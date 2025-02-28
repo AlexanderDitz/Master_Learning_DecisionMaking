@@ -75,7 +75,7 @@ def pipeline_rnn(
         hidden_size=hidden_size, 
         init_value=0.5,
         device=device,
-        list_sindy_signals=sindy_feature_list,
+        list_signals=sindy_feature_list,
         dropout=dropout,
         n_participants=n_participants if participant_emb else 0,
         counterfactual=dataset_train.xs[:, :, n_actions+1].mean() != -1,

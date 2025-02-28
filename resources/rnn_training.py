@@ -75,10 +75,30 @@ def fit_model(
     epochs: int = 1,
     batch_size: int = -1,
     bagging: bool = False,
+    scheduler: bool = False,
     n_steps: int = -1,
-    penalty_l1: float = 1e-4,
+    l1_weight_decay: float = 1e-4,
     verbose: bool = True,
     ):
+    """_summary_
+
+    Args:
+        model (BaseRNN): A child class of the BaseRNN, which implements the forward method
+        dataset_train (DatasetRNN): training data for the RNN of shape (Batch, Timesteps, Features) with Features being (Actions, Rewards, Participant ID) -> (n_actions, n_actions, 1)
+        dataset_test (DatasetRNN, optional): Validation dataset during training. Defaults to None.
+        optimizer (torch.optim.Optimizer, optional): Torch-optimizer. Defaults to None.
+        convergence_threshold (float, optional): Threshold of convergence value, which determines early stopping of training. Defaults to 1e-5.
+        epochs (int, optional): Total number of training epochs. Defaults to 1.
+        batch_size (int, optional): Batch size. Defaults to -1.
+        bagging (bool, optional): Enables bootstrap aggregation. Defaults to False.
+        n_steps (int, optional): Number of steps passed at once through the RNN to compute a gradient over steps. Defaults to -1.
+        l1_weight_decay (float, optional): L1 weight decay for sparsification. Defaults to 1e-4.
+        verbose (bool, optional): Verbosity. Defaults to True.
+
+    Returns:
+        (BaseRNN, Optimizer, float): (Trained RNN, Optimizer with last state, Training loss)
+    """
+    
     
     # initialize dataloader
     if batch_size == -1:
@@ -95,7 +115,7 @@ def fit_model(
         dataloader_test = DataLoader(dataset_test, batch_size=len(dataset_test))
     
     # set up learning rate scheduler
-    if optimizer is not None:
+    if scheduler and optimizer is not None:
         warmup_steps = int(epochs * 0.125)
         # Define the LambdaLR scheduler for warm-up
         def warmup_lr_lambda(current_step):
@@ -106,7 +126,6 @@ def fit_model(
         # Create the scheduler with the Lambda function
         scheduler_warmup = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2)
-        # scheduler_warmup, scheduler = None, None
     else:
         scheduler_warmup, scheduler = None, None
         
@@ -146,6 +165,7 @@ def fit_model(
                     ys=ys,
                     optimizer=optimizer,
                     n_steps=n_steps,
+                    l1_weight_decay=l1_weight_decay,
                 )
                 loss_train += loss_i
             loss_train /= iterations_per_epoch
@@ -188,11 +208,11 @@ def fit_model(
                     if not converged:
                         msg += '\nModel did not converge yet.'
                         
-            # if scheduler is not None:
-            #     if n_calls_to_train_model <= warmup_steps: 
-            #         scheduler_warmup.step()
-            #     else:
-            #         scheduler.step()
+            if scheduler is not None:
+                if n_calls_to_train_model <= warmup_steps: 
+                    scheduler_warmup.step()
+                else:
+                    scheduler.step()
                     
         except KeyboardInterrupt:
             continue_training = False

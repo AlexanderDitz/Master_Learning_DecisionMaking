@@ -4,8 +4,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import rnn_main
 
-path_datasets = 'data/study_recovery_stepperserverance/'
-path_params = 'params/study_recovery_stepperserverance/'
+path_datasets = 'data/study_recovery_stepperseverance/'
+path_params = 'params/study_recovery_stepperseverance/'
 
 datasets = os.listdir(path_datasets)
 
@@ -27,7 +27,7 @@ for d in datasets:
         participant_emb=True,
         bagging=True,
 
-        learning_rate=1e-2,
+        learning_rate=5e-3,
         batch_size=-1,
         sequence_length=-1,
         train_test_ratio=0,

@@ -27,7 +27,7 @@ def setup_rnn(
         n_actions=n_actions, 
         hidden_size=hidden_size, 
         n_participants=n_participants if participant_emb else 0, 
-        list_sindy_signals=list_sindy_signals, 
+        list_signals=list_sindy_signals, 
         device=device, 
         counterfactual=counterfactual,
         )
@@ -48,7 +48,7 @@ def setup_agent_rnn(
     ) -> AgentNetwork:
     
     rnn = setup_rnn(path_model=path_model, n_participants=n_participants, n_actions=n_actions, hidden_size=hidden_size, list_sindy_signals=list_sindy_signals, device=device, participant_emb=participant_emb, counterfactual=counterfactual)
-    agent = AgentNetwork(model=rnn, n_actions=n_actions, deterministic=True)
+    agent = AgentNetwork(model_rnn=rnn, n_actions=n_actions, deterministic=True)
     
     return agent
 
@@ -56,7 +56,9 @@ def setup_agent_rnn(
 def setup_agent_sindy(
     model,
     data,
+    n_trials = 1024,
     threshold = 0.03,
+    regularization = 0.1,
     participant_id: int = None,
     polynomial_degree: int = 2,
 ) -> AgentSindy:
@@ -64,7 +66,9 @@ def setup_agent_sindy(
     agent, _, _ = sindy_main(
         model = model,
         data = data,
+        n_trials=n_trials,
         threshold = threshold,
+        regularization=regularization,
         polynomial_degree=polynomial_degree,
         verbose = True,
         analysis=False,

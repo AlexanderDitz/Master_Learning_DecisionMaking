@@ -28,7 +28,7 @@ for i in range(1):
         # sindy parameters
         polynomial_degree=2,
         regularization=0.1,
-        threshold=0.05,
+        threshold=0.1,
         verbose=True,
         
         # generated training dataset parameters
@@ -36,11 +36,11 @@ for i in range(1):
         sigma=0.2,
         beta_reward=3.,
         alpha=0.25,
-        alpha_penalty=0.5,
+        alpha_penalty=0.25,
         forget_rate=0.,
         confirmation_bias=0.,
-        beta_choice=1.,
-        alpha_choice=1.,
+        beta_choice=0.,
+        alpha_choice=0.,
         counterfactual=False,
         alpha_counterfactual=0.,
         # parameter_variance=0.,

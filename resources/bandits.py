@@ -8,7 +8,7 @@ import torch
 import torch.utils
 import pysindy as ps
 
-from resources.rnn import RLRNN
+from resources.rnn import BaseRNN
 from resources.rnn_utils import DatasetRNN
 
 # Setup so that plots will look nice
@@ -133,8 +133,15 @@ class AgentQ:
   
   def new_sess(self, sample_parameters=False, **kwargs):
     """Reset the agent for the beginning of a new session."""
-    self._q = np.full(self._n_actions, self._q_init)
-    self._c = np.zeros(self._n_actions)
+    # self._q = np.full(self._n_actions, self._q_init)
+    # self._c = np.zeros(self._n_actions)
+    # self._alpha = np.zeros(self._n_actions)
+    
+    self._state = {
+      'x_value_reward': np.full(self._n_actions, self._q_init),
+      'x_value_choice': np.zeros(self._n_actions),
+      'x_learning_rate_reward': np.zeros(self._n_actions),
+    }
     
     # sample new parameters
     if sample_parameters:
@@ -207,28 +214,27 @@ class AgentQ:
       
       # Positivity bias (https://www.sciencedirect.com/science/article/pii/S1364661322000894#bb0010)
       # Explanation for confirmation bias: reduce the learning rate relative to the current belief by weighting with a factor relative to the learning rate
-      alpha[action] -= alpha[action] * self._confirmation_bias * self._q[action]
-
+      alpha[action] -= alpha[action] * self._confirmation_bias * self._state['x_value_reward'][action]
+    self._state['x_learning_rate_reward'] = alpha
+    
     # Reward-prediction-error
-    rpe = self._reward_prediction_error(self._q, reward)
+    rpe = self._reward_prediction_error(self._state['x_value_reward'], reward)
     reward_update = alpha * rpe
     
     # Forgetting - restore q-values of non-chosen actions towards the initial value
-    forget_update = self._forget_rate * (self._q_init - self._q[non_chosen_action])
+    forget_update = self._forget_rate * (self._q_init - self._state['x_value_reward'][non_chosen_action])
 
     # update reward values
-    self._q[non_chosen_action] += reward_update[non_chosen_action] + forget_update
-    self._q[choice] += reward_update[choice]
+    self._state['x_value_reward'][non_chosen_action] += reward_update[non_chosen_action] + forget_update
+    self._state['x_value_reward'][choice] += reward_update[choice]
     
     # Choice-Perseverance: Action-based updates
-    # self._c = np.zeros(self._n_actions)
-    # self._c[choice] += self._perseverance_bias
-    cpe = np.eye(self._n_actions)[choice] - self._c
-    self._c += self._alpha_choice * cpe
+    cpe = np.eye(self._n_actions)[choice] - self._state['x_value_choice']
+    self._state['x_value_choice'] += self._alpha_choice * cpe
 
   @property
   def q(self):
-    return self._q*self._beta_reward + self._c*self._beta_choice
+    return self._state['x_value_reward']*self._beta_reward + self._state['x_value_choice']*self._beta_choice
   
   def set_reward_prediction_error(self, update_rule: Callable):
     self._reward_prediction_error = update_rule
@@ -277,8 +283,8 @@ class AgentQ_SampleBetaDist(AgentQ):
   
   def new_sess(self, sample_parameters=False, **kwargs):
     """Reset the agent for the beginning of a new session."""
-    self._q = np.full(self._n_actions, self._q_init)
-    self._c = np.zeros(self._n_actions)
+    
+    super(AgentQ_SampleBetaDist, self).new_sess()
     
     # sample new parameters
     if sample_parameters:
@@ -300,7 +306,7 @@ class AgentQ_SampleBetaDist(AgentQ):
       self._alpha_reward = np.random.rand()
       self._alpha_penalty = np.random.rand()
       # self._alpha_choice = np.random.rand()
-      self._alpha_choice = np.random.choice(a=(0., 1.), p=(0.2, 0.8))
+      # self._alpha_choice = np.random.choice(a=(0., 1.), p=(0.2, 0.8))
       # self._alpha_counterfactual = np.random.beta(*self._beta_distribution)
       # self._confirmation_bias = np.random.beta(*self._beta_distribution)
       self._forget_rate = np.random.rand()
@@ -335,10 +341,10 @@ class AgentNetwork:
 
     def __init__(
       self,
-      model: RLRNN,
+      model_rnn,
       n_actions: int = 2,
       device = torch.device('cpu'),
-      deterministic: bool = False,
+      deterministic: bool = True,
       ):
         """Initialize the agent network.
 
@@ -347,18 +353,13 @@ class AgentNetwork:
             n_actions: number of permitted actions (default = 2)
         """
         
+        assert isinstance(model_rnn, BaseRNN), "The passed model is not an instance of BaseRNN."
+                
         self._deterministic = deterministic
         self._q_init = 0.5
         self._n_actions = n_actions
 
-        self._model = RLRNN(
-          n_actions=model._n_actions, 
-          hidden_size=model._hidden_size, 
-          n_participants=model._n_participants, 
-          list_sindy_signals=list(model.recording.keys()), 
-          device=device,
-          )
-        self._model.load_state_dict(model.state_dict())
+        self._model = model_rnn
         self._model = self._model.to(device)
         self._model.eval()
         
@@ -376,17 +377,24 @@ class AgentNetwork:
       
       if self._model._n_participants > 0:
         participant_embedding = self._model.participant_embedding(participant_id)
-        self._beta_reward = self._model._beta_reward(participant_embedding).detach().cpu().item()
-        self._beta_choice = self._model._beta_choice(participant_embedding).detach().cpu().item()
+        self._beta_reward = self._model._beta_reward(participant_embedding).detach().cpu().item() if hasattr(self._model, '_beta_reward') else 1
+        self._beta_choice = self._model._beta_choice(participant_embedding).detach().cpu().item() if hasattr(self._model, '_beta_choice') else 1
       else:
-        self._beta_reward = self._model._beta_reward.detach().cpu().item()
-        self._beta_choice = self._model._beta_choice.detach().cpu().item()
+        self._beta_reward = self._model._beta_reward.detach().cpu().item() if hasattr(self._model, '_beta_reward') else 1
+        self._beta_choice = self._model._beta_choice.detach().cpu().item() if hasattr(self._model, '_beta_choice') else 1
       
       self.set_state()
 
     def get_logit(self):
       """Return the value of the agent's current state."""
-      logit = self._q * self._beta_reward + self._c * self._beta_choice
+      if hasattr(self._model, '_beta_reward') or hasattr(self._model, '_beta_choice'):
+        if hasattr(self._model, '_beta_reward'):
+          logit = self._state['x_value_reward'] * self._beta_reward 
+        if hasattr(self._model, '_beta_choice'):
+          logit += self._state['x_value_choice'] * self._beta_choice
+      else:
+        logit = np.sum(np.concatenate([self._state[key] for key in self._state if 'x_value' in key]), axis=0)
+        
       return logit
     
     def get_choice_probs(self) -> np.ndarray:
@@ -411,9 +419,7 @@ class AgentNetwork:
       self.set_state()
     
     def set_state(self):
-      self._q = self._model.get_state()[0].view(-1).detach().cpu().numpy()
-      # self._alpha_reward = self._model.get_state()[1].detach().cpu().numpy()[0, 0]
-      self._c = self._model.get_state()[2].view(-1).detach().cpu().numpy()
+      self._state = self._model.get_state()
 
     @property
     def q(self):
@@ -424,13 +430,13 @@ class AgentSindy(AgentNetwork):
   
   def __init__(
     self,
-    model: RLRNN,
-    sindy_modules,
+    model_rnn,
+    sindy_modules: Dict,
     n_actions: int,
-    deterministic: bool,
+    deterministic: bool = True,
   ):
     
-    super(AgentSindy, self).__init__(model=model, n_actions=n_actions, deterministic=deterministic)
+    super(AgentSindy, self).__init__(model_rnn=model_rnn, n_actions=n_actions, deterministic=deterministic)
     
     self._model.integrate_sindy(sindy_modules)
   
@@ -620,9 +626,9 @@ class BanditsDrift(Bandits):
     self._counterfactual = counterfactual
 
     # Sample new reward probabilities
-    self._new_sess()
+    self.new_sess()
 
-  def _new_sess(self):
+  def new_sess(self):
     # Pick new reward probabilities.
     # Sample randomly between 0 and 1
     self._reward_probs = np.random.rand(self._n_actions)
@@ -828,6 +834,7 @@ def get_update_dynamics(experiment: Union[BanditSession, np.ndarray], agent: Uni
   Qs = np.zeros((choices.shape[0], agent._n_actions))
   qs = np.zeros((choices.shape[0], agent._n_actions))
   cs = np.zeros((choices.shape[0], agent._n_actions))
+  alphas = np.zeros((choices.shape[0], agent._n_actions))
   choice_probs = np.zeros((choices.shape[0], agent._n_actions))
 
   agent.new_sess(participant_id=participant_id)
@@ -835,13 +842,14 @@ def get_update_dynamics(experiment: Union[BanditSession, np.ndarray], agent: Uni
   for trial in range(choices.shape[0]):
     # track all states
     Qs[trial] = agent.q
-    qs[trial] = agent._q
-    cs[trial] = agent._c
+    qs[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
+    cs[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros(agent._n_actions)
+    alphas[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
     
     choice_probs[trial] = agent.get_choice_probs()
     agent.update(int(choices[trial]), rewards[trial], participant_id)
 
-  return (Qs, qs, cs), choice_probs, agent
+  return (Qs, qs, cs, alphas), choice_probs, agent
 
 
 ###############

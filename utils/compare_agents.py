@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset, get_update_dynamics
-from utils.plotting import session
+from utils.plotting import plot_session
 
 agent1 = AgentQ(
     beta_reward=3.,
@@ -33,5 +33,5 @@ agent2 = AgentQ(
 env = BanditsDrift(0.2)
 trajectory = create_dataset(agent1, env, 256, 1)[1][0]
 agents = {'groundtruth': agent1, 'rnn': agent2}
-fig, axs = session(agents, trajectory)
+fig, axs = plot_session(agents, trajectory)
 plt.show()

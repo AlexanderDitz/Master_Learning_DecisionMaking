@@ -101,17 +101,21 @@ def create_dataset(
             n_trials = data[0].shape[0]
           
   keys_x = [key for key in agent._model.recording.keys() if key.startswith('x_')]
+  # remove keys that are available in agent._model.submodules_eq (non-rnn-modules; hard-coded modules)
+  for key in agent._model.submodules_eq:
+    if key in keys_x:
+      keys_x.remove(key)
+  
   keys_c = [key for key in agent._model.recording.keys() if key.startswith('c_')]
   
   x_train = {key: [] for key in keys_x}
   control = {key: [] for key in keys_c}
   
-  
   # determine whether trimming is specified in any of the variables of the dataprocessing-setup
-  if dataprocessing is None or any([1-int(dataprocessing[key][0]) for key in dataprocessing]):
-    trimming = 0
-  else:
+  if dataprocessing is not None and any([int(dataprocessing[key][0]) for key in dataprocessing]):
     trimming = int(0.25*n_trials)
+  else:
+    trimming = 0
 
   for session in range(n_sessions):
     # perform agent updates to record values over trials
@@ -157,37 +161,38 @@ def create_dataset(
   # make arrays from dictionaries
   x_train_array = np.zeros((len(x_train[keys_x[0]]), 2, len(keys_x)))
   control_array = np.zeros((len(x_train[keys_x[0]]), 2, len(keys_c)))
-  for i, key in enumerate(keys_x):
-    x_train_array[:, :, i] = np.stack(x_train[key])
-  for i, key in enumerate(keys_c):
-    control_array[:, :, i] = np.stack(control[key])
+  for index_key, key in enumerate(keys_x):
+    x_train_array[:, :, index_key] = np.stack(x_train[key])
+  for index_key, key in enumerate(keys_c):
+    control_array[:, :, index_key] = np.stack(control[key])
   
   # data processing
   x_mins, x_maxs, c_mins, c_maxs = [], [], [], []
   
-  for index_key, key in enumerate(keys_x):
-    # Check for offset-clearing
-    if key in dataprocessing.keys() and int(dataprocessing[key][1]):
-      x_mins = np.min(x_train_array[..., index_key])
-      x_train_array[..., index_key] -= x_mins
-    # Check for normalization
-    if key in dataprocessing.keys() and int(dataprocessing[key][2]):
-      raise UserWarning('Normalization is not yet supported as a data processing step.')
-      # x_maxs = np.max(np.abs(x_train_array), axis=0, keepdims=True)[:, :1] + 1e-6
-      # x_train_array /= x_maxs
-  for index_key, key in enumerate(keys_c):
-    # Check for offset-clearing
-    if key in dataprocessing.keys() and int(dataprocessing[key][1]):
-      c_mins = np.min(control_array[..., index_key], axis=0)[0]
-      c_mins = c_mins if c_mins != -1 else 0
-      control_array[..., index_key] -= c_mins
-    # Check for normalization
-    if key in dataprocessing.keys() and int(dataprocessing[key][2]):
-      raise UserWarning('Normalization is not yet supported as a data processing step.')
-      # c_maxs = np.max(control_array, axis=0, keepdims=True)[:, 0]
-      # c_maxs[c_maxs == -1] = 1
-      # mask_c_maxs_not_zero = (c_maxs != 0).reshape(-1)
-      # control_array[:, 0, mask_c_maxs_not_zero] /= c_maxs[..., mask_c_maxs_not_zero]
+  if dataprocessing is not None:
+    for index_key, key in enumerate(keys_x):
+      # Check for offset-clearing
+      if key in dataprocessing.keys() and int(dataprocessing[key][1]):
+        x_mins = np.min(x_train_array[..., index_key])
+        x_train_array[..., index_key] -= x_mins
+      # Check for normalization
+      if key in dataprocessing.keys() and int(dataprocessing[key][2]):
+        raise UserWarning('Normalization is not yet supported as a data processing step.')
+        # x_maxs = np.max(np.abs(x_train_array), axis=0, keepdims=True)[:, :1] + 1e-6
+        # x_train_array /= x_maxs
+    for index_key, key in enumerate(keys_c):
+      # Check for offset-clearing
+      if key in dataprocessing.keys() and int(dataprocessing[key][1]):
+        c_mins = np.min(control_array[..., index_key], axis=0)[0]
+        c_mins = c_mins if c_mins != -1 else 0
+        control_array[..., index_key] -= c_mins
+      # Check for normalization
+      if key in dataprocessing.keys() and int(dataprocessing[key][2]):
+        raise UserWarning('Normalization is not yet supported as a data processing step.')
+        # c_maxs = np.max(control_array, axis=0, keepdims=True)[:, 0]
+        # c_maxs[c_maxs == -1] = 1
+        # mask_c_maxs_not_zero = (c_maxs != 0).reshape(-1)
+        # control_array[:, 0, mask_c_maxs_not_zero] /= c_maxs[..., mask_c_maxs_not_zero]
   
     # compute scaling factor for beta
   #   beta_scaling = np.abs(x_maxs - x_mins).reshape(-1)

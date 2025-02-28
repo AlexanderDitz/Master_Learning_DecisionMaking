@@ -8,12 +8,12 @@ from typing import Callable
 
 sys.path.append('resources')
 from resources.rnn import RLRNN
-from resources.bandits import AgentQ, AgentSindy, AgentNetwork, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits
+from resources.bandits import AgentQ, AgentSindy, AgentNetwork, BanditsDrift, BanditsSwitch, BanditSession, plot_session, create_dataset as create_dataset_bandits
 from resources.sindy_utils import create_dataset, check_library_setup
 from resources.rnn_utils import parameter_file_naming
 from resources.sindy_training import fit_model
 from utils.convert_dataset import convert_dataset
-from utils.plotting import session as plot_session
+from utils.plotting import plot_session as plot_session
 
 warnings.filterwarnings("ignore")
 
@@ -90,18 +90,18 @@ def main(
     # data pre-processing setup:
     # define the processing steps for each variable and control signal.
     # possible processing steps are: 
-    #   Trimming: Remove the first 25% of the samples along the time-axis. This is useful if the RNN begins with a variable at 0 but then accumulates first first to a specific default value, i.e. the range changes from (0, p) to (q, q+p). That way the data is cleared of the accumulation process. Trimming will be active for all variables, if it is active for one. 
-    #   Offset-Clearing: Clearup any offset by determining the minimal value q of a variable and move the value range from (q, q+p) -> (0, p). This step makes SINDy equations less complex and aligns them more with RL-Theory
-    #   Normalization: Scale the value range of a variable to x_max - x_min = 1. Offset-Clearing is recommended to achieve a value range of (0, 1) 
+    #   1. Trimming: Remove the first 25% of the samples along the time-axis. This is useful if the RNN begins with a variable at 0 but then accumulates first first to a specific default value, i.e. the range changes from (0, p) to (q, q+p). That way the data is cleared of the accumulation process. Trimming will be active for all variables, if it is active for one. 
+    #   2. Offset-Clearing: Clearup any offset by determining the minimal value q of a variable and move the value range from (q, q+p) -> (0, p). This step makes SINDy equations less complex and aligns them more with RL-Theory
+    #   3. Normalization: Scale the value range of a variable to x_max - x_min = 1. Offset-Clearing is recommended to achieve a value range of (0, 1) 
     # The processing steps are passed in the form of a binary triplet in this order: (Trimming, Offset-Clearing, Normalization) 
     dataprocessing_setup = {
-        'x_V_LR': [1, 0, 0],
-        'x_V_nc': [1, 0, 0],
-        'x_C': [1, 1, 0],
-        'x_C_nc': [1, 1, 0],
+        'x_V_LR': [0, 0, 0],
+        'x_V_nc': [0, 0, 0],
+        'x_C': [1, 0, 0],
+        'x_C_nc': [1, 0, 0],
         # 'c_a': [0, 0, 0],
         # 'c_r': [0, 0, 0],
-        'c_V': [1, 0, 0],
+        'c_V': [0, 0, 0],
     }
     
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):
@@ -132,7 +132,6 @@ def main(
             agent.set_reward_prediction_error(reward_prediction_error)
         _, experiment_list_test, _ = create_dataset_bandits(agent, environment, 100, 1)
         _, experiment_list_train, _ = create_dataset_bandits(agent, environment, n_trials, 1)
-        participant_ids = np.arange(len(experiment_list_train))
     else:
         # get data from experiments for later evaluation
         _, experiment_list_test, df, _ = convert_dataset(data)
@@ -141,8 +140,21 @@ def main(
         # set up environment to run with trained RNN to collect data
         environment = BanditsDrift(sigma=sigma, n_actions=n_actions, counterfactual=counterfactual) # TODO: compute counterfactual from data based on rewards       
         agent_dummy = AgentQ(n_actions=n_actions, alpha_reward=0.5, beta_reward=1.0)
-        experiment_list_train = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials, n_sessions=1)[1]
-    
+        experiment_train = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials, n_sessions=1)[1][0]
+
+        # replace participant_id in experiment_train with real participant_ids
+        experiment_list_train = []
+        for pid in participant_ids:
+            experiment_train_pid = BanditSession(
+                choices=experiment_train.choices,
+                rewards=experiment_train.rewards,
+                session=np.full_like(experiment_train.session, pid),
+                reward_probabilities=np.zeros_like(experiment_train.reward_probabilities),
+                q=np.zeros_like(experiment_train.q),
+                n_trials=n_trials,
+            )
+            experiment_list_train.append(experiment_train_pid)
+            
     # ---------------------------------------------------------------------------------------------------
     # RNN Setup
     # ---------------------------------------------------------------------------------------------------
@@ -153,21 +165,23 @@ def main(
     else:
         params_path = model
     state_dict = torch.load(params_path, map_location=torch.device('cpu'))['model']
-    # participant_embedding_index = [i for i, s in enumerate(list(state_dict.keys())) if 'participant_embedding' in s]
-    # participant_embedding_bool = True if len(participant_embedding_index) > 0 else False
-    # n_participants = 0 if not participant_embedding_bool else state_dict[list(state_dict.keys())[participant_embedding_index[0]]].shape[0]
-    n_participants = len(participant_ids)
+    participant_embedding_index = [i for i, s in enumerate(list(state_dict.keys())) if 'participant_embedding' in s]
+    participant_embedding_bool = True if len(participant_embedding_index) > 0 else False
+    n_participants = 0 if not participant_embedding_bool else state_dict[list(state_dict.keys())[participant_embedding_index[0]]].shape[0]
+    # n_participants = len(participant_ids)
     key_hidden_size = [key for key in state_dict if 'x' in key.lower()][0]  # first key that contains the hidden_size
     hidden_size = state_dict[key_hidden_size].shape[0]
     rnn = RLRNN(
         n_actions=n_actions, 
         hidden_size=hidden_size,
         n_participants=n_participants, 
-        list_sindy_signals=sindy_feature_list, 
+        list_signals=sindy_feature_list, 
         )
     print('Loaded model ' + params_path)
     rnn.load_state_dict(state_dict)
     agent_rnn = AgentNetwork(rnn, n_actions, deterministic=True)
+    if participant_ids is None:
+        participant_ids = np.arange(n_participants)
     
     # ---------------------------------------------------------------------------------------------------
     # SINDy training
@@ -175,11 +189,11 @@ def main(
     
     sindy_models = {module: {} for module in module_list}
     range_participant_id = [participant_id] if participant_id is not None else participant_ids
-    for pid in range_participant_id:
+    for index_pid, pid in enumerate(range_participant_id):
         # get SINDy-formatted data with exposed latent variables computed by RNN-Agent
         variables, control, feature_names, beta_scaling = create_dataset(
             agent=agent_rnn,
-            data=experiment_list_train,
+            data=[experiment_list_train[index_pid]],
             # data=environment,
             n_trials=n_trials,
             n_sessions=1,
@@ -273,7 +287,7 @@ def main(
     features = {}
     for model in sindy_models:
         features[model] = {}
-        for pid in participant_ids:
+        for pid in sindy_models[model]:
             features_i = sindy_models[model][pid].get_feature_names()
             coeffs_i = [c for c in sindy_models[model][pid].coefficients()[0]]
             index_u = []

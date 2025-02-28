@@ -1,5 +1,6 @@
 from typing import List, Union, Dict, Tuple
 import numpy as np
+from math import comb
 
 import pysindy as ps
 
@@ -66,11 +67,19 @@ def fit_model(
             control_i = [np.zeros_like(x_i[0]) for _ in range(len(x_i))]
             feature_names_i = feature_names_i + ['dummy']
         
+        # set up increasing thresholds with polynomial degree
+        n_polynomial_combinations = np.array([comb(len(feature_names_i) + d, d) for d in range(polynomial_degree+1)])
+        thresholds = np.zeros((1, n_polynomial_combinations[-1]))
+        index = 0
+        for d in range(len(n_polynomial_combinations)):
+            thresholds[0, index:n_polynomial_combinations[d]] = d * optimizer_threshold
+            index = n_polynomial_combinations[d]
+        
         # setup sindy model for current x-feature
         sindy_models[x_feature] = ps.SINDy(
             # optimizer=ps.STLSQ(threshold=optimizer_threshold, alpha=optimizer_alpha, verbose=verbose),
-            optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose),
-            feature_library=ps.PolynomialLibrary(polynomial_degree),
+            optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose),
+            feature_library=ps.PolynomialLibrary(polynomial_degree, include_bias=True),
             discrete_time=True,
             feature_names=feature_names_i,
         )
