@@ -71,7 +71,7 @@ def fit_model(
     dataset_train: DatasetRNN,
     dataset_test: DatasetRNN = None,
     optimizer: torch.optim.Optimizer = None,
-    convergence_threshold: float = 1e-5,
+    convergence_threshold: float = 1e-7,
     epochs: int = 1,
     batch_size: int = -1,
     bagging: bool = False,

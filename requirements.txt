@@ -1,0 +1,15 @@
+arviz==0.20.0
+jax==0.4.35
+matplotlib==3.10.1
+numpy==2.2.3
+numpyro==0.15.3
+pandas==2.2.3
+pymc==5.21.0
+pyro_ppl==1.9.1
+pysindy==1.7.5
+scikit_learn==1.6.1
+scipy==1.15.2
+seaborn==0.13.2
+theano==1.0.5
+torch==2.5.1
+tqdm==4.67.0
