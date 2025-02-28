@@ -175,7 +175,7 @@ def main(
       n_actions=n_actions, 
       hidden_size=hidden_size, 
       device=device,
-      list_sindy_signals=sindy_feature_list,
+      list_signals=sindy_feature_list,
       dropout=dropout,
       n_participants=n_participants if participant_emb else 0,
       ).to(device)
@@ -244,7 +244,7 @@ def main(
     else:
       agents = {'rnn': agent_rnn}
 
-    fig, axs = plotting.session(agents, experiment_test)
+    fig, axs = plotting.plot_session(agents, experiment_test)
     
     title_ground_truth = ''
     if agent is not None: 

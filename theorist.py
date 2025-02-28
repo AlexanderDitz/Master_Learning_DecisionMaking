@@ -125,7 +125,7 @@ class rl_sindy_theorist(BaseEstimator):
             hidden_size=hidden_size, 
             init_value=0.5,
             device=device,
-            list_sindy_signals=self.sindy_feature_list,
+            list_signals=self.sindy_feature_list,
             dropout=dropout,
             n_participants=n_participants,
             counterfactual=counterfactual,

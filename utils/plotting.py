@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import AgentQ, AgentNetwork, AgentSindy, BanditSession, get_update_dynamics, plot_session as plt_session
 
-def session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experiment: BanditSession, labels: List[str] = None, save: str = None):    
+def plot_session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experiment: BanditSession, labels: List[str] = None, save: str = None):    
     # plot the dynamcis associated with the first arm
     
     # valid keys in agent dictionary
@@ -23,6 +23,7 @@ def session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experime
     list_Qs = []
     list_qs = []
     list_cs = []
+    list_alphas = []
 
     colors = []
     if labels is None:
@@ -36,6 +37,7 @@ def session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experime
             list_Qs.append(np.expand_dims(qs[0], 0))
             list_qs.append(np.expand_dims(qs[1], 0))
             list_cs.append(np.expand_dims(qs[2], 0))
+            list_alphas.append(np.expand_dims(qs[3], 0))
             
             # get color from current agent
             colors.append(valid_keys_color_pairs[valid_key])
@@ -49,6 +51,7 @@ def session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experime
     Qs = np.concatenate(list_Qs, axis=0)
     qs = np.concatenate(list_qs, axis=0)
     cs = np.concatenate(list_cs, axis=0)
+    alphas = np.concatenate(list_alphas, axis=0)
 
     # normalize q-values
     # def normalize(qs):
@@ -56,7 +59,7 @@ def session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experime
 
     # qs = normalize(qs)
 
-    fig, axs = plt.subplots(4, 1, figsize=(20, 10))
+    fig, axs = plt.subplots(5, 1, figsize=(20, 10))
     axs_row = 0
     fig_col = None
     
@@ -93,6 +96,19 @@ def session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experime
         rewards=rewards,
         timeseries=qs[:, :, 0],
         timeseries_name='$q_{reward}$',
+        color=colors,
+        fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
+        x_axis_info=False,
+        y_axis_info=True,
+        )
+    axs_row += 1
+    
+    plt_session(
+        compare=True,
+        choices=choices,
+        rewards=rewards,
+        timeseries=alphas[:, :, 0],
+        timeseries_name=r'$\alpha$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
         x_axis_info=False,

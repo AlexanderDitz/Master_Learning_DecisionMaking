@@ -10,7 +10,7 @@ from resources.bandits import create_dataset, AgentQ, AgentQ_SampleBetaDist, Ban
 
 n_sessions_datasets = [16, 32, 64, 128, 256, 512]
 sigma = 0.2
-base_name = 'data/study_recovery_stepperserverance/data_rldm.csv'
+base_name = 'data/study_recovery_stepperseverance/data_rldm.csv'
 
 for iteration in range(8):
     for n_sessions in n_sessions_datasets:
