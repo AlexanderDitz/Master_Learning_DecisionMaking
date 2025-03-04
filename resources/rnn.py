@@ -10,7 +10,7 @@ class BaseRNN(nn.Module):
     def __init__(
         self, 
         n_actions, 
-        hidden_size,
+        hidden_size: int = 8,
         device=torch.device('cpu'),
         list_signals=['x_V', 'c_a', 'c_r'],
         ):
@@ -20,7 +20,7 @@ class BaseRNN(nn.Module):
         self.device = device
         self._n_actions = n_actions
         self._hidden_size = hidden_size
-        self.emb_size = 0
+        self.embedding_size = 0
         self._n_participants = 0
             
         # session recording; used for sindy training; training variables start with 'x' and control parameters with 'c' 
@@ -129,13 +129,36 @@ class BaseRNN(nn.Module):
     def get_recording(self, key):
         return self.recording[key]
     
-    def setup_module(self, input_size, hidden_size, dropout, activation: nn.Module = None):
+    def setup_module(self, input_size: int, hidden_size: int = None, dropout: float = 0., activation: nn.Module = None):
+        """This method creates the standard RNN-module used in computational discovery of cognitive dynamics
+
+        Args:
+            input_size (_type_): The number of inputs (excluding the memory state)
+            hidden_size (_type_): Hidden size after the input layer
+            dropout (_type_): Dropout rate before output layer
+            activation (nn.Module, optional): Possibility to include an activation function. Defaults to None.
+
+        Returns:
+            torch.nn.Sequential: A sequential module which can be called by one line
+        """
+        if hidden_size is None:
+            hidden_size = self._hidden_size
+            
+        # Linear network
         layers = [
-            nn.Linear(input_size, hidden_size),
+            nn.Linear(input_size+1, hidden_size),
             nn.Tanh(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_size, 1)
+            nn.Linear(hidden_size, 1),
         ]
+        
+        # GRU network
+        # layers = [
+        #     nn.Linear(input_size, hidden_size),
+        #     nn.Dropout(dropout),
+        #     nn.GRU(hidden_size, 1),
+        #     nn.Linear(1, 1),
+        # ]
         
         if activation is not None:
             layers.append(activation())
@@ -152,18 +175,39 @@ class BaseRNN(nn.Module):
         participant_index: torch.Tensor = None,
         activation_rnn: Callable = None,
         ):
-        
+        """Used to call a submodule of the RNN. Can be either: 
+            1. RNN-module (saved in 'self.submodules_rnn')
+            2. SINDy-module (saved in 'self.submodules_sindy')
+            3. hard-coded equation (saved in 'self.submodules_eq')
+
+        Args:
+            key_module (str): _description_
+            key_state (str): _description_
+            action (torch.Tensor, optional): _description_. Defaults to None.
+            inputs (Union[torch.Tensor, Tuple[torch.Tensor]], optional): _description_. Defaults to None.
+            participant_embedding (torch.Tensor, optional): _description_. Defaults to None.
+            participant_index (torch.Tensor, optional): _description_. Defaults to None.
+            activation_rnn (Callable, optional): _description_. Defaults to None.
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
         record_signal = False
         
         action = action.unsqueeze(-1)
-        # value = self.get_state()[key_state].unsqueeze(-1)
-        value = key_state.unsqueeze(-1)
+        value = self.get_state()[key_state].unsqueeze(-1)
+        # value = key_state.unsqueeze(-1)
         
         if inputs is None:
             inputs = torch.zeros((*value.shape[:-1], 0), dtype=torch.float32, device=value.device)
             
         if participant_embedding is None:
             participant_embedding = torch.zeros((*value.shape[:-1], 0), dtype=torch.float32, device=value.device)
+        elif participant_embedding.ndim == 2:
+            participant_embedding = participant_embedding.unsqueeze(1).repeat(1, value.shape[1], 1)
         
         if isinstance(inputs, tuple):
             inputs = torch.concat([inputs_i.unsqueeze(-1) for inputs_i in inputs], dim=-1)
@@ -193,8 +237,24 @@ class BaseRNN(nn.Module):
         elif key_module in self.submodules_rnn.keys():
             # rnn module
             record_signal = True if not self.training else False
+            
+            # Linear handling
             inputs = torch.concat((value, inputs, participant_embedding), dim=-1)
             update_value = self.submodules_rnn[key_module](inputs)
+            
+            # GRU handling
+            # if inputs.shape[-1] == 0:
+            #     inputs = torch.zeros((*value.shape[:-1], 1), dtype=torch.float32, device=value.device)
+            # inputs = torch.concat((inputs, participant_embedding), dim=-1)
+            # update_value = torch.zeros_like(value)
+            # for index_action in self._n_actions:
+            #     current_action = torch.eye(self._n_actions)[index_action].view(1, self._n_actions, 1)
+            #     value_i = value.squeeze(-1) @ current_action
+            #     hidden_representation = self.submodules_rnn[key_module][:2](inputs[:, index_action][:, None].swapaxes(0, 1))
+            #     _, update_value_i = self.submodules_rnn[key_module][2](hidden_representation, value)
+            #     update_value_i = self.submodules_rnn[key_module][3](update_value)
+            #     update_value = torch.eye(self._n_actions)[index_action].view(1, self._n_actions, 1) * update_value_i
+            
             next_value = value + update_value
             if activation_rnn is not None:
                 next_value = activation_rnn(next_value)

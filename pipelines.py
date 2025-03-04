@@ -13,7 +13,7 @@ sys.path.append('resources')
 from resources.rnn import RLRNN
 from resources.bandits import AgentSindy, AgentNetwork, get_update_dynamics
 from resources.sindy_utils import create_dataset, check_library_setup
-from resources.sindy_training import fit_model
+from resources.sindy_training import fit_sindy
 from resources.rnn_utils import DatasetRNN, load_checkpoint
 from utils.convert_dataset import convert_dataset
 
@@ -98,7 +98,7 @@ def pipeline_rnn(
     #Fit the RNN
     if verbose:
         print('Training the RNN...')
-    model_rnn, optimizer_rnn, loss_train = fit_model(
+    model_rnn, optimizer_rnn, loss_train = fit_sindy(
         model=model_rnn,
         dataset_train=dataset_train,
         optimizer=optimizer_rnn,
@@ -126,7 +126,7 @@ def pipeline_rnn(
         if verbose:
             print('\nTesting the trained RNN on the test dataset...')
         with torch.no_grad():
-            _, _, loss_test = fit_model(
+            _, _, loss_test = fit_sindy(
                 model=model_rnn,
                 dataset_train=dataset_train,
             )
@@ -216,7 +216,7 @@ def pipeline_sindy(
             )
         
         # fit SINDy models -> One model per x_train feature
-        sindy_models = fit_model(
+        sindy_models = fit_sindy(
             variables=x_train, 
             control=control, 
             feature_names=feature_names, 
