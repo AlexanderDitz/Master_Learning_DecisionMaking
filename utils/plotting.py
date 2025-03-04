@@ -3,21 +3,30 @@ from typing import List, Union, Dict
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
+import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import AgentQ, AgentNetwork, AgentSindy, BanditSession, get_update_dynamics, plot_session as plt_session
+from resources.rnn_utils import DatasetRNN
 
-def plot_session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experiment: BanditSession, labels: List[str] = None, save: str = None):    
+def plot_session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experiment: Union[BanditSession, np.ndarray], labels: List[str] = None, save: str = None):    
     # plot the dynamcis associated with the first arm
     
     # valid keys in agent dictionary
     valid_keys_color_pairs = {'groundtruth': 'tab:blue', 'rnn': 'tab:orange', 'sindy': 'tab:pink', 'benchmark':'tab:grey'}    
     
-    choices = np.eye(agents[list(agents.keys())[0]]._n_actions)[experiment.choices.astype(int)][:, 0]
-    rewards = experiment.rewards[:, 0]
-
-    # get beta values
+    n_actions = agents[list(agents.keys())[0]]._n_actions
+    if isinstance(experiment, BanditSession):
+        choices = np.eye(n_actions)[experiment.choices.astype(int)][:, 0]
+        rewards = experiment.rewards[:, 0]
+    elif isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
+        if isinstance(experiment, torch.Tensor):
+            experiment = experiment.detach().cpu().numpy()
+        assert experiment.ndim == 2, 'Experiment data should have only two dimensions -> (timesteps, features)'
+        # choices = experiment[:, :n_actions].argmax(axis=-1)
+        # rewards = np.array([exp[choices[i]] for i, exp in enumerate(experiment[:, n_actions:2*n_actions])])  
+        choices = experiment[:, 0]
+        rewards = experiment[:, n_actions]  
     
     list_probs = []
     list_Qs = []

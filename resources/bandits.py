@@ -375,14 +375,6 @@ class AgentNetwork:
       self._xs = torch.zeros((1, self._n_actions*2+1))
       self._xs[0, -1] = participant_id
       
-      if self._model._n_participants > 0:
-        participant_embedding = self._model.participant_embedding(participant_id)
-        self._beta_reward = self._model._beta_reward(participant_embedding).detach().cpu().item() if hasattr(self._model, '_beta_reward') else 1
-        self._beta_choice = self._model._beta_choice(participant_embedding).detach().cpu().item() if hasattr(self._model, '_beta_choice') else 1
-      else:
-        self._beta_reward = self._model._beta_reward.detach().cpu().item() if hasattr(self._model, '_beta_reward') else 1
-        self._beta_choice = self._model._beta_choice.detach().cpu().item() if hasattr(self._model, '_beta_choice') else 1
-      
       self.set_state()
 
     def get_logit(self):
@@ -824,7 +816,9 @@ def get_update_dynamics(experiment: Union[BanditSession, np.ndarray], agent: Uni
     choices = np.expand_dims(experiment.choices, 1)
     rewards = experiment.rewards
     participant_id = int(experiment.session[0])
-  elif isinstance(experiment, np.ndarray):
+  elif isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
+    if isinstance(experiment, torch.Tensor):
+      experiment = experiment.detach().cpu().numpy()
     choices = np.argmax(experiment[:, 0:agent._n_actions], axis=-1, keepdims=True)
     rewards = experiment[:, agent._n_actions:2*agent._n_actions]
     participant_id = int(experiment[0, -1])

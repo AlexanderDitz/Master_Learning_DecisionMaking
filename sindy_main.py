@@ -11,7 +11,7 @@ from resources.rnn import RLRNN
 from resources.bandits import AgentQ, AgentSindy, AgentNetwork, BanditsDrift, BanditsSwitch, BanditSession, plot_session, create_dataset as create_dataset_bandits
 from resources.sindy_utils import create_dataset, check_library_setup
 from resources.rnn_utils import parameter_file_naming
-from resources.sindy_training import fit_model
+from resources.sindy_training import fit_sindy
 from utils.convert_dataset import convert_dataset
 from utils.plotting import plot_session as plot_session
 
@@ -203,7 +203,7 @@ def main(
             )
         
         # fit SINDy models -> One model per module
-        sindy_models_pid = fit_model(
+        sindy_models_pid = fit_sindy(
             variables=variables, 
             control=control, 
             feature_names=feature_names, 

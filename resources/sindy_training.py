@@ -1,13 +1,17 @@
 from typing import List, Union, Dict, Tuple
 import numpy as np
 from math import comb
+import torch
+from copy import deepcopy
 
 import pysindy as ps
 
-from resources.sindy_utils import remove_control_features, conditional_filtering
+from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset
+from resources.rnn_utils import DatasetRNN
+from resources.bandits import AgentNetwork, AgentSindy, Bandits
 
 
-def fit_model(
+def fit_sindy(
     variables: List[np.ndarray], 
     control: List[np.ndarray] = None, 
     feature_names: List[str] = None, 
@@ -17,7 +21,7 @@ def fit_model(
     verbose: bool = False,
     get_loss: bool = False,
     optimizer_threshold: float = 0.05,
-    optimizer_alpha: float = 1e-1
+    optimizer_alpha: float = 1,
     ):
     
     if feature_names is None:
@@ -89,15 +93,19 @@ def fit_model(
         
         # TODO: check if post-processing is still necessary
         # post-process sindy weights
-        # for i in range(len(sindy_models[x_feature].model.steps[-1][1].coef_[0])):
-        #     # case: coefficient is x_feature[k] 
-        #     # --> Target in the case of non-available dynamics: 
-        #     # x_feature[k+1] = 1.0 x_feature[k] and not e.g. x_feature[k+1] = 1.03 x_feature[k]
-        #     if i == 1 and (np.abs(1-sindy_models[x_feature].model.steps[-1][1].coef_[0, 1]) < optimizer_threshold or np.abs(sindy_models[x_feature].model.steps[-1][1].coef_[0, 1]) < optimizer_threshold):
-        #         sindy_models[x_feature].model.steps[-1][1].coef_[0, 1] = float(int(sindy_models[x_feature].model.steps[-1][1].coef_[0, 1]))
-        #     # case: any other coefficient
-        #     elif i != 1 and np.abs(sindy_models[x_feature].model.steps[-1][1].coef_[0, i]) < optimizer_threshold and sindy_models[x_feature].model.steps[-1][1].coef_[0, i] != 0:
-        #         sindy_models[x_feature].model.steps[-1][1].coef_[0, i] = 0.
+        coefs = sindy_models[x_feature].model.steps[-1][1].coef_
+        for index_feature, feature in enumerate(sindy_models[x_feature].get_feature_names()):
+            # case: coefficient is x_feature[k] 
+            # --> Target in the case of non-available dynamics: 
+            # x_feature[k+1] = 1.0 x_feature[k] and not e.g. x_feature[k+1] = 1.03 x_feature[k]
+            if feature == x_feature:
+                if np.abs(coefs[0, index_feature]-1) < optimizer_threshold:
+                    sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 1.
+                elif np.abs(coefs[0, index_feature]) < optimizer_threshold:
+                    sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 0.
+            # case: any other coefficient
+            elif np.abs(coefs[0, index_feature]) < optimizer_threshold:
+                sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 0.
         
         if get_loss:
             loss_model = 1-sindy_models[x_feature].score(x_i, u=control_i, t=1, multiple_trajectories=True)
@@ -111,3 +119,62 @@ def fit_model(
         return sindy_models, loss
     else:
         return sindy_models
+    
+    
+def fit_model(
+    variables: List[np.ndarray],
+    agent: AgentNetwork,
+    data: DatasetRNN,
+    environment: Bandits,
+    n_trials: int = 1024,
+    n_sessions: int = 1,
+    participant_id: int = None,
+    shuffle: bool = False,
+    verbose: bool = False,
+    dataprocessing: Dict[str, List] = None,
+    control: List[np.ndarray] = None, 
+    feature_names: List[str] = None, 
+    polynomial_degree: int = 1, 
+    library_setup: Dict[str, List[str]] = {},
+    filter_setup: Dict[str, Tuple[str, float]] = {},
+    get_loss: bool = False,
+    optimizer_threshold: float = 0.05,
+    optimizer_alpha: float = 1,
+    ):
+    
+    participant_ids = data.xs[..., -1].unique()
+    n_participants = len(participant_ids)
+    
+    sindy_models = {rnn_module: {} for rnn_module in variables}
+    for participant_id in range(n_participants):
+        # extract all necessary data from the RNN (memory state) and align with the control inputs (action, reward)
+        variables, control_parameters, feature_names, _ = create_dataset(
+            agent=agent,
+            data=data,
+            environment=environment,
+            n_trials=n_trials,
+            n_sessions=n_sessions,
+            participant_id=participant_id,
+            shuffle=shuffle,
+            verbose=verbose,
+            dataprocessing=dataprocessing,
+        )
+
+        # fit one SINDy-model per RNN-module
+        sindy_models_id = fit_sindy(
+            variables=variables,
+            control=control_parameters,
+            feature_names=feature_names,
+            polynomial_degree=2,
+            library_setup=library_setup,
+            filter_setup=filter_setup,
+            verbose=verbose,
+        )
+        
+        for rnn_module in variables:
+            sindy_models[rnn_module][participant_id] = sindy_models_id[rnn_module]
+
+    # set up a SINDy-based agent by replacing the RNN-modules with the respective SINDy-model
+    agent_sindy = AgentSindy(model_rnn=deepcopy(agent._model), sindy_modules=sindy_models, n_actions=agent._n_actions)
+    
+    return agent_sindy
