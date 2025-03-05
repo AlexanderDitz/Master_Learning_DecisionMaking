@@ -58,7 +58,7 @@ class AgentQ:
       alpha_penalty: float = -1,
       alpha_counterfactual: float = 0.,
       beta_choice: float = 0.,
-      alpha_choice: float = 1.,
+      alpha_choice: float = 0.,
       forget_rate: float = 0.,
       confirmation_bias: float = 0.,
       parameter_variance: Union[Dict[str, float], float] = 0.,
@@ -801,7 +801,7 @@ def create_dataset(
   return dataset, experiment_list, parameter_list
 
 
-def get_update_dynamics(experiment: Union[BanditSession, np.ndarray], agent: Union[AgentQ, AgentNetwork, AgentSindy]):
+def get_update_dynamics(experiment: Union[BanditSession, np.ndarray, torch.Tensor], agent: Union[AgentQ, AgentNetwork, AgentSindy]):
   """Compute Q-Values of a specific agent for a specific experiment sequence with given actions and rewards.
 
   Args:

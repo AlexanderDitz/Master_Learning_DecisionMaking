@@ -225,6 +225,9 @@ class BaseRNN(nn.Module):
                 # create dummy control inputs
                 inputs = torch.zeros((*inputs.shape[:-1], 1))
             
+            if participant_index is None:
+                participant_index = torch.zeros((1, 1), dtype=torch.int32)
+            
             next_value = np.zeros_like(value)
             for index_batch in range(value.shape[0]):
                 sindy_model = self.submodules_sindy[key_module][participant_index[index_batch].item()] if isinstance(self.submodules_sindy[key_module], dict) else self.submodules_sindy[key_module]
