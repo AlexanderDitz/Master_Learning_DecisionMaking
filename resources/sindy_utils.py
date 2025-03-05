@@ -69,37 +69,29 @@ def make_sindy_data(
 
 def create_dataset(
   agent: AgentNetwork,
-  data: Union[Bandits, DatasetRNN, List[BanditSession], np.ndarray, torch.Tensor, List[np.ndarray], List[torch.Tensor]],
+  data: Union[Bandits, DatasetRNN, List[np.ndarray], List[torch.Tensor]],
   n_trials: int,
   n_sessions: int,
-  participant_id: int = None,
-  shuffle: bool = False,
-  verbose: bool = False,
+  participant_id: int,
   dataprocessing: Dict[str, List] = None,
+  shuffle: bool = False,
   ):
   
   highpass_threshold_dt = 0.05
   
   if not isinstance(data, Bandits):
     if isinstance(data, (np.ndarray, torch.Tensor)) and data.ndim == 2:
-      data = [data]
-    if verbose:
-      Warning('data is not of type Environment. Checking for correct number of sessions and trials per session with respect to the given data object.')
-    if isinstance(data, DatasetRNN):
-      if n_trials == -1 or n_trials == None or n_trials > data.xs.shape[1]:
-        n_trials = data.xs.shape[1]
+      data = data.reshape((1, *data.shape))
+      if n_sessions > data.shape[0]:
+        n_trials = data.shape[0]
+      if n_trials > data.shape[1]:
+        n_trials = data.shape[1]
+    elif isinstance(data, DatasetRNN):
       if n_sessions == -1 or n_sessions == None or n_sessions > data.xs.shape[0]:
         n_sessions = data.xs.shape[0]
-    else:
-        if isinstance(data[0], BanditSession):
-          if n_trials == None or n_trials == -1 or n_trials > data[0].choices.shape[0]:
-            n_trials = data[0].choices.shape[0]  
-          if n_sessions == None or n_sessions == -1 or n_sessions > len(data):
-            n_sessions = len(data)
-        else:
-          if n_trials > data[0].shape[0]: 
-            n_trials = data[0].shape[0]
-          
+      if n_trials == -1 or n_trials == None or n_trials > data.xs.shape[1]:
+        n_trials = data.xs.shape[1]
+
   keys_x = [key for key in agent._model.recording.keys() if key.startswith('x_')]
   # remove keys that are available in agent._model.submodules_eq (non-rnn-modules; hard-coded modules)
   for key in agent._model.submodules_eq:
