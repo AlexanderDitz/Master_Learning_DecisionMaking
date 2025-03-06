@@ -139,7 +139,7 @@ def fit_model(
     dataprocessing: Dict[str, List] = None,
     # get_loss: bool = False,
     verbose: bool = False,
-    ):
+    ) -> AgentSindy:
     
     if participant_id is not None:
         if isinstance(participant_id, int):

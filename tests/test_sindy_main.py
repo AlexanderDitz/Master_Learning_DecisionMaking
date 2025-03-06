@@ -1,8 +1,6 @@
 import sys
 import os
 
-import numpy as np
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import sindy_main
 
@@ -10,7 +8,7 @@ import sindy_main
 features_list = []
 for i in range(1):
     # i = 1
-    _, _ , features = sindy_main.main(
+    _, features = sindy_main.main(
         
         # data='data/study_recovery_s03/data_rldm_256p_0.csv',
         # model='params/study_recovery_s03/params_rldm_256p_0.pkl',
@@ -27,8 +25,8 @@ for i in range(1):
         
         # sindy parameters
         polynomial_degree=2,
-        regularization=0.1,
-        threshold=0.1,
+        optimizer_alpha=1,
+        optimizer_threshold=0.05,
         verbose=True,
         
         # generated training dataset parameters
@@ -43,7 +41,6 @@ for i in range(1):
         alpha_choice=0.,
         counterfactual=False,
         alpha_counterfactual=0.,
-        # parameter_variance=0.,
         
         analysis=True,
     )
