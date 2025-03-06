@@ -360,6 +360,7 @@ class AgentNetwork:
         self._n_actions = n_actions
 
         self._model = model_rnn
+        self._model.set_device(device)
         self._model = self._model.to(device)
         self._model.eval()
         
@@ -379,15 +380,7 @@ class AgentNetwork:
 
     def get_logit(self):
       """Return the value of the agent's current state."""
-      if hasattr(self._model, '_beta_reward') or hasattr(self._model, '_beta_choice'):
-        if hasattr(self._model, '_beta_reward'):
-          logit = self._state['x_value_reward'] * self._beta_reward 
-        if hasattr(self._model, '_beta_choice'):
-          logit += self._state['x_value_choice'] * self._beta_choice
-      else:
-        logit = np.sum(np.concatenate([self._state[key] for key in self._state if 'x_value' in key]), axis=0)
-        
-      return logit
+      return np.sum(np.concatenate([self._state[key] for key in self._state if 'x_value' in key]), axis=0)
     
     def get_choice_probs(self) -> np.ndarray:
       """Predict the choice probabilities as a softmax over output logits."""
@@ -412,6 +405,19 @@ class AgentNetwork:
     
     def set_state(self):
       self._state = self._model.get_state()
+
+    def get_betas(self):
+      if hasattr(self._model, 'betas'):
+        betas = {}
+        if hasattr(self._model, 'participant_embedding'):
+          participant_embedding = self._model.participant_embedding(torch.tensor(self._xs[..., -1], device=self._model.device, dtype=torch.int32).view(1, 1))
+          for key in self._model.betas:
+            betas[key] = self._model.betas[key](participant_embedding).item()
+        else:
+          for key in self._model.betas:
+            betas[key] = self._model.betas[key].item()
+        return betas
+      return None
 
     @property
     def q(self):

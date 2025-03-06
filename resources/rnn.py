@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
-from typing import Optional, Tuple, Dict, Iterable, Callable, Union
+from typing import Optional, Tuple, Dict, Iterable, Callable, Union, List
 import pysindy as ps
 import numpy as np
 
@@ -501,13 +501,16 @@ class RLRNN(BaseRNN):
     
     def __init__(
         self,
-        n_actions,
-        n_participants,
-        list_signals,
+        n_actions: int,
+        n_participants: int,
+        hidden_size = 8,
+        dropout = 0.,
+        device = torch.device('cpu'),
+        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward', 'c_value_reward'],
         **kwargs,
     ):
         
-        super(RLRNN, self).__init__(n_actions=n_actions, list_signals=list_signals)
+        super(RLRNN, self).__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device)
         
         # set up the participant-embedding layer
         self.embedding_size = 8
@@ -516,12 +519,13 @@ class RLRNN(BaseRNN):
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
         self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())
         
         # set up the submodules
-        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=2+self.embedding_size, dropout=0.25)
-        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=0.25)
-        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=0.25)
-        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=0.25)
+        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
         
         # set up hard-coded equations
         self.submodules_eq['x_value_reward_chosen'] = lambda value, inputs: value + inputs[..., 1] * (inputs[..., 0] - value)
@@ -542,6 +546,7 @@ class RLRNN(BaseRNN):
         # Here we compute now the participant embeddings for each entry in the batch
         participant_embedding = self.participant_embedding(participant_id[0, :, 0].int())
         beta_value_reward = self.betas['x_value_reward'](participant_embedding)
+        beta_value_choice = self.betas['x_value_choice'](participant_embedding)
         
         for timestep, action, reward in zip(timesteps, actions, rewards):
             
@@ -582,6 +587,7 @@ class RLRNN(BaseRNN):
                 inputs=None,
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
+                activation_rnn=torch.nn.functional.sigmoid,
                 )
             
             next_value_choice_not_chosen = self.call_module(
@@ -591,12 +597,13 @@ class RLRNN(BaseRNN):
                 inputs=None,
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
+                activation_rnn=torch.nn.functional.sigmoid,
                 )
             
             # updating the memory state
             self.state['x_learning_rate_reward'] = learning_rate_reward
             self.state['x_value_reward'] = next_value_reward_chosen * beta_value_reward + next_value_reward_not_chosen
-            self.state['x_value_choice'] = next_value_choice_chosen + next_value_choice_not_chosen
+            self.state['x_value_choice'] = (next_value_choice_chosen + next_value_choice_not_chosen) * beta_value_choice
             
             # Now keep track of the logit in the output array
             logits[timestep] = self.state['x_value_reward'] + self.state['x_value_choice']
