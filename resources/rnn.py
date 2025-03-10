@@ -40,7 +40,7 @@ class BaseRNN(nn.Module):
         
         actions = inputs[:, :, :self._n_actions].float()
         rewards = inputs[:, :, self._n_actions:2*self._n_actions].float()
-        participant_ids = inputs[:, :, -1:].int()
+        participant_ids = inputs[0, :, -1:].int()
         
         if prev_state is not None:
             self.set_state(prev_state)
@@ -174,6 +174,7 @@ class BaseRNN(nn.Module):
         participant_embedding: torch.Tensor = None, 
         participant_index: torch.Tensor = None,
         activation_rnn: Callable = None,
+        scaling: bool = False,
         ):
         """Used to call a submodule of the RNN. Can be either: 
             1. RNN-module (saved in 'self.submodules_rnn')
@@ -270,11 +271,17 @@ class BaseRNN(nn.Module):
             raise ValueError(f'Invalid module key {key_module}.')
 
         if action is not None:
+            # keep only actions necessary for that update and set others to zero
             next_value = next_value * action
         
         if record_signal:
             # record sample for SINDy training 
             self.record_signal(key_module, value.view(-1, self._n_actions), next_value.view(-1, self._n_actions))
+        
+        if scaling:
+            # scale by inverse noise temperature
+            scaling_factor = self.betas[key_state] if isinstance(self.betas[key_state], nn.Parameter) else self.betas[key_state](participant_embedding)
+            next_value = next_value * scaling_factor
         
         return next_value.squeeze(-1)
     
@@ -544,9 +551,9 @@ class RLRNN(BaseRNN):
         actions, rewards, participant_id = inputs
         
         # Here we compute now the participant embeddings for each entry in the batch
-        participant_embedding = self.participant_embedding(participant_id[0, :, 0].int())
-        beta_value_reward = self.betas['x_value_reward'](participant_embedding)
-        beta_value_choice = self.betas['x_value_choice'](participant_embedding)
+        participant_embedding = self.participant_embedding(participant_id[:, 0].int())
+        # beta_value_reward = self.betas['x_value_reward'](participant_embedding)
+        # beta_value_choice = self.betas['x_value_choice'](participant_embedding)
         
         for timestep, action, reward in zip(timesteps, actions, rewards):
             
@@ -568,6 +575,7 @@ class RLRNN(BaseRNN):
                 inputs=(reward, learning_rate_reward),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
+                scaling=True,
                 )
             
             next_value_reward_not_chosen = self.call_module(
@@ -588,6 +596,7 @@ class RLRNN(BaseRNN):
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
+                scaling=True,
                 )
             
             next_value_choice_not_chosen = self.call_module(
@@ -598,12 +607,13 @@ class RLRNN(BaseRNN):
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
+                scaling=True,
                 )
             
             # updating the memory state
             self.state['x_learning_rate_reward'] = learning_rate_reward
-            self.state['x_value_reward'] = next_value_reward_chosen * beta_value_reward + next_value_reward_not_chosen
-            self.state['x_value_choice'] = (next_value_choice_chosen + next_value_choice_not_chosen) * beta_value_choice
+            self.state['x_value_reward'] = next_value_reward_chosen + next_value_reward_not_chosen
+            self.state['x_value_choice'] = next_value_choice_chosen + next_value_choice_not_chosen
             
             # Now keep track of the logit in the output array
             logits[timestep] = self.state['x_value_reward'] + self.state['x_value_choice']
