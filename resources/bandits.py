@@ -3,10 +3,9 @@ from typing import NamedTuple, Union, Optional, Dict, Callable, Tuple
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-from copy import copy
+from copy import copy, deepcopy
 import torch
 import torch.utils
-import pysindy as ps
 
 from resources.rnn import BaseRNN
 from resources.rnn_utils import DatasetRNN
@@ -434,7 +433,7 @@ class AgentSindy(AgentNetwork):
     deterministic: bool = True,
   ):
     
-    super(AgentSindy, self).__init__(model_rnn=model_rnn, n_actions=n_actions, deterministic=deterministic)
+    super(AgentSindy, self).__init__(model_rnn=deepcopy(model_rnn), n_actions=n_actions, deterministic=deterministic)
     
     self._model.integrate_sindy(sindy_modules)
   
