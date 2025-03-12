@@ -439,6 +439,20 @@ class AgentSindy(AgentNetwork):
   
   def get_modules(self):
     return self._model.submodules_sindy
+  
+  def count_parameters(self) -> Dict[int, int]:
+    submodules = self.get_modules()
+    participant_ids = None
+    n_parameters = {}
+    for submodule in submodules:
+      if participant_ids == None:
+        participant_ids = list(submodules[submodule].keys())
+        n_parameters = {participant_id: 0 for participant_id in participant_ids}
+      for participant_id in participant_ids:
+        n_parameters[participant_id] += (submodules[submodule][participant_id].coefficients() != 0).sum()
+      
+    return n_parameters
+    
 
 
 ################

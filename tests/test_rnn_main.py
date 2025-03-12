@@ -8,8 +8,8 @@ _, loss = rnn_main.main(
     checkpoint=False,
     epochs=128,
     
-    # data='data/study_recovery_stepperseverance/data_rldm_256p_0.csv',
-    # model='params/study_recovery_stepperseverance/params_rldm_256p_0.pkl',
+    data='data/study_recovery_stepperseverance/data_rldm_256p_0.csv',
+    model='params/study_recovery_stepperseverance/params_rldm_256p_0.pkl',
     
     # model=f'params/benchmarking/rnn_eckstein.pkl',
     # data = 'data/2arm/eckstein2022_291_processed.csv',
@@ -28,6 +28,7 @@ _, loss = rnn_main.main(
     sequence_length=-1,
     train_test_ratio=1,
     n_steps=16,
+    scheduler=True,
     
     n_sessions=256,
     n_trials=256,
