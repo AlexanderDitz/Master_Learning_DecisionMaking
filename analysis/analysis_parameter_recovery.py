@@ -156,11 +156,26 @@ def n_true_params(true_coefs):
 
 # configuration
 random_sampling = [0.25, 0.5, 0.75]
-n_sessions = [16, 128, 32, 64, 128, 256, 512]
-iterations = 8
+n_sessions = [256]#[16, 128, 32, 64, 128, 256, 512]
+iterations = 1#8
 base_name_data = 'data/study_recovery_stepperseverance/data_rldm_SESSp_IT.csv'
 base_name_params = 'params/study_recovery_stepperseverance/params_rldm_SESSp_IT.pkl'
 kw_participant_id = 'session'
+
+# sindy configuration
+rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
+control_parameters = ['c_action', 'c_reward', 'c_value_reward']
+sindy_library_polynomial_degree = 2
+sindy_library_setup = {
+    'x_learning_rate_reward': ['c_reward', 'c_value_reward'],
+}
+sindy_filter_setup = {
+    'x_learning_rate_reward': ['c_action', 1, True],
+    'x_value_reward_not_chosen': ['c_action', 0, True],
+    'x_value_choice_chosen': ['c_action', 1, True],
+    'x_value_choice_not_chosen': ['c_action', 0, True],
+}
+sindy_dataprocessing = None
 
 # meta parameters
 mapping_lens = {'x_V_LR': 10, 'x_V_nc': 6, 'x_C': 3, 'x_C_nc': 3}
@@ -192,7 +207,16 @@ for index_sess, sess in enumerate(n_sessions):
         participant_ids = np.unique(data[kw_participant_id].values)
         
         # setup of sindy agent for current dataset
-        sindy_agent = setup_agent_sindy(path_rnn, path_data, threshold=0.1, )
+        sindy_agent = setup_agent_sindy(
+            path_model=path_rnn, 
+            path_data=path_data, 
+            rnn_modules=rnn_modules, 
+            control_parameters=control_parameters, 
+            sindy_library_polynomial_degree=sindy_library_polynomial_degree,
+            sindy_library_setup=sindy_library_setup,
+            sindy_filter_setup=sindy_filter_setup,
+            sindy_dataprocessing=sindy_dataprocessing,
+            )
         sindy_models = sindy_agent.get_modules()
         
         for index_participant, participant in enumerate(participant_ids):
