@@ -145,7 +145,7 @@ def run_training_and_evaluation(dataset, label):
         model=model_rnn,
         optimizer=optimizer_rnn,
         dataset_train=dataset,
-        epochs=64, #2048,
+        epochs=2048,
         n_steps=16,
         scheduler=True,
         convergence_threshold=0,
@@ -166,8 +166,8 @@ def run_training_and_evaluation(dataset, label):
         filter_setup=filter_setup,
         optimizer_threshold=0.05,
         optimizer_alpha=1,
-        n_trials=1024, #dataset.xs.shape[1],
-        n_sessions=1, #n_participants,
+        n_trials=1024, 
+        n_sessions=1, 
         verbose=True,
     )
     
@@ -199,11 +199,12 @@ def run_training_and_evaluation(dataset, label):
             probs = torch.softmax(logits, dim=-1).cpu().numpy()
             choices_np = ys_participant.cpu().numpy().squeeze(0)
             ll = log_likelihood(data=choices_np, probs=probs)
-            ll_values.append(ll)  # Save log likelihood for this participant
-            bic = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=num_params, ll=ll)
             n_trials = choices_np.shape[0]
+            normalized_ll = ll / n_trials  # Normalize log-likelihood by number of trials
+            ll_values.append(normalized_ll)  # Save normalized log likelihood
+            bic = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=num_params, ll=ll)
             normalized_bic = bic / n_trials
-            logger.info(f"Participant {pid}: Log-likelihood: {ll:.4f}, Raw BIC: {bic:.4f}, Normalized BIC: {normalized_bic:.4f}")
+            logger.info(f"Participant {pid}: Log-likelihood: {ll:.4f}, Normalized LL: {normalized_ll:.4f}, Raw BIC: {bic:.4f}, Normalized BIC: {normalized_bic:.4f}")
             bic_values.append(normalized_bic)
         except Exception as e:
             logger.error(f"Error evaluating participant {pid} with SINDy model: {str(e)}")
@@ -218,7 +219,7 @@ def run_training_and_evaluation(dataset, label):
     
     if ll_values:
         avg_ll = np.mean(ll_values)
-        logger.info(f"\nAverage Log Likelihood for {label}: {avg_ll:.4f}")
+        logger.info(f"\nAverage Normalized Log Likelihood for {label}: {avg_ll:.4f}")
     else:
         avg_ll = float('nan')
         logger.warning("Could not compute average Log Likelihood due to errors")
@@ -301,10 +302,10 @@ if ll_results:
     plt.figure(figsize=(8, 5))
     plt.plot(trial_lengths, avg_ll_values, marker='o')
     plt.xlabel('Trials per Participant')
-    plt.ylabel('Average Log Likelihood')
-    plt.title('Average Log Likelihood vs. Trials per Participant')
+    plt.ylabel('Average Normalized Log Likelihood')
+    plt.title('Average Normalized Log Likelihood vs. Trials per Participant')
     plt.grid(True)
-    plt.savefig('log_likelihood_vs_trials.png')
+    plt.savefig('normalized_log_likelihood_vs_trials.png')
     plt.show()
 else:
     logger.error("No valid Log Likelihood")
