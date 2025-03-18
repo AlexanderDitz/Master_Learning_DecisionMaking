@@ -158,7 +158,7 @@ def run_training_and_evaluation(dataset, label):
         filter_setup=filter_setup,
         optimizer_threshold=0.05,
         optimizer_alpha=1,
-        n_trials=dataset.xs.shape[1],
+        n_trials_off_policy=dataset.xs.shape[1],
         n_sessions=n_participants,
         verbose=True,
     )

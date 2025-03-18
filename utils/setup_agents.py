@@ -86,7 +86,7 @@ def setup_agent_sindy(
         filter_setup=sindy_filter_setup,
         dataprocessing=sindy_dataprocessing,
         participant_id=participant_id,
-        n_trials=n_trials,
+        n_trials_off_policy=n_trials,
         optimizer_alpha=regularization,
         optimizer_threshold=threshold,
     )
