@@ -823,7 +823,7 @@ def create_dataset(
   return dataset, experiment_list, parameter_list
 
 
-def get_update_dynamics(experiment: Union[BanditSession, np.ndarray, torch.Tensor], agent: Union[AgentQ, AgentNetwork, AgentSindy]):
+def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Union[AgentQ, AgentNetwork, AgentSindy]):
   """Compute Q-Values of a specific agent for a specific experiment sequence with given actions and rewards.
 
   Args:
@@ -834,18 +834,16 @@ def get_update_dynamics(experiment: Union[BanditSession, np.ndarray, torch.Tenso
       _type_: _description_
   """
 
-  if isinstance(experiment, BanditSession):
-    choices = np.expand_dims(experiment.choices, 1)
-    rewards = experiment.rewards
-    participant_id = int(experiment.session[0])
-  elif isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
+  
+  
+  if isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
     if isinstance(experiment, torch.Tensor):
       experiment = experiment.detach().cpu().numpy()
     choices = np.argmax(experiment[:, 0:agent._n_actions], axis=-1, keepdims=True)
     rewards = experiment[:, agent._n_actions:2*agent._n_actions]
     participant_id = int(experiment[0, -1])
   else:
-    raise TypeError("experiment is of not of class BanditSession nor numpy.ndarray")
+    raise TypeError("experiment is of not of class numpy.ndarray or torch.Tensor")
 
   Qs = np.zeros((choices.shape[0], agent._n_actions))
   qs = np.zeros((choices.shape[0], agent._n_actions))
