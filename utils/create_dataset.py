@@ -26,7 +26,7 @@ for iteration in range(n_iterations_per_n_sessions):
 
         environment = BanditsDrift(sigma=sigma)
 
-        dataset, experiment_list, parameter_list = create_dataset(
+        dataset, _, parameter_list = create_dataset(
                     agent=agent,
                     environment=environment,
                     n_trials=n_trials_per_session,
@@ -47,9 +47,10 @@ for iteration in range(n_iterations_per_n_sessions):
         mean_beta_reward, mean_alpha_reward, mean_alpha_penalty = [], [], []
         mean_beta_choice, mean_alpha_choice = [], []
         mean_confirmation_bias, mean_forget_rate = [], []
-
-        for i, experiment in enumerate(experiment_list):    
+        
+        for i in range(len(dataset)):    
             # get update dynamics
+            experiment = dataset.xs[i]
             qs, choice_probs, _ = get_update_dynamics(experiment, agent)
             
             # append behavioral data
