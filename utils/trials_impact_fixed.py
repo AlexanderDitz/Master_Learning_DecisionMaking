@@ -39,6 +39,7 @@ logger.info(f"Number of actions: {n_actions}")
 
 #im using the data generated via create_dataset.py with 128 participants and 1000 trials per participant
 data_path = '/Users/martynaplomecka/closedloop_rl/data/study_recovery_stepperseverance/data_rldm_128p_0.csv'
+data_path = '/Users/martynaplomecka/closedloop_rl/data/study_recovery_stepperseverance/data_rldm_16p_0.csv'
 #data_path= '/Users/martynaplomecka/closedloop_rl/data/study_recovery_stepperseverance/data_rldm_8p_0.csv'
 
 df = pd.read_csv(data_path)
@@ -134,8 +135,8 @@ def run_training_and_evaluation(dataset, label):
         n_participants=n_participants,
         list_signals=list_rnn_modules + list_control_parameters
     )
-    num_params = sum(p.numel() for p in model_rnn.parameters() if p.requires_grad)
-    logger.info(f"RNN model trainable parameters: {num_params}")
+    rnn_params = sum(p.numel() for p in model_rnn.parameters() if p.requires_grad)
+    logger.info(f"RNN model trainable parameters: {rnn_params}")
     
     optimizer_rnn = torch.optim.Adam(model_rnn.parameters(), lr=5e-3)
     logger.info("Training configuration: epochs=512, steps=16, scheduler=True")
@@ -145,7 +146,7 @@ def run_training_and_evaluation(dataset, label):
         model=model_rnn,
         optimizer=optimizer_rnn,
         dataset_train=dataset,
-        epochs=2048,
+        epochs=16,
         n_steps=16,
         scheduler=True,
         convergence_threshold=0,
@@ -179,7 +180,9 @@ def run_training_and_evaluation(dataset, label):
     logger.info(f"SINDy models are available for participants: {available_participant_ids}")
     
     bic_values = []
-    ll_values = []  # New list to store log likelihood values
+    ll_values = []  
+
+    
     # Eval the SINDy model for each participant using their respective data
     for pid in sorted(available_participant_ids):
         logger.info(f"Evaluating participant {pid} using its own SINDy model...")
@@ -192,7 +195,27 @@ def run_training_and_evaluation(dataset, label):
         xs_modified = xs_participant.clone()
         xs_modified[:, :, -1] = pid  # input data reflects the current participant ID
         agent_sindy.new_sess(participant_id=pid)
+        
         try:
+            # Count SINDy parameters for this participant
+            sindy_params = 0
+            for module_name in list_rnn_modules:
+                if (hasattr(agent_sindy._model, 'submodules_sindy') and 
+                    module_name in agent_sindy._model.submodules_sindy and 
+                    pid in agent_sindy._model.submodules_sindy[module_name]):
+                    try:
+                        sindy_model = agent_sindy._model.submodules_sindy[module_name][pid]
+                        # Count non-zero coefficients as parameters
+                        if hasattr(sindy_model, 'coefficients') and callable(sindy_model.coefficients):
+                            coeffs = sindy_model.coefficients()
+                            if coeffs is not None and len(coeffs) > 0:
+                                # Count non-zero coefficients
+                                sindy_params += np.count_nonzero(coeffs[0])
+                    except Exception as e:
+                        logger.error(f"Error counting parameters for module {module_name} participant {pid}: {str(e)}")
+            
+            logger.info(f"SINDy model parameters for participant {pid}: {sindy_params}")
+            
             with torch.no_grad():
                 logits, _ = agent_sindy._model(xs_modified)
             logits = logits.squeeze(0)
@@ -202,7 +225,9 @@ def run_training_and_evaluation(dataset, label):
             n_trials = choices_np.shape[0]
             normalized_ll = ll / n_trials  # Normalize log-likelihood by number of trials
             ll_values.append(normalized_ll)  # Save normalized log likelihood
-            bic = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=num_params, ll=ll)
+            
+            # Use SINDy parameters for BIC calculation
+            bic = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=sindy_params, ll=ll)
             normalized_bic = bic / n_trials
             logger.info(f"Participant {pid}: Log-likelihood: {ll:.4f}, Normalized LL: {normalized_ll:.4f}, Raw BIC: {bic:.4f}, Normalized BIC: {normalized_bic:.4f}")
             bic_values.append(normalized_bic)
