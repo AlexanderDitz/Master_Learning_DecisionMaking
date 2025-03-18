@@ -8,7 +8,7 @@ import pysindy as ps
 
 from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset
 from resources.rnn_utils import DatasetRNN
-from resources.bandits import AgentNetwork, AgentSindy, Bandits
+from resources.bandits import AgentNetwork, AgentSindy, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits
 
 
 def fit_sindy(
@@ -126,43 +126,48 @@ def fit_model(
     rnn_modules: List[np.ndarray],
     control_parameters: List[np.ndarray], 
     agent: AgentNetwork,
-    data: Union[Bandits, DatasetRNN],
+    data: DatasetRNN,
     polynomial_degree: int = 2, 
     library_setup: Dict[str, List[str]] = {},
     filter_setup: Dict[str, Tuple[str, float]] = {},
     optimizer_threshold: float = 0.05,
     optimizer_alpha: float = 1,
-    n_trials: int = 1024,
-    n_sessions: int = 1,
     participant_id: int = None,
     shuffle: bool = False,
     dataprocessing: Dict[str, List] = None,
+    off_policy: bool = True,
+    n_trials_off_policy: int = 1024,
     # get_loss: bool = False,
     verbose: bool = False,
     ) -> AgentSindy:
     
     if participant_id is not None:
-        if isinstance(participant_id, int):
-            participant_ids = [participant_id]
-        else:
-            raise TypeError(f'The argument participant_id must be of type None or Integer.')
+        participant_ids = [participant_id]
+        data = DatasetRNN(xs=data.xs[participant_id][None], ys=data.ys[participant_id][None])
     else:
-        if isinstance(data, DatasetRNN):
-            participant_ids = data.xs[..., -1].unique()
-        elif isinstance(data, Bandits):
-            participant_ids = np.arange(n_sessions)
-        else:
-            raise TypeError(f'The argument data must be of type (numpy.ndarray, torch.Tensor, DatasetRNN).')
-    n_participants = len(participant_ids)
+        participant_ids = data.xs[..., -1].unique().int().cpu().numpy()
+    
+    if off_policy:
+        # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
+        # The trained RNN will then perform value updates to get off-policy data
+        environment = BanditsDrift(sigma=0.2, n_actions=agent._n_actions)
+        agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.5, beta_reward=1.0)
+        dataset_off_policy = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=1)[0]
+        # repeat the off-policy data for every participant and add the corresponding participant ID
+        xs_off_policy, ys_off_policy = torch.zeros((data.xs.shape[0], n_trials_off_policy, data.xs.shape[-1])), torch.zeros((data.ys.shape[0], n_trials_off_policy, data.ys.shape[-1]))
+        for index_data in range(len(data)):
+            xs_off_policy[index_data] = dataset_off_policy.xs
+            xs_off_policy[index_data, :, -1] = data.xs[index_data, :1, -1].repeat(n_trials_off_policy)
+            ys_off_policy[index_data] = dataset_off_policy.ys
+        data = DatasetRNN(xs=xs_off_policy, ys=ys_off_policy)
     
     sindy_models = {rnn_module: {} for rnn_module in rnn_modules}
-    for participant_id in range(n_participants):
+    for participant_id in participant_ids:
         # extract all necessary data from the RNN (memory state) and align with the control inputs (action, reward)
+        mask_participant = data.xs[:, 0, -1] == participant_id
         variables, control_parameters, feature_names, _ = create_dataset(
             agent=agent,
-            data=data,
-            n_trials=n_trials,
-            n_sessions=n_sessions,
+            data=DatasetRNN(*data[mask_participant]),
             participant_id=participant_id,
             shuffle=shuffle,
             dataprocessing=dataprocessing,

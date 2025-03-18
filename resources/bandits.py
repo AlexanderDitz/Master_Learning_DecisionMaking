@@ -421,6 +421,10 @@ class AgentNetwork:
     @property
     def q(self):
       return self.get_logit()
+    
+    def get_participant_ids(self):
+      if hasattr(self._model, 'participant_embedding'):
+        return tuple(np.arange(self._model.participant_embedding.num_embeddings).tolist())
 
 
 class AgentSindy(AgentNetwork):
@@ -445,12 +449,11 @@ class AgentSindy(AgentNetwork):
     participant_ids = None
     n_parameters = {}
     for submodule in submodules:
-      if participant_ids == None:
-        participant_ids = list(submodules[submodule].keys())
-        n_parameters = {participant_id: 0 for participant_id in participant_ids}
+      participant_ids = list(submodules[submodule].keys())
+      n_parameters = {participant_id: 0 for participant_id in participant_ids}
       for participant_id in participant_ids:
         n_parameters[participant_id] += (submodules[submodule][participant_id].coefficients() != 0).sum()
-      
+
     return n_parameters
     
 

@@ -17,7 +17,7 @@ def log_likelihood(data: np.ndarray, probs: np.ndarray, axis: int = None, normal
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1 
     
-    # Sum over all data points and negate the result
+    # Sum over all data points
     return np.sum(np.sum(data * np.log(probs), axis=-1), axis=axis) / normalization
 
 

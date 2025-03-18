@@ -184,7 +184,7 @@ def main(
         agent=agent_rnn,
         data=environment,
         n_sessions=len(participant_ids),
-        n_trials=n_trials,
+        n_trials_off_policy=n_trials,
         polynomial_degree=polynomial_degree,
         library_setup=library_setup,
         filter_setup=filter_setup,

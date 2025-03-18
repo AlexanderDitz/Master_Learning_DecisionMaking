@@ -11,7 +11,7 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from resources.model_evaluation import bayesian_information_criterion, log_likelihood
-from resources.bandits import BanditsDrift, AgentQ, AgentNetwork
+from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, get_update_dynamics, create_dataset as create_dataset_bandits
 from resources.rnn import RLRNN
 from resources.rnn_utils import DatasetRNN
 from resources.rnn_training import fit_model
@@ -38,8 +38,8 @@ logger.info(f"Number of actions: {n_actions}")
 
 
 #im using the data generated via create_dataset.py with 128 participants and 1000 trials per participant
-data_path = '/Users/martynaplomecka/closedloop_rl/data/study_recovery_stepperseverance/data_rldm_128p_0.csv'
-data_path = '/Users/martynaplomecka/closedloop_rl/data/study_recovery_stepperseverance/data_rldm_16p_0.csv'
+# data_path = 'data/study_recovery_stepperseverance/data_rldm_128p_0.csv'
+data_path = 'data/study_recovery_stepperseverance/data_rldm_16p_0.csv'
 #data_path= '/Users/martynaplomecka/closedloop_rl/data/study_recovery_stepperseverance/data_rldm_8p_0.csv'
 
 df = pd.read_csv(data_path)
@@ -146,7 +146,7 @@ def run_training_and_evaluation(dataset, label):
         model=model_rnn,
         optimizer=optimizer_rnn,
         dataset_train=dataset,
-        epochs=16,
+        epochs=128,
         n_steps=16,
         scheduler=True,
         convergence_threshold=0,
@@ -155,22 +155,23 @@ def run_training_and_evaluation(dataset, label):
     logger.info(f"Final training loss: {final_train_loss:.7f}")
     
     agent_rnn = AgentNetwork(model_rnn=model_rnn, n_actions=n_actions)
+    participant_ids = agent_rnn.get_participant_ids()
     
     logger.info("\nFitting SINDy...")
     agent_sindy = fit_model_sindy(
         rnn_modules=list_rnn_modules,
         control_parameters=list_control_parameters,
         agent=agent_rnn,
-        data=dataset,            
+        data=dataset,
+        off_policy=True,            
         polynomial_degree=2,
         library_setup=library_setup,
         filter_setup=filter_setup,
         optimizer_threshold=0.05,
         optimizer_alpha=1,
-        n_trials=1024, 
-        n_sessions=1, 
         verbose=True,
     )
+    sindy_params = agent_sindy.count_parameters()
     
     logger.info("\nEvaluating SINDy models...")
     available_participant_ids = set()
@@ -198,36 +199,39 @@ def run_training_and_evaluation(dataset, label):
         
         try:
             # Count SINDy parameters for this participant
-            sindy_params = 0
-            for module_name in list_rnn_modules:
-                if (hasattr(agent_sindy._model, 'submodules_sindy') and 
-                    module_name in agent_sindy._model.submodules_sindy and 
-                    pid in agent_sindy._model.submodules_sindy[module_name]):
-                    try:
-                        sindy_model = agent_sindy._model.submodules_sindy[module_name][pid]
+            # sindy_params = 0
+            # for module_name in list_rnn_modules:
+            #     if (hasattr(agent_sindy._model, 'submodules_sindy') and 
+            #         module_name in agent_sindy._model.submodules_sindy and 
+            #         pid in agent_sindy._model.submodules_sindy[module_name]):
+            #         try:
+            #             sindy_model = agent_sindy._model.submodules_sindy[module_name][pid]
                         # Count non-zero coefficients as parameters
-                        if hasattr(sindy_model, 'coefficients') and callable(sindy_model.coefficients):
-                            coeffs = sindy_model.coefficients()
-                            if coeffs is not None and len(coeffs) > 0:
-                                # Count non-zero coefficients
-                                sindy_params += np.count_nonzero(coeffs[0])
-                    except Exception as e:
-                        logger.error(f"Error counting parameters for module {module_name} participant {pid}: {str(e)}")
+                        # if hasattr(sindy_model, 'coefficients') and callable(sindy_model.coefficients):
+                        #     coeffs = sindy_model.coefficients()
+                        #     if coeffs is not None and len(coeffs) > 0:
+                        #         # Count non-zero coefficients
+                        #         sindy_params += np.count_nonzero(coeffs[0])
+                    # except Exception as e:
+                    #     logger.error(f"Error counting parameters for module {module_name} participant {pid}: {str(e)}")
             
-            logger.info(f"SINDy model parameters for participant {pid}: {sindy_params}")
+            logger.info(f"SINDy model parameters for participant {pid}: {sindy_params[pid]}")
             
-            with torch.no_grad():
-                logits, _ = agent_sindy._model(xs_modified)
-            logits = logits.squeeze(0)
-            probs = torch.softmax(logits, dim=-1).cpu().numpy()
-            choices_np = ys_participant.cpu().numpy().squeeze(0)
+            # with torch.no_grad():
+            #     logits, _ = agent_sindy._model(xs_modified)
+            # logits = logits.squeeze(0)
+            # probs = torch.softmax(logits, dim=-1).cpu().numpy()
+            values, probs, agent_sindy = get_update_dynamics(xs_participant, agent_sindy)
+            values_q, values_reward, values_choice, learning_rates = values
+            choices_np = xs_participant.cpu().numpy().squeeze(0)
+            
             ll = log_likelihood(data=choices_np, probs=probs)
             n_trials = choices_np.shape[0]
             normalized_ll = ll / n_trials  # Normalize log-likelihood by number of trials
             ll_values.append(normalized_ll)  # Save normalized log likelihood
             
             # Use SINDy parameters for BIC calculation
-            bic = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=sindy_params, ll=ll)
+            bic = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=sindy_params[pid], ll=ll)
             normalized_bic = bic / n_trials
             logger.info(f"Participant {pid}: Log-likelihood: {ll:.4f}, Normalized LL: {normalized_ll:.4f}, Raw BIC: {bic:.4f}, Normalized BIC: {normalized_bic:.4f}")
             bic_values.append(normalized_bic)
