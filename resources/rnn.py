@@ -274,6 +274,9 @@ class BaseRNN(nn.Module):
             # keep only actions necessary for that update and set others to zero
             next_value = next_value * action
         
+        # clip next_value to a specific range
+        next_value = torch.clip(input=next_value, min=-1e1, max=1e1)
+        
         if record_signal:
             # record sample for SINDy training 
             self.record_signal(key_module, value.view(-1, self._n_actions), next_value.view(-1, self._n_actions))

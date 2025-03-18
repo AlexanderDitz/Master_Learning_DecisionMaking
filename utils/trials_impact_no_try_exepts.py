@@ -131,7 +131,7 @@ def run_training_and_evaluation(dataset, label):
         model=model_rnn,
         optimizer=optimizer_rnn,
         dataset_train=dataset,
-        epochs=128,
+        epochs=16,
         n_steps=16,
         scheduler=True,
         convergence_threshold=0,
@@ -182,7 +182,7 @@ def run_training_and_evaluation(dataset, label):
         logger.info(f"SINDy model parameters for participant {pid}: {sindy_params[pid]}")
         values, probs, agent_sindy = get_update_dynamics(xs_participant[0], agent_sindy)
         values_q, values_reward, values_choice, learning_rates = values
-        choices_np = xs_participant.cpu().numpy().squeeze(0)
+        choices_np = xs_participant[..., :agent_sindy._n_actions].cpu().numpy().squeeze(0)
         ll = log_likelihood(data=choices_np, probs=probs)
         n_trials = choices_np.shape[0]
         normalized_ll = ll / n_trials

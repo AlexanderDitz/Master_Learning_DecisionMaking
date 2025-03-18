@@ -3597,3 +3597,1657 @@ Evaluating SINDy models...
 2025-03-18 13:43:35,281 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 2025-03-18 13:43:35,281 - INFO - Evaluating participant 0 using its own SINDy model...
 2025-03-18 13:43:35,281 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:19:04,071 - INFO - ================================================================================
+2025-03-18 14:19:04,071 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:19:04,071 - INFO - ================================================================================
+2025-03-18 14:19:04,071 - INFO - Number of actions: 2
+2025-03-18 14:19:04,078 - INFO - Number of participants: 16
+2025-03-18 14:19:04,078 - INFO - ================================================================================
+2025-03-18 14:19:04,078 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:19:04,078 - INFO - ================================================================================
+2025-03-18 14:19:04,169 - INFO - ================================================================================
+2025-03-18 14:19:04,169 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:19:04,169 - INFO - ================================================================================
+2025-03-18 14:19:04,169 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:19:04,169 - INFO - Number of participants in dataset: 16
+2025-03-18 14:19:04,169 - INFO - ================================================================================
+2025-03-18 14:19:04,169 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:19:04,169 - INFO - ================================================================================
+2025-03-18 14:19:04,169 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:19:04,170 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:19:04,170 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:19:04,170 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:19:04,170 - INFO - 
+Training RNN...
+2025-03-18 14:19:04,171 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:19:04,632 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:19:48,945 - INFO - Final training loss: 0.3166925
+2025-03-18 14:19:48,946 - INFO - 
+Fitting SINDy...
+2025-03-18 14:20:04,649 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:20:04,649 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:20:04,649 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:20:04,649 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:20:45,895 - INFO - ================================================================================
+2025-03-18 14:20:45,895 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:20:45,895 - INFO - ================================================================================
+2025-03-18 14:20:45,895 - INFO - Number of actions: 2
+2025-03-18 14:20:45,901 - INFO - Number of participants: 16
+2025-03-18 14:20:45,902 - INFO - ================================================================================
+2025-03-18 14:20:45,902 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:20:45,902 - INFO - ================================================================================
+2025-03-18 14:20:45,987 - INFO - ================================================================================
+2025-03-18 14:20:45,987 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:20:45,987 - INFO - ================================================================================
+2025-03-18 14:20:45,987 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:20:45,987 - INFO - Number of participants in dataset: 16
+2025-03-18 14:20:45,987 - INFO - ================================================================================
+2025-03-18 14:20:45,987 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:20:45,987 - INFO - ================================================================================
+2025-03-18 14:20:45,987 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:20:45,988 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:20:45,988 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:20:45,988 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:20:45,988 - INFO - 
+Training RNN...
+2025-03-18 14:20:45,989 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:20:46,446 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:21:29,566 - INFO - Final training loss: 0.3166925
+2025-03-18 14:21:29,566 - INFO - 
+Fitting SINDy...
+2025-03-18 14:21:45,079 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:21:45,079 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:21:45,079 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:21:45,080 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:21:45,353 - INFO - Participant 0: Log-likelihood: -47.1440, Normalized LL: -0.4714, Raw BIC: 98.8932, Normalized BIC: 0.9889
+2025-03-18 14:21:45,353 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:21:45,354 - INFO - SINDy model parameters for participant 1: 2
+2025-03-18 14:21:45,632 - INFO - Participant 1: Log-likelihood: -40.5718, Normalized LL: -0.4057, Raw BIC: 90.3539, Normalized BIC: 0.9035
+2025-03-18 14:21:45,632 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:21:45,632 - INFO - SINDy model parameters for participant 2: 1
+2025-03-18 14:21:45,902 - INFO - Participant 2: Log-likelihood: -2.8515, Normalized LL: -0.0285, Raw BIC: 10.3082, Normalized BIC: 0.1031
+2025-03-18 14:21:45,902 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:21:45,902 - INFO - SINDy model parameters for participant 3: 3
+2025-03-18 14:22:19,088 - INFO - ================================================================================
+2025-03-18 14:22:19,089 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:22:19,089 - INFO - ================================================================================
+2025-03-18 14:22:19,089 - INFO - Number of actions: 2
+2025-03-18 14:22:19,097 - INFO - Number of participants: 16
+2025-03-18 14:22:19,097 - INFO - ================================================================================
+2025-03-18 14:22:19,097 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:22:19,097 - INFO - ================================================================================
+2025-03-18 14:22:19,270 - INFO - ================================================================================
+2025-03-18 14:22:19,270 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:22:19,270 - INFO - ================================================================================
+2025-03-18 14:22:19,270 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:22:19,271 - INFO - Number of participants in dataset: 16
+2025-03-18 14:22:19,271 - INFO - ================================================================================
+2025-03-18 14:22:19,271 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:22:19,271 - INFO - ================================================================================
+2025-03-18 14:22:19,271 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:22:19,272 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:22:19,272 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:22:19,272 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:22:19,272 - INFO - 
+Training RNN...
+2025-03-18 14:22:19,274 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:22:20,130 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:23:10,699 - INFO - Final training loss: 0.3166925
+2025-03-18 14:23:10,700 - INFO - 
+Fitting SINDy...
+2025-03-18 14:23:38,373 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:23:38,373 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:23:38,373 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:23:38,373 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:23:38,935 - INFO - Participant 0: Log-likelihood: -47.1440, Normalized LL: -0.4714, Raw BIC: 98.8932, Normalized BIC: 0.9889
+2025-03-18 14:23:38,935 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:23:38,936 - INFO - SINDy model parameters for participant 1: 2
+2025-03-18 14:23:39,500 - INFO - Participant 1: Log-likelihood: -40.5718, Normalized LL: -0.4057, Raw BIC: 90.3539, Normalized BIC: 0.9035
+2025-03-18 14:23:39,500 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:23:39,500 - INFO - SINDy model parameters for participant 2: 1
+2025-03-18 14:23:40,064 - INFO - Participant 2: Log-likelihood: -2.8515, Normalized LL: -0.0285, Raw BIC: 10.3082, Normalized BIC: 0.1031
+2025-03-18 14:23:40,064 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:23:40,065 - INFO - SINDy model parameters for participant 3: 3
+2025-03-18 14:30:10,564 - INFO - ================================================================================
+2025-03-18 14:30:10,564 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:30:10,564 - INFO - ================================================================================
+2025-03-18 14:30:10,564 - INFO - Number of actions: 2
+2025-03-18 14:30:10,570 - INFO - Number of participants: 16
+2025-03-18 14:30:10,570 - INFO - ================================================================================
+2025-03-18 14:30:10,570 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:30:10,570 - INFO - ================================================================================
+2025-03-18 14:30:10,658 - INFO - ================================================================================
+2025-03-18 14:30:10,658 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:30:10,658 - INFO - ================================================================================
+2025-03-18 14:30:10,658 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:30:10,658 - INFO - Number of participants in dataset: 16
+2025-03-18 14:30:10,658 - INFO - ================================================================================
+2025-03-18 14:30:10,658 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:30:10,658 - INFO - ================================================================================
+2025-03-18 14:30:10,658 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:30:10,659 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:30:10,659 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:30:10,659 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:30:10,659 - INFO - 
+Training RNN...
+2025-03-18 14:30:10,660 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:30:11,124 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:30:58,326 - INFO - Final training loss: 0.3166925
+2025-03-18 14:30:58,327 - INFO - 
+Fitting SINDy...
+2025-03-18 14:31:14,341 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:31:14,341 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:31:14,341 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:31:14,342 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:31:14,615 - INFO - Participant 0: Log-likelihood: -47.1440, Normalized LL: -0.4714, Raw BIC: 98.8932, Normalized BIC: 0.9889
+2025-03-18 14:31:14,615 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:31:14,615 - INFO - SINDy model parameters for participant 1: 2
+2025-03-18 14:31:14,889 - INFO - Participant 1: Log-likelihood: -40.5718, Normalized LL: -0.4057, Raw BIC: 90.3539, Normalized BIC: 0.9035
+2025-03-18 14:31:14,890 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:31:14,890 - INFO - SINDy model parameters for participant 2: 1
+2025-03-18 14:31:15,165 - INFO - Participant 2: Log-likelihood: -2.8515, Normalized LL: -0.0285, Raw BIC: 10.3082, Normalized BIC: 0.1031
+2025-03-18 14:31:15,165 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:31:15,165 - INFO - SINDy model parameters for participant 3: 3
+2025-03-18 14:31:15,447 - INFO - Participant 3: Log-likelihood: -3130.9634, Normalized LL: -31.3096, Raw BIC: 6275.7424, Normalized BIC: 62.7574
+2025-03-18 14:31:15,448 - INFO - Evaluating participant 4 using its own SINDy model...
+2025-03-18 14:31:15,448 - INFO - SINDy model parameters for participant 4: 2
+2025-03-18 14:31:15,745 - INFO - Participant 4: Log-likelihood: -12.4799, Normalized LL: -0.1248, Raw BIC: 34.1702, Normalized BIC: 0.3417
+2025-03-18 14:31:15,745 - INFO - Evaluating participant 5 using its own SINDy model...
+2025-03-18 14:31:15,745 - INFO - SINDy model parameters for participant 5: 3
+2025-03-18 14:31:16,060 - INFO - Participant 5: Log-likelihood: nan, Normalized LL: nan, Raw BIC: nan, Normalized BIC: nan
+2025-03-18 14:31:16,060 - INFO - Evaluating participant 6 using its own SINDy model...
+2025-03-18 14:31:16,060 - INFO - SINDy model parameters for participant 6: 2
+2025-03-18 14:31:16,351 - INFO - Participant 6: Log-likelihood: nan, Normalized LL: nan, Raw BIC: nan, Normalized BIC: nan
+2025-03-18 14:31:16,351 - INFO - Evaluating participant 7 using its own SINDy model...
+2025-03-18 14:31:16,352 - INFO - SINDy model parameters for participant 7: 2
+2025-03-18 14:31:16,643 - INFO - Participant 7: Log-likelihood: nan, Normalized LL: nan, Raw BIC: nan, Normalized BIC: nan
+2025-03-18 14:31:16,643 - INFO - Evaluating participant 8 using its own SINDy model...
+2025-03-18 14:31:16,643 - INFO - SINDy model parameters for participant 8: 3
+2025-03-18 14:31:16,922 - INFO - Participant 8: Log-likelihood: -37.6847, Normalized LL: -0.3768, Raw BIC: 89.1849, Normalized BIC: 0.8918
+2025-03-18 14:31:16,922 - INFO - Evaluating participant 9 using its own SINDy model...
+2025-03-18 14:31:16,923 - INFO - SINDy model parameters for participant 9: 0
+2025-03-18 14:31:17,198 - INFO - Participant 9: Log-likelihood: -60.8187, Normalized LL: -0.6082, Raw BIC: 121.6374, Normalized BIC: 1.2164
+2025-03-18 14:31:17,198 - INFO - Evaluating participant 10 using its own SINDy model...
+2025-03-18 14:31:17,198 - INFO - SINDy model parameters for participant 10: 1
+2025-03-18 14:31:17,477 - INFO - Participant 10: Log-likelihood: -63.8813, Normalized LL: -0.6388, Raw BIC: 132.3678, Normalized BIC: 1.3237
+2025-03-18 14:31:17,477 - INFO - Evaluating participant 11 using its own SINDy model...
+2025-03-18 14:31:17,478 - INFO - SINDy model parameters for participant 11: 3
+2025-03-18 14:31:17,752 - INFO - Participant 11: Log-likelihood: -954.4860, Normalized LL: -9.5449, Raw BIC: 1922.7875, Normalized BIC: 19.2279
+2025-03-18 14:31:17,753 - INFO - Evaluating participant 12 using its own SINDy model...
+2025-03-18 14:31:17,753 - INFO - SINDy model parameters for participant 12: 0
+2025-03-18 14:31:18,030 - INFO - Participant 12: Log-likelihood: -67.8096, Normalized LL: -0.6781, Raw BIC: 135.6192, Normalized BIC: 1.3562
+2025-03-18 14:31:18,030 - INFO - Evaluating participant 13 using its own SINDy model...
+2025-03-18 14:31:18,030 - INFO - SINDy model parameters for participant 13: 2
+2025-03-18 14:31:18,317 - INFO - Participant 13: Log-likelihood: -67.1318, Normalized LL: -0.6713, Raw BIC: 143.4739, Normalized BIC: 1.4347
+2025-03-18 14:31:18,317 - INFO - Evaluating participant 14 using its own SINDy model...
+2025-03-18 14:31:18,317 - INFO - SINDy model parameters for participant 14: 2
+2025-03-18 14:31:18,594 - INFO - Participant 14: Log-likelihood: -51.0545, Normalized LL: -0.5105, Raw BIC: 111.3194, Normalized BIC: 1.1132
+2025-03-18 14:31:18,594 - INFO - Evaluating participant 15 using its own SINDy model...
+2025-03-18 14:31:18,594 - INFO - SINDy model parameters for participant 15: 3
+2025-03-18 14:31:18,900 - INFO - Participant 15: Log-likelihood: -16.8531, Normalized LL: -0.1685, Raw BIC: 47.5218, Normalized BIC: 0.4752
+2025-03-18 14:31:18,901 - INFO - 
+Average SINDy BIC for 100 trials per participant: nan
+2025-03-18 14:31:18,901 - INFO - 
+Average Normalized Log Likelihood for 100 trials per participant: nan
+2025-03-18 14:31:18,901 - INFO - 
+Identified SINDy equations:
+2025-03-18 14:31:18,901 - INFO - Module: x_learning_rate_reward
+2025-03-18 14:31:18,903 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,903 - INFO -   Participant 0 Coefficients: [ 0.27712132 -1.25999677  0.35849194  0.          1.94554293 -0.26338568
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,903 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,904 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,904 - INFO -   Participant 1 Coefficients: [ 0.15911067  0.31919582  0.50091117 -0.29938316  0.          0.31003186
+  0.          0.         -0.54586246  0.30019607]
+2025-03-18 14:31:18,904 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,906 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,906 - INFO -   Participant 2 Coefficients: [ 0.92580059 -0.95760338  0.          0.          1.03436583  0.
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,906 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,908 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,908 - INFO -   Participant 3 Coefficients: [  0.99968251  -0.17817922  -0.26837804   0.           0.
+   0.65651887   0.           0.           5.57034859 -17.14137869]
+2025-03-18 14:31:18,908 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,909 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,909 - INFO -   Participant 4 Coefficients: [0.90479781 0.         0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,909 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,911 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,911 - INFO -   Participant 5 Coefficients: [ 0.69485286  0.          0.34280144 -0.18207069  0.24336633  0.
+ -0.13514032  0.          0.06559809  0.        ]
+2025-03-18 14:31:18,911 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,913 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,913 - INFO -   Participant 6 Coefficients: [ 0.72032019  0.14671453  0.63941721 -0.30956108  0.          0.
+  0.          0.         -0.08069863  0.        ]
+2025-03-18 14:31:18,913 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,914 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,914 - INFO -   Participant 7 Coefficients: [ 0.86775957  0.09689589  0.55892686 -0.50379835  0.          0.
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,914 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,916 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,916 - INFO -   Participant 8 Coefficients: [0.8817638  0.         0.         0.         0.05889698 0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,916 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,917 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,917 - INFO -   Participant 9 Coefficients: [ 0.06697586  1.80815104  0.14676128  0.         -1.62708938  0.36002122
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,918 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,919 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,919 - INFO -   Participant 10 Coefficients: [ 0.7164339   0.18914017  0.16605983  0.          0.         -0.1114346
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,919 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,921 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,921 - INFO -   Participant 11 Coefficients: [ 0.6483072   0.24365925  1.44239912 -1.13621347  0.          0.
+  0.          0.         -1.71617719  1.21396142]
+2025-03-18 14:31:18,921 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,922 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,922 - INFO -   Participant 12 Coefficients: [ 0.29412203  1.37641306  0.36660898  0.         -0.76998391 -0.3770029
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,922 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,924 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,924 - INFO -   Participant 13 Coefficients: [ 0.22574896  1.16903437  0.38125106  0.         -0.56995015 -0.30231461
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,924 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,926 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,926 - INFO -   Participant 14 Coefficients: [ 0.37413289  1.14385154  0.38135294  0.         -0.58927593 -0.40620504
+  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,926 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,927 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,927 - INFO -   Participant 15 Coefficients: [0.9129767 0.        0.        0.        0.        0.        0.
+ 0.        0.        0.       ]
+2025-03-18 14:31:18,927 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:31:18,927 - INFO - Module: x_value_reward_not_chosen
+2025-03-18 14:31:18,929 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,929 - INFO -   Participant 0 Coefficients: [-1.60118123  0.07198959  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,929 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,930 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,930 - INFO -   Participant 1 Coefficients: [0.79151464 0.40777998 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,930 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,931 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,931 - INFO -   Participant 2 Coefficients: [-2.92770611  0.58631972  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,931 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,933 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,933 - INFO -   Participant 3 Coefficients: [-1.56889744  0.09369627  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,933 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,934 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,934 - INFO -   Participant 4 Coefficients: [-1.54633808  0.14902092  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,934 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,935 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,936 - INFO -   Participant 5 Coefficients: [-1.08181889  0.44298122  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,936 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,937 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,937 - INFO -   Participant 6 Coefficients: [-1.491723    0.31043158  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,937 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,938 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,938 - INFO -   Participant 7 Coefficients: [0.94558351 0.22430297 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,938 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,939 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,940 - INFO -   Participant 8 Coefficients: [-1.12489764 -0.27957502  0.         -0.26309213  0.          0.        ]
+2025-03-18 14:31:18,940 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,941 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,941 - INFO -   Participant 9 Coefficients: [2.30744452 0.66552653 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,941 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,942 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,942 - INFO -   Participant 10 Coefficients: [-0.52403984  0.27040371  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,942 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,944 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,944 - INFO -   Participant 11 Coefficients: [-1.71291601  0.1750234   0.          0.          0.          0.        ]
+2025-03-18 14:31:18,944 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,945 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,945 - INFO -   Participant 12 Coefficients: [0.54608502 0.84094646 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,945 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,946 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,946 - INFO -   Participant 13 Coefficients: [0.50215543 0.36478617 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,946 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,948 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,948 - INFO -   Participant 14 Coefficients: [0.47792755 0.5927243  0.         0.         0.         0.        ]
+2025-03-18 14:31:18,948 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,949 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,949 - INFO -   Participant 15 Coefficients: [-2.00961471  0.08861293  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,949 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:31:18,949 - INFO - Module: x_value_choice_chosen
+2025-03-18 14:31:18,951 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,951 - INFO -   Participant 0 Coefficients: [0.7725839 0.        0.        0.        0.        0.       ]
+2025-03-18 14:31:18,951 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,952 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,952 - INFO -   Participant 1 Coefficients: [0.92140685 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,952 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,953 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,954 - INFO -   Participant 2 Coefficients: [0.7385959 0.        0.        0.        0.        0.       ]
+2025-03-18 14:31:18,954 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,955 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,955 - INFO -   Participant 3 Coefficients: [0.87569006 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,955 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,956 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,956 - INFO -   Participant 4 Coefficients: [0.89281157 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,956 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,957 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,958 - INFO -   Participant 5 Coefficients: [0.87167392 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,958 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,959 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,959 - INFO -   Participant 6 Coefficients: [0.87052245 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,959 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,960 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,960 - INFO -   Participant 7 Coefficients: [0.9724798 0.        0.        0.        0.        0.       ]
+2025-03-18 14:31:18,960 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,962 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,962 - INFO -   Participant 8 Coefficients: [0.87497666 0.0592956  0.         0.         0.         0.        ]
+2025-03-18 14:31:18,962 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,963 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,963 - INFO -   Participant 9 Coefficients: [0.95771698 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,963 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,964 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,965 - INFO -   Participant 10 Coefficients: [0.82530832 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,965 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,966 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,966 - INFO -   Participant 11 Coefficients: [0.87061751 0.0514106  0.         0.         0.         0.        ]
+2025-03-18 14:31:18,966 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,967 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,967 - INFO -   Participant 12 Coefficients: [0.88268091 0.07454658 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,967 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,969 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,969 - INFO -   Participant 13 Coefficients: [0.85495555 0.111283   0.         0.         0.         0.        ]
+2025-03-18 14:31:18,969 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,970 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,970 - INFO -   Participant 14 Coefficients: [0.89340154 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,970 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,971 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,971 - INFO -   Participant 15 Coefficients: [0.85705316 0.06589959 0.         0.         0.         0.        ]
+2025-03-18 14:31:18,971 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:31:18,972 - INFO - Module: x_value_choice_not_chosen
+2025-03-18 14:31:18,973 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,973 - INFO -   Participant 0 Coefficients: [0.55216533 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,973 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,974 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,974 - INFO -   Participant 1 Coefficients: [ 0.33345211 -0.09381794  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,974 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,976 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,976 - INFO -   Participant 2 Coefficients: [0.92555404 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,976 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,977 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,977 - INFO -   Participant 3 Coefficients: [ 0.74018778 -0.54170783  0.          0.10533214  0.          0.        ]
+2025-03-18 14:31:18,977 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,978 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,978 - INFO -   Participant 4 Coefficients: [ 0.62101858 -0.15314399  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,978 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,980 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,980 - INFO -   Participant 5 Coefficients: [ 0.61968634 -0.48985603  0.          0.10132519  0.          0.        ]
+2025-03-18 14:31:18,980 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,981 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,981 - INFO -   Participant 6 Coefficients: [ 0.65992197 -0.22007956  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,981 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,982 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,982 - INFO -   Participant 7 Coefficients: [ 0.29451518 -0.05567262  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,982 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,984 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,984 - INFO -   Participant 8 Coefficients: [ 0.75204348 -0.57989216  0.          0.12007304  0.          0.        ]
+2025-03-18 14:31:18,984 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,985 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,985 - INFO -   Participant 9 Coefficients: [0. 0. 0. 0. 0. 0.]
+2025-03-18 14:31:18,985 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,986 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,987 - INFO -   Participant 10 Coefficients: [0.20003881 0.         0.         0.         0.         0.        ]
+2025-03-18 14:31:18,987 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,988 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,988 - INFO -   Participant 11 Coefficients: [ 0.77040908 -0.57348099  0.          0.11600855  0.          0.        ]
+2025-03-18 14:31:18,988 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,989 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,989 - INFO -   Participant 12 Coefficients: [0. 0. 0. 0. 0. 0.]
+2025-03-18 14:31:18,989 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,991 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,991 - INFO -   Participant 13 Coefficients: [ 0.14325852 -0.17584616  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,991 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,992 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,992 - INFO -   Participant 14 Coefficients: [ 0.12569559 -0.05136569  0.          0.          0.          0.        ]
+2025-03-18 14:31:18,992 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,993 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:31:18,993 - INFO -   Participant 15 Coefficients: [ 0.70477751 -0.58144064  0.          0.13242106  0.          0.        ]
+2025-03-18 14:31:18,993 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:31:18,994 - INFO - Creating dataset subset with 200 trials per participant
+2025-03-18 14:31:18,995 - INFO - Subset with 200 trials per participant:
+2025-03-18 14:31:18,995 - INFO -   Dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:31:18,995 - INFO - 
+==== Running pipeline for dataset: 200 trials per participant ====
+2025-03-18 14:31:18,995 - INFO - 
+Training RNN...
+2025-03-18 14:31:18,996 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:31:18,996 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:32:56,612 - INFO - Final training loss: 0.3255879
+2025-03-18 14:32:56,612 - INFO - 
+Fitting SINDy...
+2025-03-18 14:33:13,442 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:33:13,442 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:33:13,443 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:33:13,443 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:33:14,048 - INFO - Participant 0: Log-likelihood: -71.9964, Normalized LL: -0.3600, Raw BIC: 149.2911, Normalized BIC: 0.7465
+2025-03-18 14:33:14,048 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:33:14,049 - INFO - SINDy model parameters for participant 1: 1
+2025-03-18 14:33:14,667 - INFO - Participant 1: Log-likelihood: -252.5557, Normalized LL: -1.2628, Raw BIC: 510.4097, Normalized BIC: 2.5520
+2025-03-18 14:33:14,667 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:33:14,667 - INFO - SINDy model parameters for participant 2: 1
+2025-03-18 14:33:15,270 - INFO - Participant 2: Log-likelihood: -13.0640, Normalized LL: -0.0653, Raw BIC: 31.4264, Normalized BIC: 0.1571
+2025-03-18 14:33:15,270 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:33:15,271 - INFO - SINDy model parameters for participant 3: 2
+2025-03-18 14:33:15,890 - INFO - Participant 3: Log-likelihood: nan, Normalized LL: nan, Raw BIC: nan, Normalized BIC: nan
+2025-03-18 14:33:15,890 - INFO - Evaluating participant 4 using its own SINDy model...
+2025-03-18 14:33:15,890 - INFO - SINDy model parameters for participant 4: 1
+2025-03-18 14:33:16,505 - INFO - Participant 4: Log-likelihood: -22.4236, Normalized LL: -0.1121, Raw BIC: 50.1455, Normalized BIC: 0.2507
+2025-03-18 14:33:16,505 - INFO - Evaluating participant 5 using its own SINDy model...
+2025-03-18 14:33:16,505 - INFO - SINDy model parameters for participant 5: 1
+2025-03-18 14:33:17,114 - INFO - Participant 5: Log-likelihood: -0.3301, Normalized LL: -0.0017, Raw BIC: 5.9584, Normalized BIC: 0.0298
+2025-03-18 14:33:17,114 - INFO - Evaluating participant 6 using its own SINDy model...
+2025-03-18 14:33:17,114 - INFO - SINDy model parameters for participant 6: 2
+2025-03-18 14:33:17,721 - INFO - Participant 6: Log-likelihood: -11.2917, Normalized LL: -0.0565, Raw BIC: 33.1800, Normalized BIC: 0.1659
+2025-03-18 14:33:17,721 - INFO - Evaluating participant 7 using its own SINDy model...
+2025-03-18 14:33:17,722 - INFO - SINDy model parameters for participant 7: 2
+2025-03-18 14:33:18,340 - INFO - Participant 7: Log-likelihood: -45.9440, Normalized LL: -0.2297, Raw BIC: 102.4846, Normalized BIC: 0.5124
+2025-03-18 14:33:18,340 - INFO - Evaluating participant 8 using its own SINDy model...
+2025-03-18 14:33:18,340 - INFO - SINDy model parameters for participant 8: 1
+2025-03-18 14:33:18,954 - INFO - Participant 8: Log-likelihood: -67.2055, Normalized LL: -0.3360, Raw BIC: 139.7093, Normalized BIC: 0.6985
+2025-03-18 14:33:18,954 - INFO - Evaluating participant 9 using its own SINDy model...
+2025-03-18 14:33:18,954 - INFO - SINDy model parameters for participant 9: 1
+2025-03-18 14:33:19,555 - INFO - Participant 9: Log-likelihood: -188.3324, Normalized LL: -0.9417, Raw BIC: 381.9632, Normalized BIC: 1.9098
+2025-03-18 14:33:19,555 - INFO - Evaluating participant 10 using its own SINDy model...
+2025-03-18 14:33:19,555 - INFO - SINDy model parameters for participant 10: 1
+2025-03-18 14:33:20,174 - INFO - Participant 10: Log-likelihood: nan, Normalized LL: nan, Raw BIC: nan, Normalized BIC: nan
+2025-03-18 14:33:20,174 - INFO - Evaluating participant 11 using its own SINDy model...
+2025-03-18 14:33:20,174 - INFO - SINDy model parameters for participant 11: 1
+2025-03-18 14:33:20,792 - INFO - Participant 11: Log-likelihood: -41.8017, Normalized LL: -0.2090, Raw BIC: 88.9017, Normalized BIC: 0.4445
+2025-03-18 14:33:20,792 - INFO - Evaluating participant 12 using its own SINDy model...
+2025-03-18 14:33:20,792 - INFO - SINDy model parameters for participant 12: 1
+2025-03-18 14:33:21,391 - INFO - Participant 12: Log-likelihood: -137.7331, Normalized LL: -0.6887, Raw BIC: 280.7644, Normalized BIC: 1.4038
+2025-03-18 14:33:21,391 - INFO - Evaluating participant 13 using its own SINDy model...
+2025-03-18 14:33:21,391 - INFO - SINDy model parameters for participant 13: 1
+2025-03-18 14:33:21,997 - INFO - Participant 13: Log-likelihood: -130.7978, Normalized LL: -0.6540, Raw BIC: 266.8939, Normalized BIC: 1.3345
+2025-03-18 14:33:21,997 - INFO - Evaluating participant 14 using its own SINDy model...
+2025-03-18 14:33:21,997 - INFO - SINDy model parameters for participant 14: 1
+2025-03-18 14:33:22,618 - INFO - Participant 14: Log-likelihood: -1182.2277, Normalized LL: -5.9111, Raw BIC: 2369.7536, Normalized BIC: 11.8488
+2025-03-18 14:33:22,618 - INFO - Evaluating participant 15 using its own SINDy model...
+2025-03-18 14:33:22,618 - INFO - SINDy model parameters for participant 15: 2
+2025-03-18 14:33:23,230 - INFO - Participant 15: Log-likelihood: -30.0958, Normalized LL: -0.1505, Raw BIC: 70.7882, Normalized BIC: 0.3539
+2025-03-18 14:33:23,230 - INFO - 
+Average SINDy BIC for 200 trials per participant: nan
+2025-03-18 14:33:23,230 - INFO - 
+Average Normalized Log Likelihood for 200 trials per participant: nan
+2025-03-18 14:33:23,230 - INFO - 
+Identified SINDy equations:
+2025-03-18 14:33:23,230 - INFO - Module: x_learning_rate_reward
+2025-03-18 14:33:23,231 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,231 - INFO -   Participant 0 Coefficients: [0.99166044 0.         0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,231 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,233 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,233 - INFO -   Participant 1 Coefficients: [ 0.67956984  0.44669356  0.11003229  1.04703819 -0.13817686 -0.29236363
+  0.          0.         -0.95437106  0.59681551]
+2025-03-18 14:33:23,233 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,235 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,235 - INFO -   Participant 2 Coefficients: [ 8.40303999e-01  4.12405462e-01  0.00000000e+00  3.98184639e+00
+ -2.59210113e-01 -2.36970515e+01  5.68484204e+02  0.00000000e+00
+ -9.56879337e-01  7.77413916e+00]
+2025-03-18 14:33:23,235 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,236 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,237 - INFO -   Participant 3 Coefficients: [ 0.3665878   0.8177238   0.3402082   0.60291251 -0.21269892 -2.02111588
+  4.29074818  0.          0.          0.31154896]
+2025-03-18 14:33:23,237 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,238 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,238 - INFO -   Participant 4 Coefficients: [ 0.09813207  1.36470695  0.56716562  0.         -0.58305811 -0.48090795
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,238 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,240 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,240 - INFO -   Participant 5 Coefficients: [ 0.37755938  1.67065104  0.36935444  0.         -1.05781563 -0.41571962
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,240 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,242 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,242 - INFO -   Participant 6 Coefficients: [ 0.14386405  1.85783604  0.48126327  0.         -1.03155703 -0.51091367
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,242 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,243 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,243 - INFO -   Participant 7 Coefficients: [ 0.50261455  1.12135065  0.43367568  0.         -0.63686615 -0.45799388
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,243 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,245 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,245 - INFO -   Participant 8 Coefficients: [ 0.28718402  1.92289129  0.530103    0.         -1.23553399 -0.57332196
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,245 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,247 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,247 - INFO -   Participant 9 Coefficients: [0.74436816 0.17448284 0.         0.         0.         0.
+ 0.         0.         0.05944721 0.        ]
+2025-03-18 14:33:23,247 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,248 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,248 - INFO -   Participant 10 Coefficients: [ 0.1923126   0.76398187  0.45391034  0.20875781  0.         -1.32271545
+  0.66240702  0.          0.          0.12800056]
+2025-03-18 14:33:23,248 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,250 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,250 - INFO -   Participant 11 Coefficients: [ 0.1993733   1.87759851  0.45458552  0.         -1.11246723 -0.48895023
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,250 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,251 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,252 - INFO -   Participant 12 Coefficients: [ 0.46183999  0.88137479  0.49097162  0.         -0.35731077 -0.51336501
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,252 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,253 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,253 - INFO -   Participant 13 Coefficients: [ 0.34860051  0.62231575  0.59543546  0.          0.         -0.58236087
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,253 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,255 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,255 - INFO -   Participant 14 Coefficients: [ 0.79851801  0.17519457  0.          4.3190157   0.         -3.12466314
+ 13.25775599  0.         -5.27021354  9.00054179]
+2025-03-18 14:33:23,255 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,257 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,257 - INFO -   Participant 15 Coefficients: [ 0.          0.6792683   0.19503969  0.         -0.67389402  0.72899705
+  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,257 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:33:23,257 - INFO - Module: x_value_reward_not_chosen
+2025-03-18 14:33:23,258 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,258 - INFO -   Participant 0 Coefficients: [-2.97543788 -0.34682985  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,258 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,259 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,260 - INFO -   Participant 1 Coefficients: [-2.29539161 -0.80980934  0.         -0.14268344  0.          0.        ]
+2025-03-18 14:33:23,260 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,261 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,261 - INFO -   Participant 2 Coefficients: [-3.45893935  0.48687383  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,261 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,262 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,262 - INFO -   Participant 3 Coefficients: [-2.26737745  0.90471958  0.          0.38362725  0.          0.        ]
+2025-03-18 14:33:23,262 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,264 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,264 - INFO -   Participant 4 Coefficients: [-1.39011679  0.61877495  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,264 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,265 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,265 - INFO -   Participant 5 Coefficients: [-3.63175946  0.44285907  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,265 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,267 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,267 - INFO -   Participant 6 Coefficients: [-3.36963331 -0.2546096   0.         -0.10673126  0.          0.        ]
+2025-03-18 14:33:23,267 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,268 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,268 - INFO -   Participant 7 Coefficients: [-1.4811872   0.40812057  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,268 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,269 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,270 - INFO -   Participant 8 Coefficients: [-3.39332983 -1.19474645  0.         -0.25055971  0.          0.        ]
+2025-03-18 14:33:23,270 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,271 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,271 - INFO -   Participant 9 Coefficients: [2.27819944 0.07090174 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,271 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,272 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,272 - INFO -   Participant 10 Coefficients: [-0.92536462  0.36687357  0.          0.48278034  0.          0.        ]
+2025-03-18 14:33:23,272 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,274 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,274 - INFO -   Participant 11 Coefficients: [-3.94301877 -0.92940597  0.         -0.18651582  0.          0.        ]
+2025-03-18 14:33:23,274 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,275 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,275 - INFO -   Participant 12 Coefficients: [0.09427181 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,275 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,276 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,276 - INFO -   Participant 13 Coefficients: [0.56081013 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,277 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,278 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,278 - INFO -   Participant 14 Coefficients: [-1.44717329 -0.29992604  0.          0.          0.          0.        ]
+2025-03-18 14:33:23,278 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,279 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_reward_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,279 - INFO -   Participant 15 Coefficients: [-3.8873733  -0.6609222   0.         -0.14457793  0.          0.        ]
+2025-03-18 14:33:23,279 - INFO -   Feature names: ['x_value_reward_not_chosen', 'dummy']
+2025-03-18 14:33:23,279 - INFO - Module: x_value_choice_chosen
+2025-03-18 14:33:23,281 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,281 - INFO -   Participant 0 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,281 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,282 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,282 - INFO -   Participant 1 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,282 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,283 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,284 - INFO -   Participant 2 Coefficients: [0.55376197 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,284 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,285 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,285 - INFO -   Participant 3 Coefficients: [0.56210657 0.22018261 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,285 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,286 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,286 - INFO -   Participant 4 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,286 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,288 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,288 - INFO -   Participant 5 Coefficients: [0.55376208 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,288 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,289 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,289 - INFO -   Participant 6 Coefficients: [0.58749934 0.1515992  0.         0.         0.         0.        ]
+2025-03-18 14:33:23,289 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,290 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,290 - INFO -   Participant 7 Coefficients: [0.56037723 0.22177218 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,291 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,292 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,292 - INFO -   Participant 8 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,292 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,293 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,293 - INFO -   Participant 9 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,293 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,295 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,295 - INFO -   Participant 10 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,295 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,296 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,296 - INFO -   Participant 11 Coefficients: [0.55849433 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,296 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,298 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,298 - INFO -   Participant 12 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,298 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,299 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,299 - INFO -   Participant 13 Coefficients: [0.55283701 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,299 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,300 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,300 - INFO -   Participant 14 Coefficients: [0.56311333 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,300 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,302 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,302 - INFO -   Participant 15 Coefficients: [0.55310953 0.24282566 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,302 - INFO -   Feature names: ['x_value_choice_chosen', 'dummy']
+2025-03-18 14:33:23,302 - INFO - Module: x_value_choice_not_chosen
+2025-03-18 14:33:23,303 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,303 - INFO -   Participant 0 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,303 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,304 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,305 - INFO -   Participant 1 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,305 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,306 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,306 - INFO -   Participant 2 Coefficients: [0.28236774 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,306 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,307 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,307 - INFO -   Participant 3 Coefficients: [0.27053916 0.24434069 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,307 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,309 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,309 - INFO -   Participant 4 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,309 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,310 - INFO -   Participant 5 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,310 - INFO -   Participant 5 Coefficients: [0.28236781 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,310 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,311 - INFO -   Participant 6 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,312 - INFO -   Participant 6 Coefficients: [0.29692178 0.20782833 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,312 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,313 - INFO -   Participant 7 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,313 - INFO -   Participant 7 Coefficients: [0.36097302 0.         0.         0.16260052 0.         0.        ]
+2025-03-18 14:33:23,313 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,314 - INFO -   Participant 8 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,314 - INFO -   Participant 8 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,314 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,316 - INFO -   Participant 9 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,316 - INFO -   Participant 9 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,316 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,317 - INFO -   Participant 10 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,317 - INFO -   Participant 10 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,317 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,319 - INFO -   Participant 11 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,319 - INFO -   Participant 11 Coefficients: [0.28623112 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,319 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,320 - INFO -   Participant 12 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,320 - INFO -   Participant 12 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,320 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,321 - INFO -   Participant 13 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,322 - INFO -   Participant 13 Coefficients: [0.28161722 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,322 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,323 - INFO -   Participant 14 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,323 - INFO -   Participant 14 Coefficients: [0.29004034 0.         0.         0.         0.         0.        ]
+2025-03-18 14:33:23,323 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:23,324 - INFO -   Participant 15 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_value_choice_not_chosen', 'dummy'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:33:23,325 - INFO -   Participant 15 Coefficients: [0.28099002 0.21325301 0.         0.         0.         0.        ]
+2025-03-18 14:33:23,325 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 14:33:53,999 - INFO - ================================================================================
+2025-03-18 14:33:53,999 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:33:53,999 - INFO - ================================================================================
+2025-03-18 14:33:53,999 - INFO - Number of actions: 2
+2025-03-18 14:33:54,007 - INFO - Number of participants: 16
+2025-03-18 14:33:54,007 - INFO - ================================================================================
+2025-03-18 14:33:54,007 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:33:54,007 - INFO - ================================================================================
+2025-03-18 14:33:54,180 - INFO - ================================================================================
+2025-03-18 14:33:54,180 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:33:54,180 - INFO - ================================================================================
+2025-03-18 14:33:54,180 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:33:54,180 - INFO - Number of participants in dataset: 16
+2025-03-18 14:33:54,180 - INFO - ================================================================================
+2025-03-18 14:33:54,180 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:33:54,180 - INFO - ================================================================================
+2025-03-18 14:33:54,180 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:33:54,181 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:33:54,181 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:33:54,181 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:33:54,181 - INFO - 
+Training RNN...
+2025-03-18 14:33:54,183 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:33:55,113 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:34:01,936 - INFO - Final training loss: 0.3298943
+2025-03-18 14:34:01,937 - INFO - 
+Fitting SINDy...
+2025-03-18 14:34:28,996 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:34:28,997 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:36:01,906 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:37:41,605 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:42:36,664 - INFO - Participant 0: Log-likelihood: -48.0797, Normalized LL: -0.4808, Raw BIC: 100.7646, Normalized BIC: 1.0076
+2025-03-18 14:42:56,669 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:42:56,669 - INFO - SINDy model parameters for participant 1: 1
+2025-03-18 14:42:57,187 - INFO - Participant 1: Log-likelihood: -44.2005, Normalized LL: -0.4420, Raw BIC: 93.0062, Normalized BIC: 0.9301
+2025-03-18 14:42:59,835 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:42:59,835 - INFO - SINDy model parameters for participant 2: 1
+2025-03-18 14:43:00,326 - INFO - Participant 2: Log-likelihood: -2.4984, Normalized LL: -0.0250, Raw BIC: 9.6020, Normalized BIC: 0.0960
+2025-03-18 14:43:00,326 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:43:00,326 - INFO - SINDy model parameters for participant 3: 1
+2025-03-18 14:43:00,818 - INFO - Participant 3: Log-likelihood: -18.1625, Normalized LL: -0.1816, Raw BIC: 40.9302, Normalized BIC: 0.4093
+2025-03-18 14:43:00,818 - INFO - Evaluating participant 4 using its own SINDy model...
+2025-03-18 14:43:00,818 - INFO - SINDy model parameters for participant 4: 1
+2025-03-18 14:43:01,308 - INFO - Participant 4: Log-likelihood: -12.7181, Normalized LL: -0.1272, Raw BIC: 30.0414, Normalized BIC: 0.3004
+2025-03-18 14:43:01,309 - INFO - Evaluating participant 5 using its own SINDy model...
+2025-03-18 14:43:01,309 - INFO - SINDy model parameters for participant 5: 1
+2025-03-18 14:43:01,868 - INFO - Participant 5: Log-likelihood: nan, Normalized LL: nan, Raw BIC: nan, Normalized BIC: nan
+2025-03-18 14:43:01,868 - INFO - Evaluating participant 6 using its own SINDy model...
+2025-03-18 14:43:01,868 - INFO - SINDy model parameters for participant 6: 1
+2025-03-18 14:43:02,397 - INFO - Participant 6: Log-likelihood: -4.7407, Normalized LL: -0.0474, Raw BIC: 14.0866, Normalized BIC: 0.1409
+2025-03-18 14:43:02,398 - INFO - Evaluating participant 7 using its own SINDy model...
+2025-03-18 14:43:02,398 - INFO - SINDy model parameters for participant 7: 1
+2025-03-18 14:43:02,931 - INFO - Participant 7: Log-likelihood: -26.4611, Normalized LL: -0.2646, Raw BIC: 57.5273, Normalized BIC: 0.5753
+2025-03-18 14:43:02,931 - INFO - Evaluating participant 8 using its own SINDy model...
+2025-03-18 14:43:02,931 - INFO - SINDy model parameters for participant 8: 1
+2025-03-18 14:43:03,456 - INFO - Participant 8: Log-likelihood: -40.5384, Normalized LL: -0.4054, Raw BIC: 85.6819, Normalized BIC: 0.8568
+2025-03-18 14:43:03,456 - INFO - Evaluating participant 9 using its own SINDy model...
+2025-03-18 14:43:03,456 - INFO - SINDy model parameters for participant 9: 1
+2025-03-18 14:43:03,982 - INFO - Participant 9: Log-likelihood: -61.6752, Normalized LL: -0.6168, Raw BIC: 127.9556, Normalized BIC: 1.2796
+2025-03-18 14:43:03,982 - INFO - Evaluating participant 10 using its own SINDy model...
+2025-03-18 14:43:03,982 - INFO - SINDy model parameters for participant 10: 1
+2025-03-18 14:43:04,526 - INFO - Participant 10: Log-likelihood: -63.4187, Normalized LL: -0.6342, Raw BIC: 131.4426, Normalized BIC: 1.3144
+2025-03-18 14:43:04,527 - INFO - Evaluating participant 11 using its own SINDy model...
+2025-03-18 14:43:04,527 - INFO - SINDy model parameters for participant 11: 1
+2025-03-18 14:43:05,072 - INFO - Participant 11: Log-likelihood: -18.5435, Normalized LL: -0.1854, Raw BIC: 41.6922, Normalized BIC: 0.4169
+2025-03-18 14:43:05,072 - INFO - Evaluating participant 12 using its own SINDy model...
+2025-03-18 14:43:05,080 - INFO - SINDy model parameters for participant 12: 1
+2025-03-18 14:43:05,633 - INFO - Participant 12: Log-likelihood: -67.7624, Normalized LL: -0.6776, Raw BIC: 140.1299, Normalized BIC: 1.4013
+2025-03-18 14:43:05,633 - INFO - Evaluating participant 13 using its own SINDy model...
+2025-03-18 14:43:05,634 - INFO - SINDy model parameters for participant 13: 1
+2025-03-18 14:43:06,156 - INFO - Participant 13: Log-likelihood: -67.1595, Normalized LL: -0.6716, Raw BIC: 138.9242, Normalized BIC: 1.3892
+2025-03-18 14:43:06,156 - INFO - Evaluating participant 14 using its own SINDy model...
+2025-03-18 14:43:06,156 - INFO - SINDy model parameters for participant 14: 1
+2025-03-18 14:43:06,649 - INFO - Participant 14: Log-likelihood: -50.9728, Normalized LL: -0.5097, Raw BIC: 106.5508, Normalized BIC: 1.0655
+2025-03-18 14:43:06,649 - INFO - Evaluating participant 15 using its own SINDy model...
+2025-03-18 14:43:06,649 - INFO - SINDy model parameters for participant 15: 1
+2025-03-18 14:43:07,131 - INFO - Participant 15: Log-likelihood: -18.7163, Normalized LL: -0.1872, Raw BIC: 42.0378, Normalized BIC: 0.4204
+2025-03-18 14:43:39,270 - INFO - 
+Average SINDy BIC for 100 trials per participant: nan
+2025-03-18 14:43:50,435 - INFO - 
+Average Normalized Log Likelihood for 100 trials per participant: nan
+2025-03-18 14:53:21,261 - INFO - ================================================================================
+2025-03-18 14:53:21,261 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:53:21,261 - INFO - ================================================================================
+2025-03-18 14:53:21,261 - INFO - Number of actions: 2
+2025-03-18 14:53:21,270 - INFO - Number of participants: 16
+2025-03-18 14:53:21,270 - INFO - ================================================================================
+2025-03-18 14:53:21,270 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:53:21,270 - INFO - ================================================================================
+2025-03-18 14:53:21,452 - INFO - ================================================================================
+2025-03-18 14:53:21,452 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:53:21,452 - INFO - ================================================================================
+2025-03-18 14:53:21,452 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:53:21,452 - INFO - Number of participants in dataset: 16
+2025-03-18 14:53:21,452 - INFO - ================================================================================
+2025-03-18 14:53:21,452 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:53:21,452 - INFO - ================================================================================
+2025-03-18 14:53:21,453 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:53:21,453 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:53:21,453 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:53:21,454 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:53:21,454 - INFO - 
+Training RNN...
+2025-03-18 14:53:21,456 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:53:22,423 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:53:29,382 - INFO - Final training loss: 0.3298943
+2025-03-18 14:53:29,384 - INFO - 
+Fitting SINDy...
+2025-03-18 14:53:56,686 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:53:56,686 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:53:56,686 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:53:56,686 - INFO - SINDy model parameters for participant 0: 1
+2025-03-18 14:53:57,264 - INFO - Participant 0: Log-likelihood: -48.0797, Normalized LL: -0.4808, Raw BIC: 100.7646, Normalized BIC: 1.0076
+2025-03-18 14:53:57,265 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:53:57,265 - INFO - SINDy model parameters for participant 1: 1
+2025-03-18 14:53:57,796 - INFO - Participant 1: Log-likelihood: -44.2005, Normalized LL: -0.4420, Raw BIC: 93.0062, Normalized BIC: 0.9301
+2025-03-18 14:53:57,796 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:53:57,796 - INFO - SINDy model parameters for participant 2: 1
+2025-03-18 14:53:58,355 - INFO - Participant 2: Log-likelihood: -2.4984, Normalized LL: -0.0250, Raw BIC: 9.6020, Normalized BIC: 0.0960
+2025-03-18 14:53:58,355 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:53:58,355 - INFO - SINDy model parameters for participant 3: 1
+2025-03-18 14:53:58,925 - INFO - Participant 3: Log-likelihood: -18.1625, Normalized LL: -0.1816, Raw BIC: 40.9302, Normalized BIC: 0.4093
+2025-03-18 14:53:58,925 - INFO - Evaluating participant 4 using its own SINDy model...
+2025-03-18 14:53:58,926 - INFO - SINDy model parameters for participant 4: 1
+2025-03-18 14:53:59,496 - INFO - Participant 4: Log-likelihood: -12.7181, Normalized LL: -0.1272, Raw BIC: 30.0414, Normalized BIC: 0.3004
+2025-03-18 14:53:59,496 - INFO - Evaluating participant 5 using its own SINDy model...
+2025-03-18 14:53:59,497 - INFO - SINDy model parameters for participant 5: 1
+2025-03-18 14:54:00,067 - INFO - Participant 5: Log-likelihood: -0.3711, Normalized LL: -0.0037, Raw BIC: 5.3474, Normalized BIC: 0.0535
+2025-03-18 14:54:00,067 - INFO - Evaluating participant 6 using its own SINDy model...
+2025-03-18 14:54:00,067 - INFO - SINDy model parameters for participant 6: 1
+2025-03-18 14:54:00,638 - INFO - Participant 6: Log-likelihood: -0.3268, Normalized LL: -0.0033, Raw BIC: 5.2587, Normalized BIC: 0.0526
+2025-03-18 14:54:00,638 - INFO - Evaluating participant 7 using its own SINDy model...
+2025-03-18 14:54:00,638 - INFO - SINDy model parameters for participant 7: 1
+2025-03-18 14:54:01,208 - INFO - Participant 7: Log-likelihood: -26.4611, Normalized LL: -0.2646, Raw BIC: 57.5273, Normalized BIC: 0.5753
+2025-03-18 14:54:01,208 - INFO - Evaluating participant 8 using its own SINDy model...
+2025-03-18 14:54:01,208 - INFO - SINDy model parameters for participant 8: 1
+2025-03-18 14:54:01,779 - INFO - Participant 8: Log-likelihood: -40.5384, Normalized LL: -0.4054, Raw BIC: 85.6819, Normalized BIC: 0.8568
+2025-03-18 14:54:01,779 - INFO - Evaluating participant 9 using its own SINDy model...
+2025-03-18 14:54:01,780 - INFO - SINDy model parameters for participant 9: 1
+2025-03-18 14:54:02,349 - INFO - Participant 9: Log-likelihood: -61.6752, Normalized LL: -0.6168, Raw BIC: 127.9556, Normalized BIC: 1.2796
+2025-03-18 14:54:02,350 - INFO - Evaluating participant 10 using its own SINDy model...
+2025-03-18 14:54:02,350 - INFO - SINDy model parameters for participant 10: 1
+2025-03-18 14:54:02,906 - INFO - Participant 10: Log-likelihood: -63.4187, Normalized LL: -0.6342, Raw BIC: 131.4426, Normalized BIC: 1.3144
+2025-03-18 14:54:02,906 - INFO - Evaluating participant 11 using its own SINDy model...
+2025-03-18 14:54:02,907 - INFO - SINDy model parameters for participant 11: 1
+2025-03-18 14:54:03,473 - INFO - Participant 11: Log-likelihood: -18.5435, Normalized LL: -0.1854, Raw BIC: 41.6922, Normalized BIC: 0.4169
+2025-03-18 14:54:03,473 - INFO - Evaluating participant 12 using its own SINDy model...
+2025-03-18 14:54:03,474 - INFO - SINDy model parameters for participant 12: 1
+2025-03-18 14:54:04,042 - INFO - Participant 12: Log-likelihood: -67.7624, Normalized LL: -0.6776, Raw BIC: 140.1299, Normalized BIC: 1.4013
+2025-03-18 14:54:04,042 - INFO - Evaluating participant 13 using its own SINDy model...
+2025-03-18 14:54:04,042 - INFO - SINDy model parameters for participant 13: 1
+2025-03-18 14:54:04,610 - INFO - Participant 13: Log-likelihood: -67.1595, Normalized LL: -0.6716, Raw BIC: 138.9242, Normalized BIC: 1.3892
+2025-03-18 14:54:04,610 - INFO - Evaluating participant 14 using its own SINDy model...
+2025-03-18 14:54:04,611 - INFO - SINDy model parameters for participant 14: 1
+2025-03-18 14:54:05,179 - INFO - Participant 14: Log-likelihood: -50.9728, Normalized LL: -0.5097, Raw BIC: 106.5508, Normalized BIC: 1.0655
+2025-03-18 14:54:05,180 - INFO - Evaluating participant 15 using its own SINDy model...
+2025-03-18 14:54:05,180 - INFO - SINDy model parameters for participant 15: 1
+2025-03-18 14:54:05,760 - INFO - Participant 15: Log-likelihood: -18.7163, Normalized LL: -0.1872, Raw BIC: 42.0378, Normalized BIC: 0.4204
+2025-03-18 14:54:30,526 - INFO - 
+Average SINDy BIC for 100 trials per participant: 0.7231
+2025-03-18 14:54:35,269 - INFO - 
+Average Normalized Log Likelihood for 100 trials per participant: -0.3385
+2025-03-18 14:54:45,714 - INFO - 
+Identified SINDy equations:
+2025-03-18 14:54:47,633 - INFO - Module: x_learning_rate_reward
+2025-03-18 14:54:50,354 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:54:57,646 - INFO -   Participant 0 Coefficients: [0.46383453 0.15929678 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:54:58,150 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:55:02,016 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:55:03,897 - INFO -   Participant 1 Coefficients: [0.50463783 0.20026719 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:55:04,634 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:55:08,799 - INFO -   Participant 2 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:55:10,487 - INFO -   Participant 2 Coefficients: [0.60362925 0.13908448 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:55:11,852 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:55:14,788 - INFO -   Participant 3 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:55:16,365 - INFO -   Participant 3 Coefficients: [0.56840292 0.13156764 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:55:16,957 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:55:56,883 - INFO -   Participant 4 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 14:55:59,746 - INFO -   Participant 4 Coefficients: [0.49349938 0.18622225 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 14:56:02,000 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 14:59:19,992 - INFO - ================================================================================
+2025-03-18 14:59:19,992 - INFO - EXPERIMENT CONFIG
+2025-03-18 14:59:19,992 - INFO - ================================================================================
+2025-03-18 14:59:19,992 - INFO - Number of actions: 2
+2025-03-18 14:59:20,000 - INFO - Number of participants: 16
+2025-03-18 14:59:20,000 - INFO - ================================================================================
+2025-03-18 14:59:20,000 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 14:59:20,000 - INFO - ================================================================================
+2025-03-18 14:59:20,179 - INFO - ================================================================================
+2025-03-18 14:59:20,179 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 14:59:20,179 - INFO - ================================================================================
+2025-03-18 14:59:20,179 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 14:59:20,180 - INFO - Number of participants in dataset: 16
+2025-03-18 14:59:20,180 - INFO - ================================================================================
+2025-03-18 14:59:20,180 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 14:59:20,180 - INFO - ================================================================================
+2025-03-18 14:59:20,180 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 14:59:20,180 - INFO - Subset with 100 trials per participant:
+2025-03-18 14:59:20,180 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 14:59:20,181 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 14:59:20,181 - INFO - 
+Training RNN...
+2025-03-18 14:59:20,183 - INFO - RNN model trainable parameters: 518
+2025-03-18 14:59:21,048 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 14:59:27,380 - INFO - Final training loss: 0.3298943
+2025-03-18 14:59:27,381 - INFO - 
+Fitting SINDy...
+2025-03-18 14:59:54,487 - INFO - 
+Evaluating SINDy models...
+2025-03-18 14:59:54,487 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 14:59:54,487 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 14:59:54,487 - INFO - SINDy model parameters for participant 0: 6
+2025-03-18 14:59:55,059 - INFO - Participant 0: Log-likelihood: -48.0797, Normalized LL: -0.4808, Raw BIC: 123.7905, Normalized BIC: 1.2379
+2025-03-18 14:59:55,059 - INFO - Evaluating participant 1 using its own SINDy model...
+2025-03-18 14:59:55,059 - INFO - SINDy model parameters for participant 1: 6
+2025-03-18 14:59:55,633 - INFO - Participant 1: Log-likelihood: -44.2005, Normalized LL: -0.4420, Raw BIC: 116.0321, Normalized BIC: 1.1603
+2025-03-18 14:59:55,633 - INFO - Evaluating participant 2 using its own SINDy model...
+2025-03-18 14:59:55,633 - INFO - SINDy model parameters for participant 2: 6
+2025-03-18 14:59:56,180 - INFO - Participant 2: Log-likelihood: -2.4984, Normalized LL: -0.0250, Raw BIC: 32.6278, Normalized BIC: 0.3263
+2025-03-18 14:59:56,180 - INFO - Evaluating participant 3 using its own SINDy model...
+2025-03-18 14:59:56,181 - INFO - SINDy model parameters for participant 3: 6
+2025-03-18 14:59:56,735 - INFO - Participant 3: Log-likelihood: -18.1625, Normalized LL: -0.1816, Raw BIC: 63.9561, Normalized BIC: 0.6396
+2025-03-18 14:59:56,735 - INFO - Evaluating participant 4 using its own SINDy model...
+2025-03-18 14:59:56,735 - INFO - SINDy model parameters for participant 4: 6
+2025-03-18 14:59:57,310 - INFO - Participant 4: Log-likelihood: -12.7181, Normalized LL: -0.1272, Raw BIC: 53.0673, Normalized BIC: 0.5307
+2025-03-18 14:59:57,311 - INFO - Evaluating participant 5 using its own SINDy model...
+2025-03-18 14:59:57,311 - INFO - SINDy model parameters for participant 5: 5
+2025-03-18 14:59:57,833 - INFO - Participant 5: Log-likelihood: -0.3711, Normalized LL: -0.0037, Raw BIC: 23.7681, Normalized BIC: 0.2377
+2025-03-18 14:59:57,833 - INFO - Evaluating participant 6 using its own SINDy model...
+2025-03-18 14:59:57,834 - INFO - SINDy model parameters for participant 6: 6
+2025-03-18 14:59:58,349 - INFO - Participant 6: Log-likelihood: -0.3268, Normalized LL: -0.0033, Raw BIC: 28.2846, Normalized BIC: 0.2828
+2025-03-18 14:59:58,349 - INFO - Evaluating participant 7 using its own SINDy model...
+2025-03-18 14:59:58,349 - INFO - SINDy model parameters for participant 7: 5
+2025-03-18 14:59:58,866 - INFO - Participant 7: Log-likelihood: -26.4611, Normalized LL: -0.2646, Raw BIC: 75.9480, Normalized BIC: 0.7595
+2025-03-18 14:59:58,866 - INFO - Evaluating participant 8 using its own SINDy model...
+2025-03-18 14:59:58,866 - INFO - SINDy model parameters for participant 8: 6
+2025-03-18 14:59:59,396 - INFO - Participant 8: Log-likelihood: -40.5384, Normalized LL: -0.4054, Raw BIC: 108.7077, Normalized BIC: 1.0871
+2025-03-18 14:59:59,397 - INFO - Evaluating participant 9 using its own SINDy model...
+2025-03-18 14:59:59,397 - INFO - SINDy model parameters for participant 9: 8
+2025-03-18 14:59:59,922 - INFO - Participant 9: Log-likelihood: -61.6752, Normalized LL: -0.6168, Raw BIC: 160.1917, Normalized BIC: 1.6019
+2025-03-18 14:59:59,922 - INFO - Evaluating participant 10 using its own SINDy model...
+2025-03-18 14:59:59,922 - INFO - SINDy model parameters for participant 10: 6
+2025-03-18 15:00:00,481 - INFO - Participant 10: Log-likelihood: -63.4187, Normalized LL: -0.6342, Raw BIC: 154.4684, Normalized BIC: 1.5447
+2025-03-18 15:00:00,481 - INFO - Evaluating participant 11 using its own SINDy model...
+2025-03-18 15:00:00,481 - INFO - SINDy model parameters for participant 11: 7
+2025-03-18 15:00:01,035 - INFO - Participant 11: Log-likelihood: -18.5435, Normalized LL: -0.1854, Raw BIC: 69.3232, Normalized BIC: 0.6932
+2025-03-18 15:00:01,035 - INFO - Evaluating participant 12 using its own SINDy model...
+2025-03-18 15:00:01,036 - INFO - SINDy model parameters for participant 12: 7
+2025-03-18 15:00:01,575 - INFO - Participant 12: Log-likelihood: -67.7624, Normalized LL: -0.6776, Raw BIC: 167.7609, Normalized BIC: 1.6776
+2025-03-18 15:00:01,575 - INFO - Evaluating participant 13 using its own SINDy model...
+2025-03-18 15:00:01,575 - INFO - SINDy model parameters for participant 13: 7
+2025-03-18 15:00:02,115 - INFO - Participant 13: Log-likelihood: -67.1595, Normalized LL: -0.6716, Raw BIC: 166.5553, Normalized BIC: 1.6656
+2025-03-18 15:00:02,115 - INFO - Evaluating participant 14 using its own SINDy model...
+2025-03-18 15:00:02,115 - INFO - SINDy model parameters for participant 14: 6
+2025-03-18 15:00:02,665 - INFO - Participant 14: Log-likelihood: -50.9728, Normalized LL: -0.5097, Raw BIC: 129.5767, Normalized BIC: 1.2958
+2025-03-18 15:00:02,665 - INFO - Evaluating participant 15 using its own SINDy model...
+2025-03-18 15:00:02,665 - INFO - SINDy model parameters for participant 15: 6
+2025-03-18 15:00:03,216 - INFO - Participant 15: Log-likelihood: -18.7163, Normalized LL: -0.1872, Raw BIC: 65.0637, Normalized BIC: 0.6506
+2025-03-18 15:00:07,676 - INFO - 
+Average SINDy BIC for 100 trials per participant: 0.9620
+2025-03-18 15:00:10,061 - INFO - 
+Average Normalized Log Likelihood for 100 trials per participant: -0.3385
+2025-03-18 15:00:33,987 - INFO - 
+Identified SINDy equations:
+2025-03-18 15:00:34,846 - INFO - Module: x_learning_rate_reward
+2025-03-18 15:00:37,716 - INFO -   Participant 0 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 15:00:39,088 - INFO -   Participant 0 Coefficients: [0.46383453 0.15929678 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 15:00:39,535 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
+2025-03-18 15:00:42,561 - INFO -   Participant 1 Equation: SINDy(differentiation_method=FiniteDifference(axis=-2), discrete_time=True,
+      feature_library=PolynomialLibrary(),
+      feature_names=['x_learning_rate_reward', 'c_reward', 'c_value_reward'],
+      optimizer=SR3(nu=1, threshold=0.05, thresholder='weighted_l1',
+                    thresholds=array([[0.  , 0.05, 0.05, 0.05, 0.1 , 0.1 , 0.1 , 0.1 , 0.1 , 0.1 ]]),
+                    verbose=True))
+2025-03-18 15:00:43,906 - INFO -   Participant 1 Coefficients: [0.50463783 0.20026719 0.         0.         0.         0.
+ 0.         0.         0.         0.        ]
+2025-03-18 15:00:44,305 - INFO -   Feature names: ['x_learning_rate_reward', 'c_reward', 'c_value_reward']
