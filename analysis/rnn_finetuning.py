@@ -476,7 +476,7 @@ def main():
     
     logger.info(f"Found {len(all_data_files)} data files: {[os.path.basename(f) for f in all_data_files]}")
     
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "finetuning_results")
     os.makedirs(output_dir, exist_ok=True)
     
     all_results = []
