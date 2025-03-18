@@ -3564,3 +3564,36 @@ Identified SINDy equations:
                     verbose=True))
 2025-03-18 12:56:09,800 - INFO -   Participant 15 Coefficients: [0.28099002 0.21325301 0.         0.         0.         0.        ]
 2025-03-18 12:56:09,800 - INFO -   Feature names: ['x_value_choice_not_chosen', 'dummy']
+2025-03-18 13:42:13,294 - INFO - ================================================================================
+2025-03-18 13:42:13,294 - INFO - EXPERIMENT CONFIG
+2025-03-18 13:42:13,294 - INFO - ================================================================================
+2025-03-18 13:42:13,294 - INFO - Number of actions: 2
+2025-03-18 13:42:13,302 - INFO - Number of participants: 16
+2025-03-18 13:42:13,302 - INFO - ================================================================================
+2025-03-18 13:42:13,302 - INFO - PROCESSING PARTICIPANT DATA
+2025-03-18 13:42:13,302 - INFO - ================================================================================
+2025-03-18 13:42:13,473 - INFO - ================================================================================
+2025-03-18 13:42:13,473 - INFO - COMBINED DATASET INFORMATION
+2025-03-18 13:42:13,473 - INFO - ================================================================================
+2025-03-18 13:42:13,473 - INFO - Combined full dataset shape: torch.Size([16, 200, 5])
+2025-03-18 13:42:13,473 - INFO - Number of participants in dataset: 16
+2025-03-18 13:42:13,473 - INFO - ================================================================================
+2025-03-18 13:42:13,473 - INFO - RUNNING PIPELINE FOR DIFFERENT TRIAL SUBSET SIZES
+2025-03-18 13:42:13,473 - INFO - ================================================================================
+2025-03-18 13:42:13,473 - INFO - Creating dataset subset with 100 trials per participant
+2025-03-18 13:42:13,474 - INFO - Subset with 100 trials per participant:
+2025-03-18 13:42:13,474 - INFO -   Dataset shape: torch.Size([16, 100, 5])
+2025-03-18 13:42:13,474 - INFO - 
+==== Running pipeline for dataset: 100 trials per participant ====
+2025-03-18 13:42:13,474 - INFO - 
+Training RNN...
+2025-03-18 13:42:13,476 - INFO - RNN model trainable parameters: 518
+2025-03-18 13:42:14,341 - INFO - Training configuration: epochs=512, steps=16, scheduler=True
+2025-03-18 13:43:06,352 - INFO - Final training loss: 0.3166925
+2025-03-18 13:43:06,353 - INFO - 
+Fitting SINDy...
+2025-03-18 13:43:35,281 - INFO - 
+Evaluating SINDy models...
+2025-03-18 13:43:35,281 - INFO - SINDy models are available for participants: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+2025-03-18 13:43:35,281 - INFO - Evaluating participant 0 using its own SINDy model...
+2025-03-18 13:43:35,281 - INFO - SINDy model parameters for participant 0: 1

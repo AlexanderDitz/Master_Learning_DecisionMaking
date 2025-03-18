@@ -221,7 +221,7 @@ def run_training_and_evaluation(dataset, label):
             #     logits, _ = agent_sindy._model(xs_modified)
             # logits = logits.squeeze(0)
             # probs = torch.softmax(logits, dim=-1).cpu().numpy()
-            values, probs, agent_sindy = get_update_dynamics(xs_participant, agent_sindy)
+            values, probs, agent_sindy = get_update_dynamics(xs_participant[0], agent_sindy)
             values_q, values_reward, values_choice, learning_rates = values
             choices_np = xs_participant.cpu().numpy().squeeze(0)
             
