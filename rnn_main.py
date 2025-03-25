@@ -241,7 +241,7 @@ def main(
     else:
       agents = {'rnn': agent_rnn}
 
-    fig, axs = plotting.plot_session(agents, dataset_test.xs[0])
+    fig, axs = plotting.plot_session(agents, dataset_test.xs[participant_id])
     
     title_ground_truth = ''
     if agent is not None:

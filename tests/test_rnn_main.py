@@ -5,11 +5,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import rnn_main
 
 _, loss = rnn_main.main(
-    checkpoint=False,
-    epochs=128,
+    checkpoint=True,
+    epochs=0,
     
-    data='data/study_recovery_stepperseverance/data_rldm_256p_0.csv',
-    model='params/study_recovery_stepperseverance/params_rldm_256p_0.pkl',
+    data='data/parameter_recovery_participants/data_256p_0.csv',
+    model='params/parameter_recovery_participants/params_256p_0.pkl',
     
     # model=f'params/benchmarking/rnn_eckstein.pkl',
     # data = 'data/2arm/eckstein2022_291_processed.csv',
@@ -30,7 +30,7 @@ _, loss = rnn_main.main(
     n_steps=16,
     scheduler=True,
     
-    n_sessions=256,
+    n_sessions=128,
     n_trials=256,
     sigma=0.2,
     beta_reward=3.,
@@ -44,5 +44,5 @@ _, loss = rnn_main.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=5,
+    participant_id=42,
 )

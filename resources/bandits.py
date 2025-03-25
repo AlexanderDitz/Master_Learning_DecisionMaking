@@ -57,7 +57,7 @@ class AgentQ:
       alpha_penalty: float = -1,
       alpha_counterfactual: float = 0.,
       beta_choice: float = 0.,
-      alpha_choice: float = 0.,
+      alpha_choice: float = 1.,
       forget_rate: float = 0.,
       confirmation_bias: float = 0.,
       parameter_variance: Union[Dict[str, float], float] = 0.,
@@ -312,8 +312,8 @@ class AgentQ_SampleBetaDist(AgentQ):
       
       # Apply threshold to set variables to 0
       self._beta_reward = self._beta_reward * 2 * self._mean_beta_reward if self._beta_reward > self._zero_threshold else 0
-      self._alpha_reward = self._alpha_reward if self._alpha_reward > self._zero_threshold else 0
-      self._alpha_penalty = self._alpha_penalty if self._alpha_penalty > self._zero_threshold else 0
+      # self._alpha_reward = self._alpha_reward if self._alpha_reward > self._zero_threshold else 0
+      # self._alpha_penalty = self._alpha_penalty if self._alpha_penalty > self._zero_threshold else 0
       
       # self._confirmation_bias = self._confirmation_bias if self._confirmation_bias > self._zero_threshold else 0
       self._forget_rate = self._forget_rate if self._forget_rate > self._zero_threshold else 0

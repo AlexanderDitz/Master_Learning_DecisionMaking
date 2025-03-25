@@ -12,7 +12,7 @@ n_sessions = [16, 32, 64, 128, 256, 512]
 n_trials_per_session = 200
 n_iterations_per_n_sessions = 8
 sigma = 0.2
-base_name = 'data/study_recovery_stepperseverance/data_rldm.csv'
+base_name = 'data/parameter_recovery_participants/data_.csv'
 
 for iteration in range(n_iterations_per_n_sessions):
     for n_sess in n_sessions:

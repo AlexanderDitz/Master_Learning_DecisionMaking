@@ -10,8 +10,8 @@ for i in range(1):
     # i = 1
     _, features = sindy_main.main(
         
-        data='data/study_recovery_stepperseverance/data_rldm_256p_0.csv',
-        model='params/study_recovery_stepperseverance/params_rldm_256p_0.pkl',
+        data='data/parameter_recovery_participants/data__256p_0.csv',
+        model='params/parameter_recovery_participants/params__256p_0.pkl',
         
         # model = 'params/benchmarking/rnn_sugawara.pkl',
         # data = 'data/sugawara2021_143_processed.csv',
