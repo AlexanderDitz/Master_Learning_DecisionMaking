@@ -286,50 +286,20 @@ class AgentQ_SampleBetaDist(AgentQ):
     super(AgentQ_SampleBetaDist, self).new_sess()
     
     # sample new parameters
-    if sample_parameters:
-      # sanity_check = False
-      # while not sanity_check:
-        # sample new parameters until all sanity checks are passed
-        # sampling from a beta distribution of (0.7, 1.0) ensures a 20% chance of getting a zero parameter by thresholding at 0.1 
-        # self._beta_reward = np.random.beta(*self._beta_distribution) * 2 * self._mean_beta_reward
-        # self._beta_choice = np.random.beta(*self._beta_distribution) * 2 * self._mean_beta_choice
-        # self._alpha_reward = np.random.beta(*self._beta_distribution)
-        # self._alpha_penalty = np.random.beta(*self._beta_distribution)
-        # self._alpha_choice = np.random.beta(*self._beta_distribution)
-        # # self._alpha_counterfactual = np.random.beta(*self._beta_distribution)
-        # # self._confirmation_bias = np.random.beta(*self._beta_distribution)
-        # self._forget_rate = np.random.beta(*self._beta_distribution)
-        
+    if sample_parameters:        
       self._beta_reward = np.random.rand()
       self._beta_choice = np.random.rand()
       self._alpha_reward = np.random.rand()
       self._alpha_penalty = np.random.rand()
       # self._alpha_choice = np.random.rand()
-      # self._alpha_choice = np.random.choice(a=(0., 1.), p=(0.2, 0.8))
-      # self._alpha_counterfactual = np.random.beta(*self._beta_distribution)
-      # self._confirmation_bias = np.random.beta(*self._beta_distribution)
+      # self._alpha_counterfactual = np.random.rand()
+      # self._confirmation_bias = np.random.rand()
       self._forget_rate = np.random.rand()
       
       # Apply threshold to set variables to 0
       self._beta_reward = self._beta_reward * 2 * self._mean_beta_reward if self._beta_reward > self._zero_threshold else 0
-      # self._alpha_reward = self._alpha_reward if self._alpha_reward > self._zero_threshold else 0
-      # self._alpha_penalty = self._alpha_penalty if self._alpha_penalty > self._zero_threshold else 0
-      
-      # self._confirmation_bias = self._confirmation_bias if self._confirmation_bias > self._zero_threshold else 0
-      self._forget_rate = self._forget_rate if self._forget_rate > self._zero_threshold else 0
-      
       self._beta_choice = self._beta_choice * 2 * self._mean_beta_choice if self._beta_choice > self._zero_threshold else 0
-      # self._alpha_choice = self._alpha_choice if self._alpha_choice > self._zero_threshold else 0
-        
-        # self._alpha_counterfactual = self._alpha_counterfactual if self._alpha_counterfactual > self._zero_threshold else 0
-        
-        # sanity checks
-        # 1. (alpha, alpha_penalty) + confirmation_bias*max_confirmation must be in range(0, 1)
-        #     with max_confirmation = (q-q0)(r-q0) = +/- 0.25
-        # max_learning_rate = self._alpha_reward + self._confirmation_bias*0.25 <= 1 and self._alpha_penalty + self._confirmation_bias*0.25 <= 1
-        # min_learning_rate = self._alpha_reward + self._confirmation_bias*-0.25 >= 0 and self._alpha_penalty + self._confirmation_bias*-0.25 >= 0 
-        # sanity_check = max_learning_rate and min_learning_rate
-    
+
 
 class AgentNetwork:
     """A class that allows running a pretrained RNN as an agent.

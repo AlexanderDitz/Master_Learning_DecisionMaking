@@ -4,8 +4,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import rnn_main
 
-path_datasets = 'data/study_recovery_stepperseverance/'
-path_params = 'params/study_recovery_stepperseverance/'
+path_datasets = 'data/parameter_recovery_participants/'
+path_params = 'params/parameter_recovery_participants/'
 
 datasets = os.listdir(path_datasets)
 
@@ -16,22 +16,24 @@ for d in datasets:
     
     _, loss = rnn_main.main(
         checkpoint=False,
-        epochs=1024,
+        epochs=4096,
         
         data=dataset,
         model=model,
 
         n_actions=2,
         
-        dropout=0.25,
-        participant_emb=True,
-        bagging=True,
-
+        dropout=0.319,
+        hidden_size=22,
+        embedding_size=9,
+        
+        n_steps=62,
         learning_rate=5e-3,
         batch_size=-1,
         sequence_length=-1,
-        train_test_ratio=0,
-        n_steps=16,
+        train_test_ratio=1,
+        scheduler=True,
+        bagging=True,
         )
 
     losses.append(loss)

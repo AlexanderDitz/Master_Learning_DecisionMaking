@@ -23,8 +23,8 @@ def main(
 
   # rnn parameters
   hidden_size = 8,
+  embedding_size = 8,
   dropout = 0.,
-  participant_emb = False,
 
   # data and training parameters
   epochs = 128,
@@ -173,6 +173,7 @@ def main(
   model = rnn.RLRNN(
       n_actions=n_actions, 
       hidden_size=hidden_size, 
+      embedding_size=embedding_size,
       device=device,
       dropout=dropout,
       n_participants=n_participants,

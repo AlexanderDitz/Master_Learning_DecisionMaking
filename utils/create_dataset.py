@@ -12,15 +12,15 @@ n_sessions = [16, 32, 64, 128, 256, 512]
 n_trials_per_session = 200
 n_iterations_per_n_sessions = 8
 sigma = 0.2
-base_name = 'data/parameter_recovery_participants/data_.csv'
+base_name = 'data/parameter_recovery_participants/data_*.csv'
 
 for iteration in range(n_iterations_per_n_sessions):
     for n_sess in n_sessions:
-        dataset_name = base_name.replace('.', f'_{n_sess}p_{iteration}.')
+        dataset_name = base_name.replace('*', f'{n_sess}p_{iteration}')
 
         agent = AgentQ_SampleBetaDist(
             beta_reward=3.,
-            beta_choice=3.,
+            beta_choice=.5,
             zero_threshold=0.2,
             )
 

@@ -31,9 +31,16 @@ def setup_rnn(
     key_hidden_size = [key for key in state_dict if 'x' in key.lower()][0]  # first key that contains the hidden_size
     hidden_size = state_dict[key_hidden_size].shape[0]
     
+    key_embedding_size = [key for key in state_dict if 'embedding' in key.lower()]
+    if len(key_embedding_size) > 0:
+        embedding_size = state_dict[key_embedding_size[0]].shape[1]
+    else:
+        embedding_size = 0
+        
     rnn = RLRNN(
         n_actions=n_actions, 
         hidden_size=hidden_size, 
+        embedding_size=embedding_size,
         n_participants=n_participants, 
         list_signals=list_sindy_signals, 
         device=device, 
