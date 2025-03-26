@@ -132,8 +132,8 @@ def fit_model(
 
         # Create the scheduler with the Lambda function
         scheduler_warmup = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
-        # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2)
-        scheduler = CustomCosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2, eta_max_mult=0.5)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2)
+        # scheduler = CustomCosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2, eta_max_mult=0.5)
     else:
         scheduler_warmup, scheduler = None, None
         
@@ -231,21 +231,21 @@ def fit_model(
     return model, optimizer, loss_train
 
 
-class CustomCosineAnnealingWarmRestarts(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts):
-    def __init__(self, optimizer, T_0, T_mult=1, eta_min=0, eta_max_mult=1.0):
-        self.eta_max_mult = eta_max_mult
-        self.cycle_count = 0  # Tracks the number of completed cycles
-        super().__init__(optimizer, T_0, T_mult, eta_min)
+# class CustomCosineAnnealingWarmRestarts(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts):
+#     def __init__(self, optimizer, T_0, T_mult=1, eta_min=0, eta_max_mult=1.0):
+#         self.eta_max_mult = eta_max_mult
+#         self.cycle_count = 0  # Tracks the number of completed cycles
+#         super().__init__(optimizer, T_0, T_mult, eta_min)
         
-    def step(self, epoch=None):
-        super().step(epoch)
-        # Check if a new cycle has started
-        if self.T_cur == 0:  # Indicates the start of a new cycle
-            self.cycle_count += 1  # Increment cycle count
-            # Apply decay to the base learning rate
-            for param_group in self.optimizer.param_groups:
-                param_group['lr'] *= self.eta_max_mult
-                param_group['initial_lr'] = param_group['lr']
-                self.base_lrs[0] = param_group['lr']
+#     def step(self, epoch=None):
+#         super().step(epoch)
+#         # Check if a new cycle has started
+#         if self.T_cur == 0:  # Indicates the start of a new cycle
+#             self.cycle_count += 1  # Increment cycle count
+#             # Apply decay to the base learning rate
+#             for param_group in self.optimizer.param_groups:
+#                 param_group['lr'] *= self.eta_max_mult
+#                 param_group['initial_lr'] = param_group['lr']
+#                 self.base_lrs[0] = param_group['lr']
                 
-            self._last_lr = [group["lr"] for group in self.optimizer.param_groups]
+#             self._last_lr = [group["lr"] for group in self.optimizer.param_groups]

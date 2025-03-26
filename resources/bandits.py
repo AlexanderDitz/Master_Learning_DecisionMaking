@@ -379,7 +379,13 @@ class AgentNetwork:
 
     def get_logit(self):
       """Return the value of the agent's current state."""
-      return np.sum(np.concatenate([self._state[key] for key in self._state if 'x_value' in key]), axis=0)
+      betas = self.get_betas()
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] * betas[key] for key in self._state if 'x_value' in key
+          ]), 
+        axis=0)
+      return logits
     
     def get_choice_probs(self) -> np.ndarray:
       """Predict the choice probabilities as a softmax over output logits."""
@@ -833,8 +839,6 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
       _type_: _description_
   """
 
-  
-  
   if isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
     if isinstance(experiment, torch.Tensor):
       experiment = experiment.detach().cpu().numpy()

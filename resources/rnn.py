@@ -516,6 +516,7 @@ class RLRNN(BaseRNN):
         hidden_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
+        embedding_size = 8,
         list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward', 'c_value_reward'],
         **kwargs,
     ):
@@ -523,7 +524,7 @@ class RLRNN(BaseRNN):
         super(RLRNN, self).__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device)
         
         # set up the participant-embedding layer
-        self.embedding_size = 8
+        self.embedding_size = embedding_size
         self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
         
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation

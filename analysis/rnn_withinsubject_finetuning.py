@@ -25,6 +25,13 @@ from resources.sindy_training import fit_model as fit_model_sindy
 np.random.seed(42)
 torch.manual_seed(42)
 
+start_time = time.time()
+
+# QUICK CONFIG
+epochs_rnn = 2048
+scheduler = True
+n_trials_optuna = 50
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -118,7 +125,7 @@ def load_and_prepare_data(data_path):
     return combined_dataset, n_participants
 
 
-def split_dataset_within_participants(dataset, train_ratio=0.7):
+def split_dataset_within_participants(dataset, train_ratio=0.75):
     """
     Split dataset by trials within each participant.
     For each participant, use train_ratio% of trials for training and the rest for validation.
@@ -212,16 +219,19 @@ def objective(trial, train_dataset, val_dataset, n_participants):
     """
     list_rnn_modules, list_control_parameters, _, _ = define_sindy_configuration()
     
-    dropout = trial.suggest_float('dropout', 0.1, 0.3)
+    dropout = trial.suggest_float('dropout', 0., 0.5)
     learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
-    l1_weight_decay = trial.suggest_float('l1_weight_decay', 1e-6, 1e-3, log=True)
+    hidden_size = trial.suggest_int('hidden_size', 8, 32)
+    embedding_size = trial.suggest_int('embedding_size', 8, 32)
+    n_steps = trial.suggest_int('n_steps', 1, 100)
     
-    logger.info(f"Trial {trial.number}: dropout={dropout:.3f}, lr={learning_rate:.6f}, l1={l1_weight_decay:.6f}")
+    logger.info(f"Trial {trial.number}: dropout={dropout:.3f}, lr={learning_rate:.6f}, hidden_size={hidden_size}, embedding_size={embedding_size}, n_steps={n_steps}")
     
     model_rnn = RLRNN(
         n_actions=n_actions,
         n_participants=n_participants,
-        hidden_size=8,
+        hidden_size=hidden_size,
+        embedding_size=embedding_size,
         dropout=dropout,
         list_signals=list_rnn_modules + list_control_parameters
     )
@@ -234,10 +244,9 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             optimizer=optimizer_rnn,
             dataset_train=train_dataset,
             dataset_test=val_dataset,
-            epochs=512,
-            n_steps=16,
-            l1_weight_decay=l1_weight_decay,
-            scheduler=True,
+            epochs=epochs_rnn,
+            n_steps=n_steps,
+            scheduler=scheduler,
             convergence_threshold=1e-14,
         )
         
@@ -470,8 +479,10 @@ def main():
     logger.info("EXPERIMENT CONFIG")
     logger.info("=" * 80)
     
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-    all_data_files = glob.glob(os.path.join(data_dir, "data_rldm_*.csv"))
+    # data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/")
+    data_dir = "data/optuna"
+    # all_data_files = glob.glob(os.path.join(data_dir, "data_*.csv"))
+    all_data_files = os.listdir(data_dir)
     
     logger.info(f"Found {len(all_data_files)} data files: {[os.path.basename(f) for f in all_data_files]}")
     
@@ -480,7 +491,9 @@ def main():
     
     all_results = []
     
-    for data_file in all_data_files:
+    # for data_file in all_data_files:
+    for data_file in os.listdir(data_dir):
+        data_file = os.path.join(data_dir, data_file)
         dataset_name = os.path.basename(data_file)
         logger.info(f"Processing dataset: {dataset_name}")
         
@@ -496,7 +509,7 @@ def main():
         objective_func = lambda trial: objective(trial, train_dataset, val_dataset, n_participants)
         
         logger.info("Starting hyperparameter optimization...")
-        study.optimize(objective_func, n_trials=20)
+        study.optimize(objective_func, n_trials=n_trials_optuna)
         
         best_params = study.best_params
         best_value = study.best_value
@@ -507,7 +520,8 @@ def main():
         model_rnn = RLRNN(
             n_actions=n_actions,
             n_participants=n_participants,
-            hidden_size=8,
+            hidden_size=best_params['hidden_size'],
+            embedding_size=best_params['embedding_size'],
             dropout=best_params['dropout'],
             list_signals=define_sindy_configuration()[0] + define_sindy_configuration()[1]
         )
@@ -520,10 +534,9 @@ def main():
             optimizer=optimizer_rnn,
             dataset_train=train_dataset,
             dataset_test=val_dataset,
-            epochs=2048,  
-            n_steps=16,
-            l1_weight_decay=best_params['l1_weight_decay'],
-            scheduler=True,
+            epochs=epochs_rnn,  
+            n_steps=best_params['n_steps'],
+            scheduler=scheduler,
             convergence_threshold=1e-14,
         )
         
@@ -591,4 +604,7 @@ def main():
         logger.error(traceback.format_exc())
     
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    print(f"Time: {end_time - start_time} seconds")
