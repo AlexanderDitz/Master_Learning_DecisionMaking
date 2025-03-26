@@ -11,75 +11,75 @@ from resources.bandits import AgentSindy
 
 
 # create a mapping of ground truth parameters to library parameters
-mapping_x_V_LR = {
+mapping_x_learning_rate_reward = {
     '1': lambda alpha_reward, alpha_penalty: alpha_penalty,
+     
+    'x_learning_rate_reward': 0,
     
-    'x_V_LR': 0,
+    'c_reward': lambda alpha_reward, alpha_penalty: alpha_reward,
     
-    'c_r': lambda alpha_reward, alpha_penalty: alpha_reward,
+    'c_value_reward': 0,
     
-    'c_V': 0,
+    'x_learning_rate_reward c_value_reward': 0,
+    'c_value_reward x_learning_rate_reward': 0,
     
-    'x_V_LR c_V': 0,
-    'c_V x_V_LR': 0,
+    'x_learning_rate_reward c_reward': 0,
+    'c_reward x_learning_rate_reward': 0,
     
-    'x_V_LR c_r': 0,
-    'c_r x_V_LR': 0,
+    'x_learning_rate_reward^2': 0,
     
-    'x_V_LR^2': 0,
+    'c_value_reward c_reward': 0,
+    'c_reward c_value_reward': 0,
     
-    'c_V c_r': 0,
-    'c_r c_V': 0,
+    'c_value_reward^2': 0,
     
-    'c_V^2': 0,
-    
-    'c_r^2': 0,
+    'c_reward^2': 0,
 }
 
-mapping_x_V_nc = {
+mapping_x_value_reward_not_chosen = {
     '1': lambda forget_rate: 0.5*forget_rate,
     
-    'x_V_nc': lambda forget_rate: 1-forget_rate,
+    'x_value_reward_not_chosen': lambda forget_rate: 1-forget_rate,
     
-    'c_r': 0,
+    'c_reward': 0,
     
-    'x_V_nc c_r': 0,
-    'c_r x_V_nc': 0,
+    'x_value_reward_not_chosen c_reward': 0,
+    'c_reward x_value_reward_not_chosen': 0,
     
-    'x_V_nc^2': 0,
+    'x_value_reward_not_chosen^2': 0,
     
-    'c_r^2': 0,
+    'c_reward^2': 0,
 }
 
-mapping_x_C = {
-    '1': lambda alpha_choice: alpha_choice,
+mapping_x_value_choice_chosen = {
+    '1': 1,#lambda alpha_choice: alpha_choice,
     
     # 'x_C': lambda alpha_choice: 1-alpha_choice,
-    'x_C': 0,
+    'x_value_choice_chosen': 0,
     
-    'x_C^2': 0,
+    'x_value_choice_chosen^2': 0,
 }
 
-mapping_x_C_nc = {
+mapping_x_value_choice_not_chosen = {
     '1': 0,
     
-    'x_C_nc': 0,
+    'x_value_choice_not_chosen': 0,
     
-    'x_C_nc^2': 0,
+    'x_value_choice_not_chosen^2': 0,
 }
 
 mapping_betas = {
-    'x_V_LR': lambda agent_or_data: agent_or_data._beta_reward if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
-    'x_V_nc': lambda agent_or_data: agent_or_data._beta_reward if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
-    'x_C': lambda agent_or_data: agent_or_data._beta_choice if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_choice'],
-    'x_C_nc': lambda agent_or_data: agent_or_data._beta_choice if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_choice'],
+    'x_learning_rate_reward': lambda agent_or_data: 1, # no scaling of learning rate; agent_or_data.get_betas()[] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
+    'x_value_reward_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_reward'] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
+    'x_value_choice_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_choice'],
+    'x_value_choice_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_choice'],
 }
 
 mapping_libraries = {
-    'x_V_LR': mapping_x_V_LR,
-    'x_V_nc': mapping_x_V_nc,
-    'x_C': mapping_x_C,
-    'x_C_nc': mapping_x_C_nc,
+    'x_learning_rate_reward': mapping_x_learning_rate_reward,
+    'x_value_reward_not_chosen': mapping_x_value_reward_not_chosen,
+    'x_value_choice_chosen': mapping_x_value_choice_chosen,
+    'x_value_choice_not_chosen': mapping_x_value_choice_not_chosen,
 }
 
 # special-cases-handles
@@ -100,13 +100,13 @@ def handle_asymmetric_learning_rates(alpha_reward, alpha_penalty):
     return alpha_reward, alpha_penalty
 
 def argument_extractor(data, library: str):
-    if library == 'x_V_LR':
+    if library == 'x_learning_rate_reward':
         return handle_asymmetric_learning_rates(data['alpha_reward'], data['alpha_penalty'])
-    elif library == 'x_V_nc':
+    elif library == 'x_value_reward_not_chosen':
         return tuple([data['forget_rate']])
-    elif library == 'x_C':
+    elif library == 'x_value_choice_chosen':
         return tuple([data['alpha_choice']])
-    elif library == 'x_C_nc':
+    elif library == 'x_value_choice_not_chosen':
         return tuple([data['alpha_choice']])
     else:
         raise ValueError(f'The argument extractor for the library {library} is not implemented.')

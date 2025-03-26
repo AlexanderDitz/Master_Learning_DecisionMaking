@@ -13,25 +13,25 @@ agent1 = AgentQ(
     alpha_penalty=0.25,
     forget_rate=0.,
     confirmation_bias=0.,
-    beta_choice=0.,
-    alpha_choice=0.,
+    beta_choice=1.,
+    alpha_choice=1.,
     alpha_counterfactual=0.,
     )
 
 agent2 = AgentQ(
     beta_reward=3.,
     alpha_reward=0.25,
-    alpha_penalty=0.5,
+    alpha_penalty=0.25,
     forget_rate=0.,
-    confirmation_bias=0.9,
-    beta_choice=0.,
-    alpha_choice=0.0,
+    confirmation_bias=0.,
+    beta_choice=.5,
+    alpha_choice=1.,
     alpha_counterfactual=0.,
     )
 
 # env = EnvironmentBanditsSwitch(0.05, reward_prob_high=1.0, reward_prob_low=0.5)
 env = BanditsDrift(0.2)
-trajectory = create_dataset(agent1, env, 256, 1)[1][0]
-agents = {'groundtruth': agent1, 'rnn': agent2}
-fig, axs = plot_session(agents, trajectory)
+trajectory = create_dataset(agent1, env, 256, 1)[0]
+agents = {'groundtruth': agent1, 'benchmark': agent2}
+fig, axs = plot_session(agents, trajectory.xs[0])
 plt.show()

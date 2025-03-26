@@ -29,8 +29,8 @@ participant_emb = True,
 # model_benchmark = 'benchmarking/params/eckstein2022_291/traces.nc'
 # results = 'benchmarking/results/results_eckstein.csv'
 
-data='data/study_recovery_stepperseverance/data_rldm_256p_0.csv'
-model_rnn='params/study_recovery_stepperseverance/params_rldm_256p_0.pkl'
+data='data/parameter_recovery_participants/data_128p_0.csv'
+model_rnn='params/parameter_recovery_participants/params_128p_0_NoID.pkl'
 model_benchmark = 'benchmarking/params/traces_test.nc'
 results = 'benchmarking/results/results_study_recovery_stepperseverance_rldm_256p_0.csv'
 

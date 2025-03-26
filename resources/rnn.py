@@ -6,6 +6,23 @@ import pysindy as ps
 import numpy as np
 
 
+class GRUModule(nn.Module):
+    def __init__(self, input_size, hidden_size, dropout):
+        super().__init__()
+        
+        self.gru_in = nn.GRU(input_size, 1)
+        self.dropout = nn.Dropout(dropout)
+        self.linear_out = nn.Linear(1, 1)
+       
+    def forward(self, inputs):
+        n_actions = inputs.shape[1]
+        inputs = inputs.view(inputs.shape[0]*inputs.shape[1], inputs.shape[2]).unsqueeze(0)
+        next_state = self.gru_in(inputs[..., 1:], inputs[..., :1])[1].view(-1, n_actions, 1)
+        next_state = self.dropout(next_state)
+        next_state = self.linear_out(next_state)
+        return next_state
+    
+    
 class BaseRNN(nn.Module):
     def __init__(
         self, 
@@ -139,31 +156,26 @@ class BaseRNN(nn.Module):
             activation (nn.Module, optional): Possibility to include an activation function. Defaults to None.
 
         Returns:
-            torch.nn.Sequential: A sequential module which can be called by one line
+            torch.nn.Module: A torch module which can be called by one line and returns state update
         """
         if hidden_size is None:
             hidden_size = self._hidden_size
             
         # Linear network
-        layers = [
-            nn.Linear(input_size+1, hidden_size),
-            nn.Tanh(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_size, 1),
-        ]
+        # layers = [
+        #     nn.Linear(input_size+1, hidden_size),
+        #     nn.Tanh(),
+        #     nn.Dropout(dropout),
+        #     nn.Linear(hidden_size, 1),
+        # ]
+        # if activation is not None:
+        #     layers.append(activation())
+        # module = nn.Sequential(*layers)
         
         # GRU network
-        # layers = [
-        #     nn.Linear(input_size, hidden_size),
-        #     nn.Dropout(dropout),
-        #     nn.GRU(hidden_size, 1),
-        #     nn.Linear(1, 1),
-        # ]
+        module = GRUModule(input_size=input_size, hidden_size=hidden_size, dropout=dropout)
         
-        if activation is not None:
-            layers.append(activation())
-        
-        return nn.Sequential(*layers)
+        return module 
     
     def call_module(
         self,
@@ -246,19 +258,6 @@ class BaseRNN(nn.Module):
             inputs = torch.concat((value, inputs, participant_embedding), dim=-1)
             update_value = self.submodules_rnn[key_module](inputs)
             
-            # GRU handling
-            # if inputs.shape[-1] == 0:
-            #     inputs = torch.zeros((*value.shape[:-1], 1), dtype=torch.float32, device=value.device)
-            # inputs = torch.concat((inputs, participant_embedding), dim=-1)
-            # update_value = torch.zeros_like(value)
-            # for index_action in self._n_actions:
-            #     current_action = torch.eye(self._n_actions)[index_action].view(1, self._n_actions, 1)
-            #     value_i = value.squeeze(-1) @ current_action
-            #     hidden_representation = self.submodules_rnn[key_module][:2](inputs[:, index_action][:, None].swapaxes(0, 1))
-            #     _, update_value_i = self.submodules_rnn[key_module][2](hidden_representation, value)
-            #     update_value_i = self.submodules_rnn[key_module][3](update_value)
-            #     update_value = torch.eye(self._n_actions)[index_action].view(1, self._n_actions, 1) * update_value_i
-            
             next_value = value + update_value
             if activation_rnn is not None:
                 next_value = activation_rnn(next_value)
@@ -300,207 +299,6 @@ class BaseRNN(nn.Module):
         self.submodules_sindy = modules
 
 
-# class RLRNN(BaseRNN):
-#     def __init__(
-#         self,
-#         n_actions:int, 
-#         hidden_size:int,
-#         n_participants:int=0,
-#         list_signals=['x_V', 'x_V_nc', 'x_C', 'x_C_nc', 'c_a', 'c_r'],
-#         dropout=0.,
-#         device=torch.device('cpu'),
-#         ):
-        
-#         super(RLRNN, self).__init__(n_actions, hidden_size, device, list_signals)
-
-#         # define additional network parameters
-#         self._prev_action = torch.zeros(self._n_actions)
-#         self._relu = nn.ReLU()
-#         self._sigmoid = nn.Sigmoid()
-#         self._n_participants = n_participants
-#         self.init_values = (0.5, 0., 0.)  # (value_reward, learning_rate, value_choice)
-        
-#         # participant-embedding layer
-#         if n_participants > 0:
-#             self.emb_size = 8
-#             # self.participant_embedding = nn.Sequential(nn.Embedding(n_participants, self.emb_size), nn.Tanh())
-#             self.participant_embedding = nn.Embedding(n_participants, self.emb_size)
-#             self._beta_reward = nn.Sequential(nn.Linear(self.emb_size, 1), nn.ReLU())
-#             self._beta_choice = nn.Sequential(nn.Linear(self.emb_size, 1), nn.ReLU())
-#         else:
-#             self._beta_reward = nn.Parameter(torch.tensor(1.))
-#             self._beta_choice = nn.Parameter(torch.tensor(1.))
-        
-#         # action-based subnetwork
-#         self.submodules_rnn['x_C'] = self.setup_module(1+self.emb_size, hidden_size, dropout)
-        
-#         # action-based subnetwork for non-repeated action
-#         self.submodules_rnn['x_C_nc'] = self.setup_module(1+self.emb_size, hidden_size, dropout)
-
-#         # reward-based learning-rate subnetwork for chosen action (and counterfactual if applies)
-#         self.submodules_rnn['x_V_LR'] = self.setup_module(3+self.emb_size, hidden_size, dropout)
-        
-#         # reward-based equation for chosen action
-#         # self.submodules_eq['x_V'] = lambda value, inputs: (inputs @ torch.tensor([[0], [1]], dtype=torch.float32, device=inputs.device))*(inputs @ torch.tensor([[1], [0]], dtype=torch.float32, device=inputs.device) - value)
-#         self.submodules_eq['x_V'] = lambda value, inputs: value + (inputs[..., 1] * (inputs[..., 0] - value[..., 0])).view(-1, 2, 1)
-        
-#         # reward-based subnetwork for not-chosen action
-#         self.submodules_rnn['x_V_nc'] = self.setup_module(2+self.emb_size, hidden_size, dropout)
-        
-#         self._state = self.set_initial_state()
-        
-#     def value_network(self, action: torch.Tensor, reward: torch.Tensor, value: torch.Tensor, learning_rate: torch.Tensor, participant_embedding: torch.Tensor, participant_index: torch.Tensor):
-#         """this method computes the reward-blind and reward-based updates for the Q-Values without considering the habit (e.g. last chosen action)
-        
-#         Args:
-#             state (torch.Tensor): last hidden state
-#             value (torch.Tensor): last Q-Values
-#             action (torch.Tensor): chosen action (one-hot encoded)
-#             reward (torch.Tensor): received reward
-
-#         Returns:
-#             torch.Tensor: updated Q-Values
-#         """
-        
-#         # add dimension to inputs
-#         action = action.unsqueeze(-1)
-#         reward = reward.unsqueeze(-1)
-#         value = value.unsqueeze(-1)
-#         learning_rate = learning_rate.unsqueeze(-1)
-        
-#         # learning rate computation
-#         next_learning_rate = self.call_module(
-#             key_module='x_V_LR', 
-#             action=action, 
-#             key_state=learning_rate, 
-#             inputs = torch.concat([value, reward], dim=-1),
-#             participant_embedding=participant_embedding, 
-#             participant_index=participant_index, 
-#             activation_rnn=f.sigmoid,
-#             )
-        
-#         # compute update for chosen action (hard-coded equation)
-#         next_value_chosen = self.call_module(
-#             key_module='x_V', 
-#             action=action, 
-#             key_state=value, 
-#             inputs=torch.concat([reward, next_learning_rate], dim=-1),
-#             )
-        
-#         # reward sub-network for non-chosen action
-#         next_value_not_chosen = self.call_module(
-#             'x_V_nc', 
-#             action=1-action,
-#             key_state=value, 
-#             inputs=reward, 
-#             participant_embedding=participant_embedding, 
-#             participant_index=participant_index,
-#             )
-        
-#         # get together all updated values
-#         next_value = next_value_chosen + next_value_not_chosen
-        
-#         return next_value.squeeze(-1), next_learning_rate.squeeze(-1)
-    
-#     def choice_network(self, action: torch.Tensor, value: torch.Tensor, participant_embedding: torch.Tensor, participant_index: torch.Tensor):
-        
-#         # add dimension to inputs
-#         action = action.unsqueeze(-1)
-#         value = value.unsqueeze(-1)
-        
-#         # choice sub-network for chosen action
-#         next_value_chosen = self.call_module(
-#             'x_C', 
-#             action=action,
-#             key_state=value, 
-#             inputs=None, 
-#             participant_embedding=participant_embedding, 
-#             participant_index=participant_index,
-#             activation_rnn=f.sigmoid,
-#             )
-        
-#         # choice sub-network for non-chosen action
-#         next_value_not_chosen = self.call_module(
-#             'x_C_nc', 
-#             action=1-action,
-#             key_state=value, 
-#             inputs=None, 
-#             participant_embedding=participant_embedding, 
-#             participant_index=participant_index,
-#             activation_rnn=f.sigmoid,
-#             )
-        
-#         # get together all updated values
-#         next_value = next_value_chosen + next_value_not_chosen
-        
-#         return next_value.squeeze(-1)
-    
-#     def forward(self, inputs: torch.Tensor, prev_state: Optional[Tuple[torch.Tensor]] = None, batch_first=False):
-#         """this method computes the next hidden state and the updated Q-Values based on the input and the previous hidden state
-        
-#         Args:
-#             inputs (torch.Tensor): input tensor of form (seq_len, batch_size, n_actions + 1) or (batch_size, seq_len, n_actions + 1) if batch_first
-#             prev_state (Tuple[torch.Tensor]): tuple of previous state of form (habit state, value state, habit, value)
-
-#         Returns:
-#             torch.Tensor: updated Q-Values
-#             Tuple[torch.Tensor]: updated habit state, value state, habit, value
-#         """
-        
-#         if batch_first:
-#             inputs = inputs.permute(1, 0, 2)
-        
-#         action_array = inputs[:, :, :self._n_actions].float()
-#         reward_array = inputs[:, :, self._n_actions:2*self._n_actions].float()
-#         participant_id_array = inputs[:, :, -1:].int()
-        
-#         if prev_state is not None:
-#             self.set_state(*prev_state)
-#         else:
-#             self.set_initial_state(batch_size=inputs.shape[1])
-        
-#         # get previous model state
-#         state = [s.squeeze(1) for s in self.get_state()]  # remove model dim for forward pass -> only one model
-#         value_reward, learning_rate, value_choice = state
-        
-#         # get participant embedding
-#         if self._n_participants > 0:
-#             participant_embedding_array = self.participant_embedding(participant_id_array).repeat(1, 1, self._n_actions, 1)
-#             beta_reward = self._beta_reward(participant_embedding_array[0, :, 0])
-#             beta_choice = self._beta_choice(participant_embedding_array[0, :, 0])
-#         else:
-#             participant_embedding_array = torch.zeros((*inputs.shape[:-1], 2, 0), device=self.device)
-#             beta_reward = self._beta_reward
-#             beta_choice = self._beta_choice
-        
-#         timestep_array = torch.arange(inputs.shape[0])
-#         logits_array = torch.zeros_like(action_array, device=self.device)
-#         for timestep, action, reward, participant_embedding, participant_id in zip(timestep_array, action_array, reward_array, participant_embedding_array, participant_id_array):                         
-            
-#             # record memory state and control signals for SINDy-training if model is not in training mode
-#             if not self.training:
-#                 # self.record_signal('x_V_LR', prev_learning_rate, learning_rate)
-#                 # self.record_signal('x_V_nc', prev_value_reward, value_reward)
-#                 # self.record_signal('x_C', prev_value_choice, value_choice)
-#                 # self.record_signal('x_C_nc', prev_value_choice, value_choice)
-#                 self.record_signal('c_a', action)
-#                 self.record_signal('c_r', reward)
-#                 self.record_signal('c_V', value_reward)
-            
-#             # save memory state at timestep t
-#             # prev_value_reward, prev_learning_rate, prev_value_choice = value_reward, learning_rate, value_choice
-            
-#             # compute the updates
-#             value_reward, learning_rate = self.value_network(action, reward, value_reward, learning_rate, participant_embedding, participant_id)
-#             value_choice = self.choice_network(action, value_choice, participant_embedding, participant_id)
-            
-#             logits_array[timestep] += value_reward * beta_reward + value_choice * beta_choice
-
-#         self.post_forward_pass(logits_array, batch_first, value_reward, learning_rate, value_choice)
-        
-#         return logits_array, self.get_state()
-
-
 class RLRNN(BaseRNN):
     
     init_values = {
@@ -514,9 +312,9 @@ class RLRNN(BaseRNN):
         n_actions: int,
         n_participants: int,
         hidden_size = 8,
+        embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        embedding_size = 8,
         list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward', 'c_value_reward'],
         **kwargs,
     ):
@@ -525,12 +323,16 @@ class RLRNN(BaseRNN):
         
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
-        self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
+        if embedding_size > 0:
+            self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
+        else:
+            self.embedding_size = 1
+            self.participant_embedding = lambda participant_id: torch.ones_like(participant_id, device=participant_id.device, dtype=torch.float).view(-1, 1)
         
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
