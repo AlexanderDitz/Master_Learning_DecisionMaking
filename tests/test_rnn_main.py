@@ -44,5 +44,5 @@ _, loss = rnn_main.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=42,
+    participant_id=1,
 )
