@@ -5,12 +5,14 @@ from typing import List, Dict
 from torch import device, load
 import numpy as np
 import torch
+import pickle
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn import RLRNN
-from resources.bandits import AgentSindy, AgentNetwork, AgentQ
+from resources.bandits import AgentSpice, AgentNetwork, AgentQ
 from resources.sindy_training import fit_model
 from utils.convert_dataset import convert_dataset
+from benchmarking.hierarchical_bayes_numpyro import rl_model
 
 
 def setup_rnn(
@@ -56,16 +58,17 @@ def setup_agent_rnn(
     list_sindy_signals,
     n_actions=2,
     counterfactual=False,
+    deterministic=True,
     device=device('cpu'),
     ) -> AgentNetwork:
     
     rnn = setup_rnn(path_model=path_model, list_sindy_signals=list_sindy_signals, device=device, n_actions=n_actions, counterfactual=counterfactual)
-    agent = AgentNetwork(model_rnn=rnn, n_actions=n_actions, deterministic=True)
+    agent = AgentNetwork(model_rnn=rnn, n_actions=n_actions, deterministic=deterministic)
     
     return agent
 
 
-def setup_agent_sindy(
+def setup_agent_spice(
     path_model: str,
     path_data: str,
     rnn_modules: List[str],
@@ -78,12 +81,14 @@ def setup_agent_sindy(
     threshold = 0.05,
     regularization = 1,
     participant_id: int = None,
-) -> AgentSindy:
+    deterministic = True,
+    verbose: bool = False,
+) -> AgentSpice:
     
     agent_rnn = setup_agent_rnn(path_model=path_model, list_sindy_signals=rnn_modules+control_parameters)
     dataset = convert_dataset(file=path_data)[0]
     
-    agent_sindy = fit_model(
+    agent_spice = fit_model(
         agent=agent_rnn,
         data=dataset,
         rnn_modules=rnn_modules,
@@ -96,50 +101,61 @@ def setup_agent_sindy(
         n_trials_off_policy=n_trials,
         optimizer_alpha=regularization,
         optimizer_threshold=threshold,
+        deterministic=deterministic,
+        verbose=verbose,
     )
 
-    return agent_sindy
+    return agent_spice
 
 
-def setup_benchmark_q_agent(
-    parameters,
-    **kwargs
-) -> AgentQ:
+def setup_agent_mcmc(
+    path_model: str,
+) -> List[AgentQ]:
     
-    class AgentBenchmark(AgentQ):
-        
-        def __init__(self, parameters, n_actions = 2):
-            super().__init__(n_actions, 0, 0)
-            
-            self._parameters = parameters
-            
-        def update(self, a, r, *args):
-            # q, c = update_rule(self._q, self._c, a, r)
-            ch = np.eye(2)[a]
-            r = r[0]
-            
-            # Compute prediction errors for each outcome
-            rpe = (r - self._q) * ch
-            cpe = ch - self._c
-            
-            # Update values
-            lr = np.where(r > 0.5, self._parameters['alpha_pos'], self._parameters['alpha_neg'])
-            self._q += lr * rpe
-            self._c += self._parameters['alpha_c'] * cpe
-            
-        @property
-        def q(self):
-            return self._parameters['beta_r'] * self._q + self._parameters['beta_c'] * self._c
-        
-    return AgentBenchmark(parameters)
+    # setup mcmc agent
+    with open(path_model, 'rb') as file:
+        mcmc = pickle.load(file)
     
+    n_sessions = mcmc.get_samples()[list(mcmc.get_samples().keys())[0]].shape[-1]
+    
+    agents = []
+    
+    for session in range(n_sessions):
+        parameters = {
+            'alpha_pos': 1,
+            'alpha_neg': -1,
+            'alpha_c': 1,
+            'beta_c': 0,
+            'beta_r': 1,
+        }
+        
+        for param in parameters:
+            if param in mcmc.get_samples():
+                samples = mcmc.get_samples()[param]
+                if len(samples.shape) == 2:
+                    samples = samples[:, session]
+                parameters[param] = np.mean(samples, axis=0)
+        
+        if np.mean(parameters['alpha_neg']) == -1:
+            parameters['alpha_neg'] = parameters['alpha_pos']
+            
+        agents.append(AgentQ(
+            alpha_reward=parameters['alpha_pos'],
+            alpha_penalty=parameters['alpha_neg'],
+            alpha_choice=parameters['alpha_c'],
+            beta_reward=parameters['beta_r'],
+            beta_choice=parameters['beta_c'],
+        ))
+    
+    return agents
+        
     
     
 
 
 if __name__ == '__main__':
     
-    setup_agent_sindy(
+    setup_agent_spice(
         path_model = 'params/benchmarking/sugawara2021_143_4.pkl',
         path_data = 'data/sugawara2021_143_processed.csv',
     )

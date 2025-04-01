@@ -11,7 +11,7 @@ from copy import deepcopy
 
 sys.path.append('resources')
 from resources.rnn import RLRNN
-from resources.bandits import AgentSindy, AgentNetwork, get_update_dynamics
+from resources.bandits import AgentSpice, AgentNetwork, get_update_dynamics
 from resources.sindy_utils import create_dataset, check_library_setup
 from resources.sindy_training import fit_sindy
 from resources.rnn_utils import DatasetRNN, load_checkpoint
@@ -196,7 +196,7 @@ def pipeline_sindy(
     experiment_list_train = convert_dataset(data)[1]
     
     # set sessions ids according to whether the rnn fitted single participants (i.e. with participant embedding)
-    session_id = np.arange(len(experiment_list_train)) if model_rnn._n_participants > 0 else [0]
+    session_id = np.arange(len(experiment_list_train)) if model_rnn.n_participants > 0 else [0]
     
     # set up rnn agent and expose q-values to train sindy
     agent_rnn = AgentNetwork(model_rnn, n_actions, deterministic=True)            
@@ -233,7 +233,7 @@ def pipeline_sindy(
         try:
             # set up SINDy-Agent
             agent_rnn.new_sess(experiment_list_train[id].session[0])
-            agent_sindy[id] = AgentSindy(
+            agent_sindy[id] = AgentSpice(
                 sindy_models=sindy_models, 
                 n_actions=n_actions, 
                 beta_reward=agent_rnn._beta_reward,

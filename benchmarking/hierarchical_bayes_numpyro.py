@@ -101,7 +101,7 @@ def rl_model(model, choice, reward, hierarchical):
     
     # Use numpyro.plate for sampling
     next_choices = choice[1:, :, -1]
-    valid_mask = ys != -1
+    valid_mask = next_choices != -1
     # Apply the mask to the observations
     if hierarchical == 1:
         with numpyro.handlers.mask(mask=valid_mask):
@@ -121,7 +121,9 @@ def encode_model_name(model: str, model_parts: list) -> np.ndarray:
     return enc
 
 
-def main(file: str, model: str, num_samples: int, num_warmup: int, num_chains: int, hierarchical: bool, output_file: str, checkpoint: bool):
+def main(file: str, model: str, num_samples: int, num_warmup: int, num_chains: int, hierarchical: bool, output_file: str, checkpoint: bool, train_test_ratio: float = 1.):
+    # jax.config.update('jax_disable_jit', True)
+    
     # set output file
     output_file = output_file.split('.')[0] + '_' + model + '.nc'
     
@@ -138,15 +140,16 @@ def main(file: str, model: str, num_samples: int, num_warmup: int, num_chains: i
     # get all different sessions
     sessions = data['session'].unique()
     # get maximum number of trials per session
-    max_trials = data.groupby('session').size().max()
+    max_trials = int(data.groupby('session').size().max() * train_test_ratio)
     # sort values into session-grouped arrays
     choices = np.zeros((len(sessions), max_trials, 2)) - 1
     rewards = np.zeros((len(sessions), max_trials, 1)) - 1
     for i, s in enumerate(sessions):
         choice = data[data['session'] == s]['choice'].values.astype(int)
         reward = data[data['session'] == s]['reward'].values
-        choices[i, :len(choice)] = np.eye(2)[choice]
-        rewards[i, :len(choice), 0] = reward
+        index_train = int(len(choice) * train_test_ratio)
+        choices[i, :index_train] = np.eye(2)[choice[:index_train]]
+        rewards[i, :index_train, 0] = reward[:index_train]
     
     # Run the model
     numpyro.set_host_device_count(num_chains)

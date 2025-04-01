@@ -119,7 +119,7 @@ def main(
     print('Generation of dataset complete.')
   else:
     dataset, _, df, _ = convert_dataset.convert_dataset(data, sequence_length=sequence_length)
-    dataset_test = rnn_utils.DatasetRNN(dataset.xs, dataset.ys)
+    # dataset_test = rnn_utils.DatasetRNN(dataset.xs, dataset.ys)
     
     # check if groundtruth parameters in data - only applicable to generated data with e.g. utils/create_dataset.py
     if 'mean_beta_reward' in df.columns:
@@ -137,18 +137,12 @@ def main(
   n_participants = len(dataset.xs[..., -1].unique())
   
   if train_test_ratio < 1:
-    # setup of training and test dataset
-    index_train = int(train_test_ratio * dataset.xs.shape[1])
-    
-    xs_test, ys_test = dataset.xs[:, index_train:], dataset.ys[:, index_train:]
-    xs_train, ys_train = dataset.xs[:, :index_train], dataset.ys[:, :index_train]
-    dataset_train = bandits.DatasetRNN(xs_train, ys_train, sequence_length=sequence_length)
-    if dataset_test is None:
-      dataset_test = bandits.DatasetRNN(xs_test, ys_test)  
+    dataset_train, dataset_test = rnn_utils.split_data_along_timedim(dataset, train_test_ratio)
+    dataset_train = bandits.DatasetRNN(dataset_train.xs, dataset_train.ys, sequence_length=sequence_length)  
   else:
-    if dataset_test is None:
-      dataset_test = dataset
     dataset_train = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length)
+    if dataset_test is None:
+      dataset_test = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length)
     
   if data is None and model is None:
     params_path = rnn_utils.parameter_file_naming(

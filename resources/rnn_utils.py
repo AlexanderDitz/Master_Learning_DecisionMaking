@@ -138,3 +138,61 @@ def parameter_file_naming(params_path, alpha_reward, alpha_penalty, alpha_counte
         print(f'Automatically generated name for model parameter file: {params_path}.')
         
     return params_path
+
+
+def split_data_along_timedim(dataset: DatasetRNN, split_ratio: float):
+    """Split the data along the time dimension (dim=1). 
+    Each session (dim=0) can be of individual length and is therefore post-padded with -1.
+    To split the data into training and testing samples according to the split_ratio each session's individual length has to be considered.
+    E.g.: 
+    1. session_length = len(session 0) -> 120
+    2. split_index = int(split_ratio * session length) -> 96
+    3. samples for training data -> 96
+    4. samples for testing data -> 24 = 120 - 96    
+
+    Args:
+        data (torch.Tensor): Data containing all sessions in the shape (session, time, features)
+        split_ratio (float): Float number indicating the ratio to be used as training data
+
+    Returns:
+        tuple(DatasetRNN, DatasetRNN): Training data and testing data splitted along time dimension (dim=1)
+    """
+    
+    dim = 1
+    xs, ys = dataset.xs, dataset.ys
+    
+    # Create a mask of non-zero elements
+    non_zero_mask = (xs[..., 0] != -1).int()
+    
+    # Find cumulative sum along the specified dimension in reverse order
+    cumsum = torch.cumsum(non_zero_mask, dim)
+    
+    # Find the index where the cumulative sum becomes 1 in the reversed array
+    last_nonzero_indices = torch.argmax(cumsum, dim=dim)
+    
+    # compute the indeces at which the data is going to be splitted into training and testing data
+    split_indices = (last_nonzero_indices * split_ratio).int()
+    
+    # initialize training data and testing data storages
+    train_xs = torch.zeros((xs.shape[0], max(split_indices), xs.shape[2])) - 1
+    test_xs = torch.zeros((xs.shape[0], max(last_nonzero_indices - split_indices), xs.shape[2])) - 1
+    train_ys = torch.zeros((xs.shape[0], max(split_indices), ys.shape[2])) - 1
+    test_ys = torch.zeros((xs.shape[0], max(last_nonzero_indices - split_indices), ys.shape[2])) - 1
+    
+    # get columns which had no -1 values in the first place to fill them up entirely in the training and testing data
+    # necessary for e.g. participant-IDs because otherwise -1 will be passed to embedding layer -> Error
+    example_session_id = torch.argmax((last_nonzero_indices < xs.shape[1]-1).int()).item()
+    full_columns = xs[example_session_id, -1] != -1
+    
+    # fill up training and testing data
+    for index_session in range(xs.shape[0]):
+        train_xs[index_session, :split_indices[index_session]] = xs[index_session, :split_indices[index_session]]
+        test_xs[index_session, :last_nonzero_indices[index_session]-split_indices[index_session]] = xs[index_session, split_indices[index_session]:last_nonzero_indices[index_session]]
+        train_ys[index_session, :split_indices[index_session]] = ys[index_session, :split_indices[index_session]]
+        test_ys[index_session, :last_nonzero_indices[index_session]-split_indices[index_session]] = ys[index_session, split_indices[index_session]:last_nonzero_indices[index_session]]
+
+        # fill up non-"-1"-columns (only applicable for xs)
+        train_xs[index_session, :, full_columns] = xs[index_session, :train_xs.shape[1], full_columns]
+        test_xs[index_session, :, full_columns] = xs[index_session, :test_xs.shape[1], full_columns]
+    
+    return DatasetRNN(train_xs, train_ys), DatasetRNN(test_xs, test_ys)

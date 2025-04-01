@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from resources.bandits import AgentQ, AgentNetwork, AgentSindy, BanditSession, get_update_dynamics, plot_session as plt_session
+from resources.bandits import AgentQ, AgentNetwork, AgentSpice, BanditSession, get_update_dynamics, plot_session as plt_session
 from resources.rnn_utils import DatasetRNN
 
-def plot_session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experiment: Union[BanditSession, np.ndarray], labels: List[str] = None, save: str = None):    
+def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], experiment: Union[BanditSession, np.ndarray], labels: List[str] = None, save: str = None):    
     # plot the dynamcis associated with the first arm
     
     # valid keys in agent dictionary
@@ -143,7 +143,7 @@ def plot_session(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], exp
     
     return fig, axs
     
-def pca(agents: Dict[str, Union[AgentSindy, AgentNetwork, AgentQ]], experiments: List[BanditSession], labels=None, save=None):
+def pca(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], experiments: List[BanditSession], labels=None, save=None):
     
     # valid keys in agent dictionary
     valid_keys_color_pairs = {'groundtruth': 'tab:blue', 'rnn': 'tab:orange', 'sindy': 'tab:pink', 'benchmark':'tab:grey'}    

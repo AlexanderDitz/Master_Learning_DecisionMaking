@@ -8,7 +8,7 @@ import pysindy as ps
 
 from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset
 from resources.rnn_utils import DatasetRNN
-from resources.bandits import AgentNetwork, AgentSindy, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits
+from resources.bandits import AgentNetwork, AgentSpice, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits
 
 
 def fit_sindy(
@@ -87,27 +87,18 @@ def fit_sindy(
             discrete_time=True,
             feature_names=feature_names_i,
         )
-
+        
         # fit sindy model
         sindy_models[x_feature].fit(x_i, u=control_i, t=1, multiple_trajectories=True, ensemble=False)
         
         # post-process sindy weights
-        coefs = sindy_models[x_feature].model.steps[-1][1].coef_
+        coefs = sindy_models[x_feature].coefficients()
         for index_feature, feature in enumerate(sindy_models[x_feature].get_feature_names()):
-            # # case: coefficient is x_feature[k] 
-            # # --> Target in the case of non-available dynamics: 
-            # # x_feature[k+1] = 1.0 x_feature[k] and not e.g. x_feature[k+1] = 1.03 x_feature[k]
-            # if feature == x_feature:
-            #     if np.abs(coefs[0, index_feature]-1) < optimizer_threshold:
-            #         sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 1.
-            #     elif np.abs(coefs[0, index_feature]) < optimizer_threshold:
-            #         sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 0.
-            # # case: any other coefficient
-            # elif np.abs(coefs[0, index_feature]) < optimizer_threshold:
-            #     sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 0.
             if np.abs(coefs[0, index_feature]) < optimizer_threshold:
                 sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 0.
-        
+            if feature == x_feature and np.abs(1-coefs[0, index_feature]) < optimizer_threshold:
+                sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 1.
+                
         if get_loss:
             loss_model = 1-sindy_models[x_feature].score(x_i, u=control_i, t=1, multiple_trajectories=True)
             loss += loss_model
@@ -137,9 +128,10 @@ def fit_model(
     dataprocessing: Dict[str, List] = None,
     off_policy: bool = True,
     n_trials_off_policy: int = 1024,
+    deterministic: bool = True,
     # get_loss: bool = False,
     verbose: bool = False,
-    ) -> AgentSindy:
+    ) -> AgentSpice:
     
     if participant_id is not None:
         participant_ids = [participant_id]
@@ -190,6 +182,6 @@ def fit_model(
             sindy_models[rnn_module][participant_id] = sindy_models_id[rnn_module]
 
     # set up a SINDy-based agent by replacing the RNN-modules with the respective SINDy-model
-    agent_sindy = AgentSindy(model_rnn=deepcopy(agent._model), sindy_modules=sindy_models, n_actions=agent._n_actions)
+    agent_spice = AgentSpice(model_rnn=deepcopy(agent._model), sindy_modules=sindy_models, n_actions=agent._n_actions, deterministic=deterministic)
     
-    return agent_sindy
+    return agent_spice
