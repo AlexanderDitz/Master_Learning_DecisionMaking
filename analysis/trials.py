@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from resources.model_evaluation import bayesian_information_criterion, log_likelihood
 from utils.plotting import plot_session
-from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, AgentSindy, get_update_dynamics
+from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, AgentSpice, get_update_dynamics
 from resources.rnn import RLRNN
 from resources.rnn_utils import DatasetRNN
 from resources.rnn_training import fit_model

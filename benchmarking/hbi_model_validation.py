@@ -9,8 +9,8 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-original_data = 'data/sugawara2021_143_processed.csv'
-inference_data = 'benchmarking/params/data_rnn_a05_b30_p025_ap05_varDict_1000s_3c.nc'
+original_data = 'data/sugawara2021/sugawara2021.csv'
+inference_data = 'params/params_ApBr.nc'
 
 idata = az.from_netcdf(inference_data)
 print(az.summary(idata))
@@ -19,22 +19,16 @@ plt.show()
 
 # load original data
 odata = pd.read_csv(original_data)
-odata['perseverance_bias'] = odata['perseverance_bias'] * odata['beta']
 # get true participant parameters
 # keys in data for true participant parameters
-okeys = ['beta', 'alpha', 'alpha_penalty', 'perseverance_bias', 'alpha_perseverance']
+okeys = ['beta_reward', 'beta_choice', 'alpha_reward', 'alpha_penalty', 'alpha_choice']
 # standard values (if not available in model)
-oparams_standard = {
-    'alpha_perseverance': 1,
-}
 n_sessions = int(odata['session'].max())
 oparams = np.zeros((n_sessions, len(okeys)))
 for s in range(n_sessions):
     for i, k in enumerate(okeys):
         if k in odata.columns:
             oparams[s, i] = odata[odata['session'] == s].iloc[0][k]
-        elif k in oparams_standard:
-            oparams[s, i] = oparams_standard[k]
 
 # load inferred data
 idata = az.from_netcdf(inference_data)

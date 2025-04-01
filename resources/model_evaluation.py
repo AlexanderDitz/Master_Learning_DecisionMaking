@@ -13,38 +13,55 @@ from resources.bandits import get_update_dynamics
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 
 
-def log_likelihood(data: np.ndarray, probs: np.ndarray, axis: int = None, normalization: int = 1):
+def average_trial_likelihood(data: np.ndarray, probs: np.ndarray):
+    avg_trial_likelihood = None
+    
+    trial_likelihood = np.sum(data * probs, axis=-1)
+    avg_trial_likelihood = np.mean(trial_likelihood)
+    return avg_trial_likelihood
+    
+def log_likelihood(data: np.ndarray, probs: np.ndarray):
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1 
     
     # Sum over all data points
-    return np.sum(np.sum(data * np.log(probs), axis=-1), axis=axis) / normalization
+    # return np.sum(np.sum(data * np.log(probs), axis=-1), axis=axis) / normalization
+    # Ensure probabilities are within a valid range to prevent log(0)
+    epsilon = 1e-9
+    probs = np.clip(probs, epsilon, 1 - epsilon)
+    
+    # Calculate log-likelihood for each observation
+    # log_likelihoods = data * np.log(probs) + (1 - data) * np.log(1 - probs)
+    log_likelihoods = np.sum(data * np.log(probs), axis=-1)
+    
+    # Sum log-likelihoods over all observations
+    return np.sum(log_likelihoods)
 
-
-def bayesian_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None, axis: int = None, normalization: int = 1):
+def bayesian_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None):
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1
     # n_parameters: integer number of trainable model parameters
     
     if ll is None:
-        ll = log_likelihood(daa=data, probs=probs, axis=axis, normalization=normalization)
+        ll = log_likelihood(data=data, probs=probs)
     
-    return -2 * ll + n_parameters * np.log(np.prod(data.shape[:-1]))
+    n_samples = (data[:, 0] != -1).sum()
+    return -2 * ll + n_parameters * np.log(n_samples)
 
-def akaike_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None, axis: int = None, normalization: int = 1):
+def akaike_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None):
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1
     # n_parameters: integer number of trainable model parameters
     
     if ll is None:
-        ll = log_likelihood(data=data, probs=probs, axis=axis, normalization=normalization)
+        ll = log_likelihood(data=data, probs=probs)
     
     return -2 * ll + 2 * n_parameters
 
-def get_scores(data: np.ndarray, probs: np.ndarray, n_parameters: int, axis: int = None, normalization: int = 1) -> float:
-        ll = log_likelihood(data=data, probs=probs, axis=axis, normalization=normalization)
-        bic = bayesian_information_criterion(data=data, probs=probs, n_parameters=n_parameters, ll=ll, axis=axis, normalization=normalization)
-        aic = akaike_information_criterion(data=data, probs=probs, n_parameters=n_parameters, ll=ll, axis=axis, normalization=normalization)
+def get_scores(data: np.ndarray, probs: np.ndarray, n_parameters: int) -> float:
+        ll = log_likelihood(data=data, probs=probs)
+        bic = bayesian_information_criterion(data=data, probs=probs, n_parameters=n_parameters, ll=ll)
+        aic = akaike_information_criterion(data=data, probs=probs, n_parameters=n_parameters, ll=ll)
         return -ll, bic, aic
     
 def plot_traces(file_numpyro: Union[str, numpyro.infer.MCMC], figsize=(12, 8)):

@@ -6,34 +6,37 @@ import pandas as pd
 import seaborn as sns
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.setup_agents import setup_agent_sindy
-from resources.bandits import AgentSindy
+from utils.setup_agents import setup_agent_spice
+from resources.bandits import AgentSpice
 
 
+# -----------------------------------------------------------------------------------------------
 # create a mapping of ground truth parameters to library parameters
+# -----------------------------------------------------------------------------------------------
+
 mapping_x_learning_rate_reward = {
     '1': lambda alpha_reward, alpha_penalty: alpha_penalty,
      
-    'x_learning_rate_reward': 0,
+    'x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
     
     'c_reward': lambda alpha_reward, alpha_penalty: alpha_reward,
     
-    'c_value_reward': 0,
+    'c_value_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'x_learning_rate_reward c_value_reward': 0,
-    'c_value_reward x_learning_rate_reward': 0,
+    'x_learning_rate_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
+    'c_value_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'x_learning_rate_reward c_reward': 0,
-    'c_reward x_learning_rate_reward': 0,
+    'x_learning_rate_reward c_reward': lambda alpha_reward, alpha_penalty: 0,
+    'c_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'x_learning_rate_reward^2': 0,
+    'x_learning_rate_reward^2': lambda alpha_reward, alpha_penalty: 0,
     
-    'c_value_reward c_reward': 0,
-    'c_reward c_value_reward': 0,
+    'c_value_reward c_reward': lambda alpha_reward, alpha_penalty: 0,
+    'c_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'c_value_reward^2': 0,
+    'c_value_reward^2': lambda alpha_reward, alpha_penalty: 0,
     
-    'c_reward^2': 0,
+    'c_reward^2': lambda alpha_reward, alpha_penalty: 0,
 }
 
 mapping_x_value_reward_not_chosen = {
@@ -41,38 +44,38 @@ mapping_x_value_reward_not_chosen = {
     
     'x_value_reward_not_chosen': lambda forget_rate: 1-forget_rate,
     
-    'c_reward': 0,
+    # 'c_reward': lambda forget_rate: 0,
     
-    'x_value_reward_not_chosen c_reward': 0,
-    'c_reward x_value_reward_not_chosen': 0,
+    # 'x_value_reward_not_chosen c_reward': lambda forget_rate: 0,
+    # 'c_reward x_value_reward_not_chosen': lambda forget_rate: 0,
     
-    'x_value_reward_not_chosen^2': 0,
+    'x_value_reward_not_chosen^2': lambda forget_rate: 0,
     
-    'c_reward^2': 0,
+    # 'c_reward^2': lambda forget_rate: 0,
 }
 
 mapping_x_value_choice_chosen = {
-    '1': 1,#lambda alpha_choice: alpha_choice,
+    '1': lambda alpha_choice: 1, #alpha_choice,
     
     # 'x_C': lambda alpha_choice: 1-alpha_choice,
-    'x_value_choice_chosen': 0,
+    'x_value_choice_chosen': lambda alpha_choice: 0,
     
-    'x_value_choice_chosen^2': 0,
+    'x_value_choice_chosen^2': lambda alpha_choice: 0,
 }
 
 mapping_x_value_choice_not_chosen = {
-    '1': 0,
+    '1': lambda alpha_choice: 0,
     
-    'x_value_choice_not_chosen': 0,
+    'x_value_choice_not_chosen': lambda alpha_choice: 0,
     
-    'x_value_choice_not_chosen^2': 0,
+    'x_value_choice_not_chosen^2': lambda alpha_choice: 0,
 }
 
 mapping_betas = {
     'x_learning_rate_reward': lambda agent_or_data: 1, # no scaling of learning rate; agent_or_data.get_betas()[] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
-    'x_value_reward_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_reward'] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
-    'x_value_choice_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_choice'],
-    'x_value_choice_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_choice'],
+    'x_value_reward_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_reward'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_reward'],
+    'x_value_choice_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_choice'],
+    'x_value_choice_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_choice'],
 }
 
 mapping_libraries = {
@@ -82,21 +85,33 @@ mapping_libraries = {
     'x_value_choice_not_chosen': mapping_x_value_choice_not_chosen,
 }
 
+mapping_variable_names = {
+    '1': '1',
+    'x_learning_rate_reward': r'$\alpha_{t}$',
+    'x_value_reward_not_chosen': r'$q_{r,t}$',
+    'x_value_choice_chosen': r'$q_{c,t}$',
+    'x_value_choice_not_chosen': r'$q_{c,t}$',
+    'c_reward': r'$r$',
+    'c_value_reward': r'$q_{r}$',
+}
+
+
+# -----------------------------------------------------------------------------------------------
+# analysis auxiliary functions
+# -----------------------------------------------------------------------------------------------
+
 # special-cases-handles
 # necessary because some sindy notations in the mappings interpet the parameters differently than AgentQ
 def handle_asymmetric_learning_rates(alpha_reward, alpha_penalty):
     # in AgentQ: alpha = alpha_reward if reward > 0.5 else alpha_penalty
     # in SINDy: alpha = alpha_penalty 1 - alpha_reward r 
-    if alpha_reward > 0 and alpha_penalty > 0 and alpha_reward > alpha_penalty:
-        pass
-    if alpha_reward > 0 and alpha_penalty > 0 and alpha_reward < alpha_penalty:
-        alpha_reward = -1 * alpha_reward
-    elif alpha_reward > 0 and alpha_penalty == 0:
-        pass
-    elif alpha_reward == 0 and alpha_penalty > 0:
-        alpha_reward = -1 * alpha_penalty
-    elif alpha_reward == alpha_penalty:
+    if alpha_reward == alpha_penalty:
+        # same learning rates -> 'c_reward' in SINDy is 0 in simplest model
         alpha_reward = 0
+    elif alpha_reward > alpha_penalty:
+        alpha_reward = alpha_reward - alpha_penalty
+    elif alpha_reward < alpha_penalty:
+        alpha_reward = -1 * (alpha_penalty - alpha_reward)
     return alpha_reward, alpha_penalty
 
 def argument_extractor(data, library: str):
@@ -116,13 +131,19 @@ def identified_params(true_coefs: np.ndarray, recovered_coefs: np.ndarray):
     non_zero_features = true_coefs != 0
     zero_features = true_coefs == 0
     
-    # check which recovered coefficients were recovered (true_pos and true_neg) correctly and which ones were not (false_pos and false_neg)
-    true_pos = np.sum(recovered_coefs[non_zero_features] != 0) / np.sum(non_zero_features) if np.sum(non_zero_features) > 0 else np.nan
-    false_neg = np.sum(recovered_coefs[non_zero_features] == 0) / np.sum(non_zero_features) if np.sum(non_zero_features) > 0 else np.nan
-    true_neg = np.sum(recovered_coefs[zero_features] == 0) / np.sum(zero_features) if np.sum(zero_features) > 0 else np.nan
-    false_pos = np.sum(recovered_coefs[zero_features] != 0) / np.sum(zero_features) if np.sum(zero_features) > 0 else np.nan
+    # count all correctly and non-correctly identified parameters
+    true_pos = np.sum(recovered_coefs[non_zero_features] != 0)
+    false_neg = np.sum(recovered_coefs[non_zero_features] == 0)
+    true_neg = np.sum(recovered_coefs[zero_features] == 0)
+    false_pos = np.sum(recovered_coefs[zero_features] != 0)
     
-    return true_pos, false_neg, true_neg, false_pos
+    # get identification rates of correctly and non-correctly identified parameters
+    true_pos_rel = true_pos / np.sum(non_zero_features) if np.sum(non_zero_features) > 0 else np.nan
+    false_neg_rel = false_neg / np.sum(non_zero_features) if np.sum(non_zero_features) > 0 else np.nan
+    true_neg_rel = true_neg / np.sum(zero_features) if np.sum(zero_features) > 0 else np.nan
+    false_pos_rel = false_pos / np.sum(zero_features) if np.sum(zero_features) > 0 else np.nan
+    
+    return (true_pos, true_neg, false_pos, false_neg), (true_pos_rel, true_neg_rel, false_pos_rel, false_neg_rel)
 
 def n_true_params(true_coefs):
     # Count number of non-zero coefficients in AgentQ-parameters
@@ -137,13 +158,11 @@ def n_true_params(true_coefs):
         true_coefs['alpha_reward'] = 0
         true_coefs['alpha_penalty'] = 0
         true_coefs['forget_rate'] = 0
-        true_coefs['confirmation_bias'] = 0 
         true_coefs['beta_reward'] = 0
     
     # choice-based parameter group
-    if true_coefs['beta_choice'] == 0 or true_coefs['alpha_choice'] == 0:
-        true_coefs['alpha_choice'] = 0
-        true_coefs['beta_choice'] = 0
+    # if true_coefs['beta_choice'] == 0 or true_coefs['alpha_choice'] == 0:
+    #     true_coefs['beta_choice'] = 0
     
     return np.sum([
         true_coefs['beta_reward'] != 0,
@@ -151,15 +170,19 @@ def n_true_params(true_coefs):
         true_coefs['alpha_penalty'] != 0,
         true_coefs['forget_rate'] != 0,
         true_coefs['beta_choice'] != 0,
-        true_coefs['alpha_choice'] != 0,
         ]).astype(int)
 
+
+# -----------------------------------------------------------------------------------------------
 # configuration
+# -----------------------------------------------------------------------------------------------
+
 random_sampling = [0.25, 0.5, 0.75]
-n_sessions = [256]#[16, 128, 32, 64, 128, 256, 512]
-iterations = 1#8
-base_name_data = 'data/study_recovery_stepperseverance/data_rldm_SESSp_IT.csv'
-base_name_params = 'params/study_recovery_stepperseverance/params_rldm_SESSp_IT.pkl'
+n_sessions = [16]#, 32, 64, 128, 256]#, 512]
+iterations = 3
+
+base_name_data = 'data/parameter_recovery/data_SESSp_IT.csv'
+base_name_params = 'params/parameter_recovery/params_SESSp_IT.pkl'
 kw_participant_id = 'session'
 
 # sindy configuration
@@ -178,23 +201,39 @@ sindy_filter_setup = {
 sindy_dataprocessing = None
 
 # meta parameters
-mapping_lens = {'x_V_LR': 10, 'x_V_nc': 6, 'x_C': 3, 'x_C_nc': 3}
+mapping_lens = {'x_V_LR': 10, 'x_V_nc': 3, 'x_C': 3, 'x_C_nc': 3}
 n_candidate_terms = np.sum([mapping_lens[key] for key in mapping_lens])
-n_params_q = 6
+n_params_q = 5
+
+
+# -----------------------------------------------------------------------------------------------
+# Initialization of storages
+# -----------------------------------------------------------------------------------------------
 
 # parameter correlation coefficients
 true_params = [np.zeros((sess*iterations, n_candidate_terms)) for sess in n_sessions]
 recovered_params = [np.zeros((sess*iterations, n_candidate_terms)) for sess in n_sessions]
 
-# parameter identification rates
-true_pos_sessions = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
-true_neg_sessions = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
-false_pos_sessions = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
-false_neg_sessions = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
-count_true_pos = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))# + 1e-9
-count_true_neg = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))# + 1e-9
-count_false_pos = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))# + 1e-9
-count_false_neg = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))# + 1e-9
+# parameter identification matrices
+true_pos_count = np.zeros((len(n_sessions)+len(random_sampling), n_params_q+1))
+true_neg_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q+1))
+false_pos_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q+1))
+false_neg_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q+1))
+
+true_pos_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
+true_neg_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
+false_pos_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
+false_neg_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
+
+true_pos_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
+true_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
+false_pos_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
+false_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
+
+
+# -----------------------------------------------------------------------------------------------
+# Start analysis
+# -----------------------------------------------------------------------------------------------
 
 random_sampling, n_sessions = tuple(random_sampling), tuple(n_sessions)
 for index_sess, sess in enumerate(n_sessions):
@@ -207,7 +246,7 @@ for index_sess, sess in enumerate(n_sessions):
         participant_ids = np.unique(data[kw_participant_id].values)
         
         # setup of sindy agent for current dataset
-        sindy_agent = setup_agent_sindy(
+        sindy_agent = setup_agent_spice(
             path_model=path_rnn, 
             path_data=path_data, 
             rnn_modules=rnn_modules, 
@@ -226,71 +265,89 @@ for index_sess, sess in enumerate(n_sessions):
             data_coefs_all = data.loc[data[kw_participant_id]==participant].iloc[-1]
             index_params = n_true_params(data_coefs_all)
             
+            sindy_coefs_array = []
+            data_coefs_array = []
+            feature_names = []
+            
             index_all_candidate_terms = 0
             for index_library, library in enumerate(mapping_libraries):
                 # get sindy coefficients
-                sindy_coefs_array = sindy_models[library][participant].model.steps[-1][1].coef_[0]
+                sindy_coefs_library = sindy_models[library][participant].model.steps[-1][1].coef_[0]
                 # drop every entry feature that contains a u-feature (i.e. dummy-feature)
-                feature_names = sindy_models[library][participant].get_feature_names()
-                index_keep = ['dummy' not in feature for feature in feature_names]
-                sindy_coefs_array = sindy_coefs_array[index_keep]
-                feature_names = np.array(feature_names)[index_keep]
-                sindy_coefs = {f: sindy_coefs_array[i] for i, f in enumerate(feature_names)}
+                feature_names_library = sindy_models[library][participant].get_feature_names()
+                index_keep = ['dummy' not in feature for feature in feature_names_library]
+                sindy_coefs_array += (sindy_coefs_library[index_keep] * mapping_betas[library](sindy_agent)).tolist()
+                feature_names_library = np.array(feature_names_library)[index_keep]
+                feature_names += feature_names_library.tolist()
                 
                 # translate data coefficient to sindy coefficients
-                data_coefs = {f: 0 for f in feature_names}
-                data_coefs_array = np.zeros(len(feature_names))
-                for index_feature, feature in enumerate(feature_names):
-                    if not isinstance(mapping_libraries[library][feature], int):
-                        data_coefs[feature] = mapping_libraries[library][feature](*argument_extractor(data_coefs_all, library))
-                        data_coefs_array[index_feature] = mapping_libraries[library][feature](*argument_extractor(data_coefs_all, library))
-                
-                # add true and recovered parameters for later parameter correlation
-                true_params[index_sess][sess*it+index_participant, index_all_candidate_terms:index_all_candidate_terms+len(feature_names)] = data_coefs_array * mapping_betas[library](data_coefs_all)
-                recovered_params[index_sess][sess*it+index_participant, index_all_candidate_terms:index_all_candidate_terms+len(feature_names)] = sindy_coefs_array * mapping_betas[library](sindy_agent)
-                index_all_candidate_terms += len(feature_names)
-                
-                # compute number of correctly identified+omitted parameters
-                true_pos, false_neg, true_neg, false_pos = identified_params(
-                    data_coefs_array * mapping_betas[library](data_coefs_all), 
-                    sindy_coefs_array * mapping_betas[library](sindy_agent),
-                    )
-                
-                # add identification rates
-                # TODO: add weighting according to library length 
-                true_pos_sessions[index_sess, it, index_params] += true_pos if not np.isnan(true_pos) else 0
-                true_neg_sessions[index_sess, it, index_params] += true_neg if not np.isnan(true_neg) else 0
-                false_pos_sessions[index_sess, it, index_params] += false_pos if not np.isnan(false_pos) else 0
-                false_neg_sessions[index_sess, it, index_params] += false_neg if not np.isnan(false_neg) else 0
-                
-                # add identification rate counter
-                count_true_pos[index_sess, it, index_params] += 1 if not np.isnan(true_pos) else 0
-                count_true_neg[index_sess, it, index_params] += 1 if not np.isnan(true_neg) else 0
-                count_false_pos[index_sess, it, index_params] += 1 if not np.isnan(false_pos) else 0
-                count_false_neg[index_sess, it, index_params] += 1 if not np.isnan(false_neg) else 0
-                
-                # sample random coefficients for biggest dataset
-                if n_sessions[index_sess] == max(n_sessions):
-                    # sample random coefficients for each random sampling strategy
-                    for index_rnd, rnd in enumerate(random_sampling):
-                        rnd_coefs = np.random.choice((1, 0), p=(rnd, 1-rnd), size=sindy_coefs_array.shape)
-                        rnd_betas = np.random.choice((1, 0), p=(rnd, 1-rnd), size=2)
-                        
-                        # do same stuff as with sindy coefs
-                        # compute number of correctly identified+omitted parameters
-                        true_pos, true_neg, false_pos, false_neg = identified_params(data_coefs_array, rnd_coefs)# * (rnd_betas[1] if 'x_C' in library else rnd_betas[0]))
-                        
-                        # add identification rates
-                        true_pos_sessions[len(n_sessions)+index_rnd, it, index_params] += true_pos if not np.isnan(true_pos) else 0
-                        true_neg_sessions[len(n_sessions)+index_rnd, it, index_params] += true_neg if not np.isnan(true_neg) else 0
-                        false_pos_sessions[len(n_sessions)+index_rnd, it, index_params] += false_pos if not np.isnan(false_pos) else 0
-                        false_neg_sessions[len(n_sessions)+index_rnd, it, index_params] += false_neg if not np.isnan(false_neg) else 0
-                        
-                        # add identification rate counter
-                        count_true_pos[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_pos) else 0
-                        count_true_neg[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_neg) else 0
-                        count_false_pos[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_pos) else 0
-                        count_false_neg[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_neg) else 0
+                data_coefs_library = np.zeros(len(feature_names_library))
+                for index_feature, feature in enumerate(feature_names_library):
+                    # data_coefs[feature] = mapping_libraries[library][feature](*argument_extractor(data_coefs_all, library)) 
+                    data_coefs_library[index_feature] = mapping_libraries[library][feature](*argument_extractor(data_coefs_all, library)) * mapping_betas[library](data_coefs_all)
+                data_coefs_array += data_coefs_library.tolist()
+            
+            sindy_coefs_array = np.array(sindy_coefs_array)
+            data_coefs_array = np.array(data_coefs_array)
+            
+            # add true and recovered parameters for later parameter correlation
+            true_params[index_sess][sess*it+index_participant] = data_coefs_array
+            recovered_params[index_sess][sess*it+index_participant] = sindy_coefs_array
+            
+            # compute number of correctly and non-correctly identified parameters
+            identification_count, identification_rates = identified_params(data_coefs_array, sindy_coefs_array)
+            true_pos, true_neg, false_pos, false_neg = identification_count
+            true_pos_rel, true_neg_rel, false_pos_rel, false_neg_rel = identification_rates
+            
+            # add identification counts
+            true_pos_count[index_sess, index_params] += true_pos
+            true_neg_count[index_sess, index_params] += true_neg
+            false_pos_count[index_sess, index_params] += false_pos
+            false_neg_count[index_sess, index_params] += false_neg
+            
+            # add identification rates
+            true_pos_rates[index_sess, it, index_params] += true_pos_rel if not np.isnan(true_pos_rel) else 0
+            true_neg_rates[index_sess, it, index_params] += true_neg_rel if not np.isnan(true_neg_rel) else 0
+            false_pos_rates[index_sess, it, index_params] += false_pos_rel if not np.isnan(false_pos_rel) else 0
+            false_neg_rates[index_sess, it, index_params] += false_neg_rel if not np.isnan(false_neg_rel) else 0
+            
+            # add identification rate counter
+            true_pos_rates_count[index_sess, it, index_params] += 1 if not np.isnan(true_pos_rel) else 0
+            true_neg_rates_count[index_sess, it, index_params] += 1 if not np.isnan(true_neg_rel) else 0
+            false_pos_rates_count[index_sess, it, index_params] += 1 if not np.isnan(false_pos_rel) else 0
+            false_neg_rates_count[index_sess, it, index_params] += 1 if not np.isnan(false_neg_rel) else 0
+            
+            # sample random coefficients for biggest dataset
+            if sess == max(n_sessions):
+                # sample random coefficients for each random sampling strategy
+                for index_rnd, rnd in enumerate(random_sampling):
+                    rnd_coefs = np.random.choice((1, 0), p=(rnd, 1-rnd), size=len(sindy_coefs_array))
+                    rnd_betas = np.random.choice((1, 0), p=(rnd, 1-rnd), size=1)
+                    
+                    # do same stuff as with sindy coefs
+                    # compute number of correctly and non-correctly identified parameters
+                    identification_count, identification_rates = identified_params(data_coefs_array, rnd_coefs*rnd_betas)
+                    true_pos, true_neg, false_pos, false_neg = identification_count
+                    true_pos_rel, true_neg_rel, false_pos_rel, false_neg_rel = identification_rates
+                    
+                    # add identification counts
+                    true_pos_count[len(n_sessions)+index_rnd, index_params] += true_pos
+                    true_neg_count[len(n_sessions)+index_rnd, index_params] += true_neg
+                    false_pos_count[len(n_sessions)+index_rnd, index_params] += false_pos
+                    false_neg_count[len(n_sessions)+index_rnd, index_params] += false_neg
+
+                    # add identification rates
+                    true_pos_rates[len(n_sessions)+index_rnd, it, index_params] += true_pos if not np.isnan(true_pos) else 0
+                    true_neg_rates[len(n_sessions)+index_rnd, it, index_params] += true_neg if not np.isnan(true_neg) else 0
+                    false_pos_rates[len(n_sessions)+index_rnd, it, index_params] += false_pos if not np.isnan(false_pos) else 0
+                    false_neg_rates[len(n_sessions)+index_rnd, it, index_params] += false_neg if not np.isnan(false_neg) else 0
+                    
+                    # add identification rate counter
+                    true_pos_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_pos) else 0
+                    true_neg_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_neg) else 0
+                    false_pos_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_pos) else 0
+                    false_neg_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_neg) else 0
+
 
 # ------------------------------------------------
 # post-processing coefficient correlation
@@ -315,17 +372,17 @@ feature_names = np.array(feature_names)[index_keep]
 
 correlation_matrix, recovery_errors, recovery_errors_median, recovery_errors_std = [], [], [], []
 for index_sess in range(len(n_sessions)):
-    correlation_matrix.append(
-        pd.DataFrame(
-            np.corrcoef(
-                true_params[index_sess], 
-                recovered_params[index_sess], 
-                rowvar=False,
-                )[len(feature_names):, :len(feature_names)],
-            columns=feature_names,
-            index=feature_names,
-            )
-        )
+#     correlation_matrix.append(
+#         pd.DataFrame(
+#             np.corrcoef(
+#                 true_params[index_sess], 
+#                 recovered_params[index_sess], 
+#                 rowvar=False,
+#                 )[len(feature_names):, :len(feature_names)],
+#             columns=feature_names,
+#             index=feature_names,
+#             )
+#         )
 
     # normalizing params
     v_max = np.nanmax(true_params[index_sess], axis=0)
@@ -342,50 +399,77 @@ for index_sess in range(len(n_sessions)):
         true_params[index_sess] - recovered_params[index_sess]
         )
 
+
 # ------------------------------------------------
 # post-processing identification rates
 # ------------------------------------------------
 
 # average across counts
-true_pos_sessions[count_true_pos > 0] /= count_true_pos[count_true_pos > 0]
-true_neg_sessions[count_true_neg > 0] /= count_true_neg[count_true_neg > 0]
-false_pos_sessions[count_false_pos > 0] /= count_false_pos[count_false_pos > 0]
-false_neg_sessions[count_false_neg > 0] /= count_false_neg[count_false_neg > 0]
-true_pos_sessions[count_true_pos == 0] = np.nan
-true_neg_sessions[count_true_neg == 0] = np.nan
-false_pos_sessions[count_false_pos == 0] = np.nan
-false_neg_sessions[count_false_neg == 0] = np.nan
+true_pos_rates[true_pos_rates_count > 0] /= true_pos_rates_count[true_pos_rates_count > 0]
+true_neg_rates[true_neg_rates_count > 0] /= true_neg_rates_count[true_neg_rates_count > 0]
+false_pos_rates[false_pos_rates_count > 0] /= false_pos_rates_count[false_pos_rates_count > 0]
+false_neg_rates[false_neg_rates_count > 0] /= false_neg_rates_count[false_neg_rates_count > 0]
+true_pos_rates[true_pos_rates_count == 0] = np.nan
+true_neg_rates[true_neg_rates_count == 0] = np.nan
+false_pos_rates[false_pos_rates_count == 0] = np.nan
+false_neg_rates[false_neg_rates_count == 0] = np.nan
 
-true_pos_sessions_mean = np.nanmean(true_pos_sessions, axis=1)
-true_neg_sessions_mean = np.nanmean(true_neg_sessions, axis=1)
-false_pos_sessions_mean = np.nanmean(false_pos_sessions, axis=1)
-false_neg_sessions_mean = np.nanmean(false_neg_sessions, axis=1)
+true_pos_sessions_mean = np.nanmean(true_pos_rates, axis=1)
+true_neg_sessions_mean = np.nanmean(true_neg_rates, axis=1)
+false_pos_sessions_mean = np.nanmean(false_pos_rates, axis=1)
+false_neg_sessions_mean = np.nanmean(false_neg_rates, axis=1)
 
-true_pos_sessions_std = np.nanstd(true_pos_sessions, axis=1)
-true_neg_sessions_std = np.nanstd(true_neg_sessions, axis=1)
-false_pos_sessions_std = np.nanstd(false_pos_sessions, axis=1)
-false_neg_sessions_std = np.nanstd(false_neg_sessions, axis=1)
+true_pos_sessions_std = np.nanstd(true_pos_rates, axis=1)
+true_neg_sessions_std = np.nanstd(true_neg_rates, axis=1)
+false_pos_sessions_std = np.nanstd(false_pos_rates, axis=1)
+false_neg_sessions_std = np.nanstd(false_neg_rates, axis=1)
+
 
 # ------------------------------------------------
-# configuration identification rates plots
+# post-processing identification counts
+# ------------------------------------------------
+
+# true_pos_count = np.nansum(true_pos_count, axis=1)
+# true_neg_count = np.nansum(true_neg_count, axis=1)
+# false_pos_count = np.nansum(false_pos_count, axis=1)
+# false_neg_count = np.nansum(false_neg_count, axis=1)
+
+accuracy = (true_pos_count + true_neg_count) / (true_pos_count + true_neg_count + false_pos_count + false_neg_count)
+true_pos_rate = true_pos_count / (true_pos_count + false_neg_count)
+false_pos_rate = false_pos_count / (false_pos_count + true_neg_count)
+precision = true_pos_count / (true_pos_count + false_pos_count)
+
+
+# ------------------------------------------------
+# configuration identification plots
 # ------------------------------------------------
 
 v_min = 0
-v_max = np.nanmax(np.stack((true_pos_sessions_mean, false_pos_sessions_mean, true_neg_sessions_mean, false_neg_sessions_mean)), axis=(-1, -2, -3))
+v_max = 1#np.nanmax(np.stack((true_pos_sessions_mean, false_pos_sessions_mean, true_neg_sessions_mean, false_neg_sessions_mean)), axis=(-1, -2, -3))
 
 identification_matrix_mean = [
     [true_pos_sessions_mean , false_pos_sessions_mean], 
     [false_neg_sessions_mean , true_neg_sessions_mean],
-    ]
+]
 
 identification_matrix_std = [
     [true_pos_sessions_std, false_pos_sessions_std], 
     [false_neg_sessions_std, true_neg_sessions_std],
     ]
 
+identification_metrics_matrix = [
+    [accuracy, precision],
+    [true_pos_rate, false_pos_rate],
+]
+
 identification_headers = [
     ['true positive', 'false pos'],
     ['false negative', 'true negative'],
+]
+
+identification_metrics_headers = [
+    ['accuracy', 'precision'],
+    ['true positive rate (recall)', 'false positive rate'],
 ]
 
 identification_x_axis_labels = [
@@ -409,11 +493,17 @@ y_tick_labels = n_sessions + random_sampling
 linestyles = ['-'] * len(n_sessions) + ['--'] * len(random_sampling)
 alphas = [0.3] * len(n_sessions) + [0] * len(random_sampling)
 
+for index_feature, feature in enumerate(feature_names):
+    for index_symbol, symbol in enumerate(mapping_variable_names):
+        if symbol in feature:
+            feature = feature.replace(symbol, mapping_variable_names[symbol])
+    feature_names[index_feature] = feature
+
 # ------------------------------------------------
 # parameter identification rates
 # ------------------------------------------------
 
-# heatmaps 
+# heatmap of relative true positives, false positives, false negatives, true negatives
 
 fig, axs = plt.subplots(
     nrows=len(identification_matrix_mean), 
@@ -439,6 +529,7 @@ for index_row, row in enumerate(identification_matrix_mean):
                 vmin=v_min,
                 vmax=v_max,
                 )
+        axs[index_row, index_col].set_title(identification_headers[index_row][index_col])
 plt.show()
 
 # line plots
@@ -484,60 +575,89 @@ axs[0, 0].legend()
 plt.tight_layout()
 plt.show()
 
+# heatmap of accuracy, precision, true positive rate, false positive rate
+
+fig, axs = plt.subplots(
+    nrows=len(identification_metrics_matrix), 
+    ncols=len(identification_metrics_matrix[0])+1,
+    gridspec_kw={
+        'width_ratios': [10]*len(identification_metrics_matrix[0]) + [1],
+        },
+    )
+
+for index_row, row in enumerate(identification_metrics_matrix):
+    for index_col, col in enumerate(row):
+        if col is not None:
+            sns.heatmap(
+                col, 
+                annot=True, 
+                cmap='viridis',
+                center=0,
+                ax=axs[index_row, index_col],
+                cbar=True if index_col == len(identification_metrics_matrix[0])-1 else False, 
+                cbar_ax=axs[index_row, len(identification_metrics_matrix[0])],
+                xticklabels=np.arange(0, n_params_q+1) if index_row == len(identification_metrics_matrix)-1 else ['']*n_params_q, 
+                yticklabels=y_tick_labels if index_col == 0 else ['']*len(n_sessions), 
+                vmin=v_min,
+                vmax=v_max,
+                )
+        axs[index_row, index_col].set_title(identification_metrics_headers[index_row][index_col])
+plt.show()
+
 # ------------------------------------------------
 # parameter correlation coefficients
 # ------------------------------------------------
 
 # heatmaps per dataset size
 
-v_min, v_max = -1, 1
-fig, axs = plt.subplots(
-    nrows=1, 
-    ncols=len(n_sessions)+1,
-    gridspec_kw={
-        'width_ratios': [10]*len(n_sessions) + [1],
-        },
-    )
+# v_min, v_max = -1, 1
+# fig, axs = plt.subplots(
+#     nrows=1, 
+#     ncols=len(n_sessions)+1,
+#     gridspec_kw={
+#         'width_ratios': [10]*len(n_sessions) + [1],
+#         },
+#     )
 
-for index_sess in range(len(n_sessions)):
-    sns.heatmap(
-        correlation_matrix[index_sess],
-        annot=True,
-        cmap='viridis',
-        center=0,
-        ax=axs[index_sess],
-        cbar=True if index_sess == len(n_sessions)-1 else False,
-        cbar_ax=axs[index_sess+1],
-        xticklabels=feature_names,
-        yticklabels=feature_names if index_sess == 0 else ['']*len(feature_names),
-        vmin=v_min,
-        vmax=v_max,
-        )
-plt.show()
+# for index_sess in range(len(n_sessions)):
+#     sns.heatmap(
+#         correlation_matrix[index_sess],
+#         annot=True,
+#         cmap='viridis',
+#         center=0,
+#         ax=axs[index_sess],
+#         cbar=True if index_sess == len(n_sessions)-1 else False,
+#         cbar_ax=axs[index_sess+1],
+#         xticklabels=feature_names,
+#         yticklabels=feature_names if index_sess == 0 else ['']*len(feature_names),
+#         vmin=v_min,
+#         vmax=v_max,
+#         )
+# plt.show()
 
 # box plot
 
-fig, axs = plt.subplots(
-    nrows=1, 
-    ncols=max((len(n_sessions), 2)),
-    sharey=True,
-    )
+# fig, axs = plt.subplots(
+#     nrows=1, 
+#     ncols=max((len(n_sessions), 2)),
+#     sharey=True,
+#     )
 
-for index_sess in range(len(n_sessions)):
-    ax = axs[index_sess]
-    sns.boxplot(
-        pd.DataFrame(
-            recovery_errors[index_sess],
-            columns=feature_names,
-        ),
-        ax=ax,
-        showfliers=False,
-    )
-    ax.plot(feature_names[-1], 0, '--', color='tab:gray', linewidth=0.5)
-    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-    ax.set_title(n_sessions[index_sess])
-plt.show()
+# for index_sess in range(len(n_sessions)):
+#     ax = axs[index_sess]
+#     sns.boxplot(
+#         pd.DataFrame(
+#             recovery_errors[index_sess],
+#             columns=feature_names,
+#         ),
+#         ax=ax,
+#         showfliers=False,
+#     )
+#     ax.plot(feature_names[-1], 0, '--', color='tab:gray', linewidth=0.5)
+#     ax.tick_params(axis='x', labelrotation=45, labelsize=8)
+#     ax.tick_params(axis='y', labelsize=8)
+#     ax.set_title(n_sessions[index_sess])
+# plt.show()
 
 #  scatter plot
 

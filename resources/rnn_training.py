@@ -35,35 +35,39 @@ def batch_train(
         xs_step = xs[:, t:t+n_steps]
         ys_step = ys[:, t:t+n_steps]
         
-        # mask = xs_step[:, :, :1] > -1
-        # xs_step *= mask
-        # ys_step *= mask
+        mask = xs_step[..., :1] > -1
         
         state = model.get_state(detach=True)
-        y_pred = model(xs_step, state, batch_first=True)[0]
+        ys_pred = model(xs_step, state, batch_first=True)[0]
+        
+        ys_pred = ys_pred * mask
+        ys_step = ys_step * mask
         
         loss_step = loss_fn(
-            # (y_pred*mask).reshape(-1, model._n_actions), 
-            y_pred.reshape(-1, model._n_actions), 
+            ys_pred.reshape(-1, model._n_actions), 
             torch.argmax(ys_step.reshape(-1, model._n_actions), dim=1),
             )
         
         loss_batch += loss_step
         iterations += 1
-                
+        
         if torch.is_grad_enabled():
             
             # L1 weight decay to enforce sparsification in the network
-            # l1_reg = l1_weight_decay * torch.stack([
-            #     param.abs().sum() for param in model.named_parameters()
-            #     ]).sum()
+            
             l1_reg = l1_weight_decay * torch.stack([
                 param.abs().sum()
                 for name, param in model.named_parameters()
                 if "embedding" not in name
                 ]).sum()
             
-            loss = loss_step + l1_reg
+            l2_reg = l1_weight_decay * torch.stack([
+                param.pow(2).sum()
+                for name, param in model.named_parameters()
+                if "embedding" in name
+                ]).sum()
+            
+            loss = loss_step + l1_reg + l2_reg
             
             # backpropagation
             optimizer.zero_grad()

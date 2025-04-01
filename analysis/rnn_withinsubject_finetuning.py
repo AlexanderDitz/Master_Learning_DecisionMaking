@@ -28,7 +28,7 @@ torch.manual_seed(42)
 start_time = time.time()
 
 # QUICK CONFIG
-epochs_rnn = 2048
+epochs_rnn =2048
 scheduler = True
 n_trials_optuna = 50
 
@@ -219,20 +219,20 @@ def objective(trial, train_dataset, val_dataset, n_participants):
     """
     list_rnn_modules, list_control_parameters, _, _ = define_sindy_configuration()
     
-    dropout = trial.suggest_float('dropout', 0., 0.5)
+    # dropout = trial.suggest_float('dropout', 0., 0.5)
     learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
-    hidden_size = trial.suggest_int('hidden_size', 8, 32)
+    # hidden_size = trial.suggest_int('hidden_size', 8, 32)
     embedding_size = trial.suggest_int('embedding_size', 8, 32)
     n_steps = trial.suggest_int('n_steps', 1, 100)
     
-    logger.info(f"Trial {trial.number}: dropout={dropout:.3f}, lr={learning_rate:.6f}, hidden_size={hidden_size}, embedding_size={embedding_size}, n_steps={n_steps}")
+    logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}")
     
     model_rnn = RLRNN(
         n_actions=n_actions,
         n_participants=n_participants,
-        hidden_size=hidden_size,
+        hidden_size=8,#hidden_size,
         embedding_size=embedding_size,
-        dropout=dropout,
+        dropout=0,#dropout,
         list_signals=list_rnn_modules + list_control_parameters
     )
     
@@ -520,9 +520,9 @@ def main():
         model_rnn = RLRNN(
             n_actions=n_actions,
             n_participants=n_participants,
-            hidden_size=best_params['hidden_size'],
+            # hidden_size=best_params['hidden_size'],
             embedding_size=best_params['embedding_size'],
-            dropout=best_params['dropout'],
+            # dropout=best_params['dropout'],
             list_signals=define_sindy_configuration()[0] + define_sindy_configuration()[1]
         )
         

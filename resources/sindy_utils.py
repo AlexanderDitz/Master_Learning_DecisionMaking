@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 import pysindy as ps
 
-from resources.bandits import Bandits, AgentNetwork, AgentSindy, get_update_dynamics, BanditSession
+from resources.bandits import Bandits, AgentNetwork, AgentSpice, get_update_dynamics, BanditSession
 from resources.rnn_utils import DatasetRNN
 
 
@@ -223,7 +223,7 @@ def conditional_filtering(x_train: List[np.ndarray], control: List[np.ndarray], 
   return x_train_relevant, control_relevant, x_features+control_features
 
 
-def sindy_loss_x(agent: Union[AgentSindy, AgentNetwork], data: List[BanditSession], loss_fn: Callable = log_loss):
+def sindy_loss_x(agent: Union[AgentSpice, AgentNetwork], data: List[BanditSession], loss_fn: Callable = log_loss):
   """Compute the loss of the SINDy model directly on the data in x-coordinates i.e. predicting behavior.
   This loss is not used for SINDy-Training, but for analysis purposes only.
 
@@ -248,7 +248,7 @@ def sindy_loss_x(agent: Union[AgentSindy, AgentNetwork], data: List[BanditSessio
   return loss_total/len(data)
 
 
-def bandit_loss(agent: Union[AgentSindy, AgentNetwork], data: List[BanditSession], coordinates: str = "x"):
+def bandit_loss(agent: Union[AgentSpice, AgentNetwork], data: List[BanditSession], coordinates: str = "x"):
   """Compute the loss of the SINDy model directly on the data in z-coordinates i.e. predicting q-values.
   This loss is also used for SINDy-Training.
 

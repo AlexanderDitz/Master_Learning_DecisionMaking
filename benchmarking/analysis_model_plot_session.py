@@ -6,7 +6,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.setup_agents import setup_agent_rnn, setup_agent_sindy, setup_benchmark_q_agent
+from utils.setup_agents import setup_agent_rnn, setup_agent_spice, setup_agent_q
 from utils.convert_dataset import convert_dataset
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 from utils.plotting import plot_session
@@ -28,7 +28,7 @@ def main(data, model_mcmc, model_rnn, session_id):
     n_parameters_rnn.append(sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad))
 
     # setup sindy agent and get number of sindy coefficients which are not 0
-    agent_sindy = setup_agent_sindy(model_rnn, data, participant_id=session_id)[0]
+    agent_sindy = setup_agent_spice(model_rnn, data, participant_id=session_id)[0]
     n_parameters_sindy.append(agent_sindy._count_sindy_parameters(without_self=True))
     
     # setup mcmc agent
@@ -56,7 +56,7 @@ def main(data, model_mcmc, model_rnn, session_id):
     if np.mean(parameters['alpha_neg']) == -1:
         parameters['alpha_neg'] = parameters['alpha_pos']
     
-    agent_mcmc = setup_benchmark_q_agent(parameters)
+    agent_mcmc = setup_agent_q(parameters)
     
     fig, axs = plot_session(
         {

@@ -11,41 +11,59 @@ class GRUModule(nn.Module):
         super().__init__()
         
         self.gru_in = nn.GRU(input_size, 1)
-        # self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.linear_out = nn.Linear(1, 1)
        
     def forward(self, inputs):
         n_actions = inputs.shape[1]
         inputs = inputs.view(inputs.shape[0]*inputs.shape[1], inputs.shape[2]).unsqueeze(0)
-        next_state = self.gru_in(inputs[..., 1:], inputs[..., :1].contiguous())[1].view(-1, n_actions, 1)
-        # next_state = self.dropout(next_state)
+        next_state = self.gru_in(inputs[..., 1:], inputs[..., :1])[1].view(-1, n_actions, 1)
+        next_state = self.dropout(next_state)
         next_state = self.linear_out(next_state)
         return next_state
     
     
 class BaseRNN(nn.Module):
+    
+    init_value = {}
+    rnn_module = []
+    equation = []
+    control_signal = []
+    input_configuration = {}
+    state_configuration = {}
+    action_assignment = {}
+    module_activation = {}
+    
     def __init__(
         self, 
-        n_actions, 
-        hidden_size: int = 8,
-        n_participants: int = 0,
+        n_actions: int, 
+        hidden_size: int,
+        embedding_size: int,
+        n_participants: int,
+        dropout: float,
         device=torch.device('cpu'),
-        list_signals=['x_V', 'c_a', 'c_r'],
         ):
         super(BaseRNN, self).__init__()
         
         # define general network parameters
         self.device = device
-        self._n_actions = n_actions
+        self.n_actions = n_actions
         self.hidden_size = hidden_size
-        self.embedding_size = 0
+        self.embedding_size = embedding_size
         self.n_participants = n_participants
+        self.dropout = dropout
+        
+        # set up the participant-embedding layer
+        self.setup_participant_embedding()
+        self.setup_scaling_modules()
+        self.setup_rnn_modules()
         
         # session recording; used for sindy training; training variables start with 'x' and control parameters with 'c' 
-        self.recording = {key: [] for key in list_signals}
+        self.recording = {key: [] for key in self.rnn_modules+self.control_signals}
         self.submodules_rnn = nn.ModuleDict()
         self.submodules_eq = dict()
         self.submodules_sindy = dict()
+        self.betas = torch.nn.ModuleDict()
         
         self.state = self.set_initial_state()
         
@@ -56,19 +74,28 @@ class BaseRNN(nn.Module):
         if batch_first:
             inputs = inputs.permute(1, 0, 2)
         
-        actions = inputs[:, :, :self._n_actions].float()
-        rewards = inputs[:, :, self._n_actions:2*self._n_actions].float()
+        actions = inputs[:, :, :self.n_actions].float()
+        rewards = inputs[:, :, self.n_actions:2*self.n_actions].float()
         participant_ids = inputs[0, :, -1:].int()
         
+        # Here we compute now the participant embeddings for each entry in the batch
+        participant_embedding = self.participant_embedding(participant_ids[:, 0])
+        
+        # update the control state w.r.t. embeddings and indeces
+        self.control_state['participant_embedding'] = participant_embedding
+        self.control_state['participant_index'] = participant_ids
+        
+        # set up memory state
         if prev_state is not None:
             self.set_state(prev_state)
         else:
             self.set_initial_state(batch_size=inputs.shape[1])
         
+        # setup action value memory
         timesteps = torch.arange(actions.shape[0])
         logits = torch.zeros_like(actions)
         
-        return (actions, rewards, participant_ids), logits, timesteps
+        return (actions, rewards), logits, timesteps
     
     def post_forward_pass(self, logits, batch_first):
         # add model dim again and set state
@@ -96,7 +123,7 @@ class BaseRNN(nn.Module):
         # dimensions of states: (batch_size, substate, hidden_size)
         # self.set_state(*[init_value + torch.zeros([batch_size, self._n_actions], dtype=torch.float, device=self.device) for init_value in self.init_values])
         
-        state = {key: torch.full(size=[batch_size, self._n_actions], fill_value=self.init_values[key], dtype=torch.float32, device=self.device) for key in self.init_values}
+        state = {key: torch.full(size=[batch_size, self.n_actions], fill_value=self.init_values[key], dtype=torch.float32, device=self.device) for key in self.init_values}
         
         self.set_state(state)
         return self.get_state()
@@ -147,48 +174,33 @@ class BaseRNN(nn.Module):
     def get_recording(self, key):
         return self.recording[key]
     
-    def setup_module(self, input_size: int, hidden_size: int = None, dropout: float = 0., activation: nn.Module = None):
-        """This method creates the standard RNN-module used in computational discovery of cognitive dynamics
-
-        Args:
-            input_size (_type_): The number of inputs (excluding the memory state)
-            hidden_size (_type_): Hidden size after the input layer
-            dropout (_type_): Dropout rate before output layer
-            activation (nn.Module, optional): Possibility to include an activation function. Defaults to None.
-
-        Returns:
-            torch.nn.Module: A torch module which can be called by one line and returns state update
-        """
-        if hidden_size is None:
-            hidden_size = self.hidden_size
+    def setup_rnn_modules(self):
+        """This method sets up the standard RNN-modules"""
+        
+        for key in self.rnn_modules:
+            # GRU network
+            module = GRUModule(input_size=len(self.input_configuration[key])+self.embedding_size, hidden_size=self.hidden_size, dropout=self.dropout)
+            self.submodules_rnn[key] = module
             
-        # Linear network
-        # layers = [
-        #     nn.Linear(input_size+1, hidden_size),
-        #     nn.Tanh(),
-        #     nn.Dropout(dropout),
-        #     nn.Linear(hidden_size, 1),
-        # ]
-        # if activation is not None:
-        #     layers.append(activation())
-        # module = nn.Sequential(*layers)
+    def setup_eq_module(self, key: str, equation: Callable):
+        if key in self.equations:
+            self.submodules_eq[key] = equation
+        else:
+            raise ValueError(f"Error setting up an equation module with the key " + key + ". Valid keys are " + self.equations)
         
-        # GRU network
-        module = GRUModule(input_size=input_size, hidden_size=hidden_size, dropout=dropout)
-        
-        return module 
+    def setup_scaling_modules(self):
+        for key in self.state:
+            if 'x_value' in key:
+                self.betas[key] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())
+                
+    def setup_participant_embedding(self):
+        if self.embedding_size > 0:
+            self.participant_embedding = torch.nn.Embedding(num_embeddings=self.n_participants, embedding_dim=self.embedding_size)
+        else:
+            self.embedding_size = 1
+            self.participant_embedding = lambda participant_id: torch.ones_like(participant_id, device=participant_id.device, dtype=torch.float).view(-1, 1)
     
-    def call_module(
-        self,
-        key_module: str,
-        key_state: str,
-        action: torch.Tensor = None,
-        inputs: Union[torch.Tensor, Tuple[torch.Tensor]] = None,
-        participant_embedding: torch.Tensor = None, 
-        participant_index: torch.Tensor = None,
-        activation_rnn: Callable = None,
-        scaling: bool = False,
-        ):
+    def call_module(self, key_module: str):
         """Used to call a submodule of the RNN. Can be either: 
             1. RNN-module (saved in 'self.submodules_rnn')
             2. SINDy-module (saved in 'self.submodules_sindy')
@@ -211,22 +223,26 @@ class BaseRNN(nn.Module):
         """
         record_signal = False
         
-        action = action.unsqueeze(-1)
-        value = self.get_state()[key_state].unsqueeze(-1)
-        # value = key_state.unsqueeze(-1)
+        # get value from memory state
+        value = self.get_state()[self.state_configuration[key_module]].unsqueeze(-1)
         
-        if inputs is None:
+        # get action from control state
+        action = self.control_state['c_action'].unsqueeze(-1)
+        
+        # get inputs from control state
+        if key_module in self.input_configuration or len(self.input_configuration[key_module]) > 0:
+            inputs = torch.concatenate([self.control_state[control_input] for control_input in self.input_configuration[key_module]], dim=-1)
+        else:
             inputs = torch.zeros((*value.shape[:-1], 0), dtype=torch.float32, device=value.device)
-            
-        if participant_embedding is None:
-            participant_embedding = torch.zeros((*value.shape[:-1], 0), dtype=torch.float32, device=value.device)
-        elif participant_embedding.ndim == 2:
-            participant_embedding = participant_embedding.unsqueeze(1).repeat(1, value.shape[1], 1)
-        
-        if isinstance(inputs, tuple):
-            inputs = torch.concat([inputs_i.unsqueeze(-1) for inputs_i in inputs], dim=-1)
-        elif inputs.dim()==2:
+        # TODO: remove unnecessary if condition
+        if inputs.dim()==2:
             inputs = inputs.unsqueeze(-1)
+        
+        # get participant embedding from control state
+        participant_embedding = self.control_state['participant_embedding'].unsqueeze(1).repeat(1, value.shape[1], 1)
+        
+        # get participant id from control state
+        participant_index = self.control_state['participant_id']
         
         if key_module in self.submodules_sindy.keys():                
             # sindy module
@@ -239,14 +255,11 @@ class BaseRNN(nn.Module):
                 # create dummy control inputs
                 inputs = torch.zeros((*inputs.shape[:-1], 1))
             
-            if participant_index is None:
-                participant_index = torch.zeros((1, 1), dtype=torch.int32)
-            
             next_value = np.zeros_like(value)
             for index_batch in range(value.shape[0]):
                 sindy_model = self.submodules_sindy[key_module][participant_index[index_batch].item()] if isinstance(self.submodules_sindy[key_module], dict) else self.submodules_sindy[key_module]
                 next_value[index_batch] = np.concatenate(
-                    [sindy_model.predict(value[index_batch, index_action], inputs[index_batch, index_action]) for index_action in range(self._n_actions)], 
+                    [sindy_model.predict(value[index_batch, index_action], inputs[index_batch, index_action]) for index_action in range(self.n_actions)], 
                     axis=0,
                     )
             next_value = torch.tensor(next_value, dtype=torch.float32, device=self.device)
@@ -260,8 +273,12 @@ class BaseRNN(nn.Module):
             update_value = self.submodules_rnn[key_module](inputs)
             
             next_value = value + update_value
-            if activation_rnn is not None:
-                next_value = activation_rnn(next_value)
+            
+            if key_module in self.module_activation:
+                if isinstance(self.module_activation[key_module], callable):
+                    next_value = self.module_activation[key_module](next_value)
+                else:
+                    raise TypeError("Given activation function for RNN module " + key_module + " is not a valid callable")
             
         elif key_module in self.submodules_eq.keys():
             # hard-coded equation
@@ -270,23 +287,38 @@ class BaseRNN(nn.Module):
         else:
             raise ValueError(f'Invalid module key {key_module}.')
 
-        if action is not None:
+        if key_module in self.action_assignment:
             # keep only actions necessary for that update and set others to zero
-            next_value = next_value * action
+            action_assignment = action*self.action_assignment[key_module] + (1-action)*(1-self.action_assignment[key_module])
+            next_value = next_value * action_assignment
+        else:
+            action_assignment = torch.ones_like(action)
         
         # clip next_value to a specific range
         next_value = torch.clip(input=next_value, min=-1e1, max=1e1)
         
         if record_signal:
             # record sample for SINDy training 
-            self.record_signal(key_module, value.view(-1, self._n_actions), next_value.view(-1, self._n_actions))
+            self.record_signal(key_module, value.view(-1, self.n_actions), next_value.view(-1, self.n_actions))
         
-        if scaling:
-            # scale by inverse noise temperature
-            scaling_factor = self.betas[key_state] if isinstance(self.betas[key_state], nn.Parameter) else self.betas[key_state](participant_embedding)
-            next_value = next_value * scaling_factor
+        # TODO: Test necessary!!!
+        # Problem may occure with learning rate
+        # save next value in memory state
+        self.state[self.state_configuration[key_module]][action_assignment == 1] = next_value[next_value == 1]
         
         return next_value.squeeze(-1)
+    
+    def compute_action_value(self):
+        """Computes the scaled action value as a sum of the memory states which have 'x_value' in their name."""
+        
+        shape = list(self.state.keys())[0].shape
+        device = list(self.state.keys())[0].device
+        action_value = torch.zeros(shape[1:], device=device)
+        for state in self.state:
+            if 'x_value' in state:
+                scaling_factor = self.betas[state] if isinstance(self.betas[state], nn.Parameter) else self.betas[state](self.control_state['participant_embedding'])
+                action_value += scaling_factor * self.state[state]
+        return action_value
     
     def integrate_sindy(self, modules: Dict[str, Iterable[ps.SINDy]]):
         # check that all provided modules find a place in the RNN
@@ -302,11 +334,58 @@ class BaseRNN(nn.Module):
 
 class RLRNN(BaseRNN):
     
-    init_values = {
+    init_value = {
             'x_value_reward': 0.5,
             'x_value_choice': 0.,
             'x_learning_rate_reward': 0.,
         }
+    
+    rnn_module = [
+        'x_learning_rate_chosen',
+        'x_learning_rate_not_chosen', 
+        'x_value_reward_not_chosen', 
+        'x_value_choice_chosen', 
+        'x_value_choice_not_chosen',
+        ]
+    
+    equations = [
+        'x_value_reward_chosen',
+    ]
+    
+    control_signal = [
+        'c_action', 
+        'c_reward', 
+    ]
+    
+    input_configuration = {
+        'x_learning_rate_reward': ['c_reward', 'x_value_reward'],
+        'x_value_reward_chosen': ['c_reward', 'x_learning_rate_reward'],
+    }
+    
+    state_configuration = {
+        'x_learning_rate_chosen': 'x_learning_rate_reward',
+        'x_learning_rate_not_chosen': 'x_learning_rate_reward',
+        'x_value_reward_chosen': 'x_value_reward', 
+        'x_value_reward_not_chosen': 'x_value_reward',  
+        'x_value_choice_chosen': 'x_value_choice', 
+        'x_value_choice_not_chosen': 'x_value_choice',
+    }
+    
+    action_assignment = {
+        'x_learning_rate_chosen': 1,
+        'x_learning_rate_not_chosen': 0,
+        'x_value_reward_chosen': 1,
+        'x_value_reward_not_chosen': 0,
+        'x_value_choice_chosen': 1,
+        'x_value_choice_not_chosen': 0,
+    }
+    
+    module_activation = {
+        'x_learning_rate_chosen': torch.nn.functional.sigmoid,
+        'x_learning_rate_not_chosen': torch.nn.functional.sigmoid,
+        'x_value_choice_chosen': torch.nn.functional.sigmoid, 
+        'x_value_choice_not_chosen': torch.nn.functional.sigmoid,        
+    }
     
     def __init__(
         self,
@@ -316,33 +395,13 @@ class RLRNN(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward', 'c_value_reward'],
         **kwargs,
     ):
         
-        super(RLRNN, self).__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device, n_participants=n_participants)
-        
-        # set up the participant-embedding layer
-        self.embedding_size = embedding_size
-        if embedding_size > 0:
-            self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
-        else:
-            self.embedding_size = 1
-            self.participant_embedding = lambda participant_id: torch.ones_like(participant_id, device=participant_id.device, dtype=torch.float).view(-1, 1)
-        
-        # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
-        self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        
-        # set up the submodules
-        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        super(RLRNN, self).__init__(n_actions=n_actions, hidden_size=hidden_size, dropout=dropout, n_participants=n_participants, embedding_size=embedding_size, device=device)
         
         # set up hard-coded equations
-        self.submodules_eq['x_value_reward_chosen'] = lambda value, inputs: value + inputs[..., 1] * (inputs[..., 0] - value)
+        self.setup_eq_module(key='x_value_reward_chosen', equation=lambda value, inputs: value + inputs[..., 1] * (inputs[..., 0] - value))
         
     def forward(self, inputs, prev_state=None, batch_first=False):
         """Forward pass of the RNN
@@ -355,88 +414,41 @@ class RLRNN(BaseRNN):
         
         # First, we have to initialize all the inputs and outputs (i.e. logits)
         inputs, logits, timesteps = self.init_forward_pass(inputs, prev_state, batch_first)
-        actions, rewards, participant_id = inputs
+        actions, rewards = inputs
         
-        # Here we compute now the participant embeddings for each entry in the batch
-        participant_embedding = self.participant_embedding(participant_id[:, 0].int())
-        # beta_value_reward = self.betas['x_value_reward'](participant_embedding)
-        # beta_value_choice = self.betas['x_value_choice'](participant_embedding)
+        # compute here derived inputs, e.g. trials since last action switch
         
         for timestep, action, reward in zip(timesteps, actions, rewards):
             
+            # update the control state w.r.t current control signals
+            self.control_state['c_action'] = action
+            self.control_state['c_reward'] = reward
+            
             # updates for x_value_reward
-            learning_rate_reward = self.call_module(
-                key_module='x_learning_rate_reward',
-                key_state='x_learning_rate_reward',
-                action=action,
-                inputs=(reward, self.state['x_value_reward']),
-                participant_embedding=participant_embedding,
-                participant_index=participant_id,
-                activation_rnn=torch.nn.functional.sigmoid,
-            )
+            self.call_module('x_learning_rate_chosen')
+            self.call_module('x_learning_rate_not_chosen')
+            # update learning rate also in control state since it is used in other modules as an input
+            self.control_state['c_learning_rate'] = self.state['x_learning_rate']
             
-            next_value_reward_chosen = self.call_module(
-                key_module='x_value_reward_chosen',
-                key_state='x_value_reward',
-                action=action,
-                inputs=(reward, learning_rate_reward),
-                participant_embedding=participant_embedding,
-                participant_index=participant_id,
-                # scaling=True,
-                )
-            
-            next_value_reward_not_chosen = self.call_module(
-                key_module='x_value_reward_not_chosen',
-                key_state='x_value_reward',
-                action=1-action,
-                inputs=None,
-                participant_embedding=participant_embedding,
-                participant_index=participant_id,
-                )
+            self.call_module('x_value_reward_chosen')
+            self.call_module('x_value_reward_not_chosen')
+            # update value_reward also in control state since it is used in other modules as an input
+            self.control_state['c_value_reward'] = self.state['x_value_reward']
             
             # updates for x_value_choice
-            next_value_choice_chosen = self.call_module(
-                key_module='x_value_choice_chosen',
-                key_state='x_value_choice',
-                action=action,
-                inputs=None,
-                participant_embedding=participant_embedding,
-                participant_index=participant_id,
-                activation_rnn=torch.nn.functional.sigmoid,
-                # scaling=True,
-                )
-            
-            next_value_choice_not_chosen = self.call_module(
-                key_module='x_value_choice_not_chosen',
-                key_state='x_value_choice',
-                action=1-action,
-                inputs=None,
-                participant_embedding=participant_embedding,
-                participant_index=participant_id,
-                activation_rnn=torch.nn.functional.sigmoid,
-                # scaling=True,
-                )
-            
-            # updating the memory state
-            self.state['x_learning_rate_reward'] = learning_rate_reward
-            self.state['x_value_reward'] = next_value_reward_chosen + next_value_reward_not_chosen
-            self.state['x_value_choice'] = next_value_choice_chosen + next_value_choice_not_chosen
-            
-            # get scaling factors
-            scaling_factors = {}
-            for key in self.state:
-                if key in self.betas:
-                    scaling_factors[key] = self.betas[key] if isinstance(self.betas[key], nn.Parameter) else self.betas[key](participant_embedding)
-            
-            # Now keep track of the logit in the output array
-            logits[timestep] = self.state['x_value_reward'] * scaling_factors['x_value_reward'] + self.state['x_value_choice'] * scaling_factors['x_value_choice']
+            self.call_module('x_value_choice_chosen')
+            self.call_module('x_value_choice_not_chosen')
             
             # record the inputs for training SINDy later on
             self.record_signal('c_action', action)
             self.record_signal('c_reward', reward)
+            self.record_signal('c_learning_rate', self.state['x_learning_rate'])
             self.record_signal('c_value_reward', self.state['x_value_reward'])
+            
+            # compute action values
+            logits[timestep] = self.compute_action_value()
         
         # post-process the forward pass; give here as inputs the logits, batch_first and all values from the memory state
         logits = self.post_forward_pass(logits, batch_first)
-                
+        
         return logits, self.get_state()

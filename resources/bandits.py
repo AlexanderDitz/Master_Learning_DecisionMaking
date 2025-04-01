@@ -175,7 +175,7 @@ class AgentQ:
     choice = np.random.choice(self._n_actions, p=choice_probs)
     return choice
 
-  def update(self, choice: int, reward: np.ndarray, *args):
+  def update(self, choice: int, reward: np.ndarray, *args, **kwargs):
     """Update the agent after one step of the task.
 
     Args:
@@ -239,7 +239,7 @@ class AgentQ:
     self._reward_prediction_error = update_rule
 
 
-class AgentQ_SampleBetaDist(AgentQ):
+class AgentQ_SampleZeros(AgentQ):
   """An agent that runs simple Q-learning for the y-maze tasks.
 
   Attributes:
@@ -264,7 +264,7 @@ class AgentQ_SampleBetaDist(AgentQ):
       zero_threshold: float = 0.1,
       ):
     
-    super(AgentQ_SampleBetaDist, self).__init__(
+    super(AgentQ_SampleZeros, self).__init__(
       n_actions=n_actions,
       beta_reward=beta_reward,
       alpha_reward=alpha_reward,
@@ -283,22 +283,31 @@ class AgentQ_SampleBetaDist(AgentQ):
   def new_sess(self, sample_parameters=False, **kwargs):
     """Reset the agent for the beginning of a new session."""
     
-    super(AgentQ_SampleBetaDist, self).new_sess()
+    super(AgentQ_SampleZeros, self).new_sess()
     
     # sample new parameters
-    if sample_parameters:        
-      self._beta_reward = np.random.rand()
-      self._beta_choice = np.random.rand()
+    if sample_parameters:
+      # sample scaling parameters (inverse noise temperatures)
+      self._beta_reward, self._beta_choice = 0, 0
+      while self._beta_reward <= self._zero_threshold and self._beta_choice <=  self._zero_threshold:
+        self._beta_reward = np.random.rand()
+        self._beta_choice = np.random.rand()
+        # apply zero-threshold if applicable
+        self._beta_reward = self._beta_reward * 2 * self._mean_beta_reward if self._beta_reward > self._zero_threshold else 0
+        self._beta_choice = self._beta_choice * 2 * self._mean_beta_choice if self._beta_choice > self._zero_threshold else 0
+      
+      # sample auxiliary parameters
+      self._forget_rate = np.random.rand()
+      self._forget_rate = self._forget_rate * (self._forget_rate > self._zero_threshold)
+      
+      # sample learning rate; don't zero out; only check for applicability of asymmetric learning rates
       self._alpha_reward = np.random.rand()
       self._alpha_penalty = np.random.rand()
-      # self._alpha_choice = np.random.rand()
-      # self._alpha_counterfactual = np.random.rand()
-      # self._confirmation_bias = np.random.rand()
-      self._forget_rate = np.random.rand()
-      
-      # Apply threshold to set variables to 0
-      self._beta_reward = self._beta_reward * 2 * self._mean_beta_reward if self._beta_reward > self._zero_threshold else 0
-      self._beta_choice = self._beta_choice * 2 * self._mean_beta_choice if self._beta_choice > self._zero_threshold else 0
+      # set alpha_reward = alpha_penalty if (alpha_reward - alpha_penalty) < zero_threshold
+      if np.abs(self._alpha_reward - self._alpha_penalty) < self._zero_threshold:
+        alpha_mean = np.mean((self._alpha_reward, self._alpha_penalty))
+        self._alpha_reward = alpha_mean
+        self._alpha_penalty = alpha_mean
 
 
 class AgentNetwork:
@@ -335,7 +344,7 @@ class AgentNetwork:
         
         self.new_sess()
 
-    def new_sess(self, participant_id: int = 0):
+    def new_sess(self, participant_id: int = 0, **kwargs):
       """Reset the network for the beginning of a new session."""
       if not isinstance(participant_id, torch.Tensor):
         participant_id = torch.tensor(participant_id, dtype=int, device=self._model.device)[None]
@@ -371,7 +380,7 @@ class AgentNetwork:
       else:
         return np.random.choice(self._n_actions, p=choice_probs)
 
-    def update(self, choice: float, reward: float, participant_id: float):
+    def update(self, choice: float, reward: float, participant_id: float, *args, **kwargs):
       choice = torch.eye(self._n_actions)[int(choice)]
       self._xs = torch.concat([choice, torch.tensor(reward), torch.tensor(participant_id).view(-1)]).view(1, 1, -1).to(device=self._model.device)
       with torch.no_grad():
@@ -403,7 +412,7 @@ class AgentNetwork:
         return tuple(np.arange(self._model.participant_embedding.num_embeddings).tolist())
 
 
-class AgentSindy(AgentNetwork):
+class AgentSpice(AgentNetwork):
   
   def __init__(
     self,
@@ -413,24 +422,41 @@ class AgentSindy(AgentNetwork):
     deterministic: bool = True,
   ):
     
-    super(AgentSindy, self).__init__(model_rnn=deepcopy(model_rnn), n_actions=n_actions, deterministic=deterministic)
+    super(AgentSpice, self).__init__(model_rnn=deepcopy(model_rnn), n_actions=n_actions, deterministic=deterministic)
     
     self._model.integrate_sindy(sindy_modules)
   
   def get_modules(self):
     return self._model.submodules_sindy
   
-  def count_parameters(self) -> Dict[int, int]:
+  def count_parameters(self, mapping_modules_values: dict = None) -> Dict[int, int]:
+    """Count the number of non-zero parameters in each module for each participant. 
+    Considers also beta values (if mapping_modules_values is given).
+    
+    Args:
+        mapping_modules_values (dict, optional): Defines which module maps onto which value in the memory state (will be deprecated in newer versions because this information will be stored as an attribute in the RNN) 
+
+    Returns:
+        Dict[int, int]: Dictionary which maps the participant ID onto the respective number of parameters
+    """
     submodules = self.get_modules()
     keys_submodules = list(submodules.keys())
     participant_ids = list(submodules[keys_submodules[0]].keys())
     n_parameters = {participant_id: 0 for participant_id in participant_ids}
     for participant_id in participant_ids:
+      self.new_sess(participant_id=participant_id)
+      betas = self.get_betas()
+      # count all non-zero coefficients in SINDy modules with considering the corresponding beta value which potentially can set all influences of this module to 0 
       for submodule in submodules:
-        n_parameters[participant_id] += (submodules[submodule][participant_id].coefficients() != 0).sum()
-
+        n_parameters_module = submodules[submodule][participant_id].coefficients()
+        # n_parameters_module = n_parameters_module * (n_parameters_module > 0.05)
+        beta_value_module = betas[mapping_modules_values[submodule]]
+        n_parameters[participant_id] += (n_parameters_module * beta_value_module != 0).sum()
+      # include beta parameters if non-zero
+      for value in betas:
+        if betas[value] != 0:
+          n_parameters[participant_id] += 1
     return n_parameters
-    
 
 
 ################
@@ -675,7 +701,7 @@ class BanditSession(NamedTuple):
   def __getitem__(self, val):
     return self._replace(choices=self.choices.__getitem__(val), rewards=self.rewards.__getitem__(val), session=self.session.__getitem__(val), reward_probabilities=self.reward_probabilities.__getitem__(val), q=self.q.__getitem__(val), n_trials=self.choices.__getitem__(val).shape[0])
   
-Agent = Union[AgentQ, AgentNetwork, AgentSindy]
+Agent = Union[AgentQ, AgentNetwork, AgentSpice]
 # Environment = Union[EnvironmentBanditsFlips, EnvironmentBanditsDrift, EnvironmentBanditsSwitch]
 
 
@@ -719,7 +745,7 @@ def run_experiment(
     rewards[trial, :len(reward)] = reward
     
     # Third - agent updates its believes based on chosen action and received reward
-    agent.update(choice, rewards[trial])
+    agent.update(choice=choice, reward=rewards[trial], participant_id=session_id)
     
   experiment = BanditSession(n_trials=n_trials,
                              choices=choices[:-1].astype(int),
@@ -765,7 +791,7 @@ def create_dataset(
   for session in range(n_sessions):
     if verbose:
       print(f'Running session {session+1}/{n_sessions}...')
-    agent.new_sess(sample_parameters=sample_parameters)
+    agent.new_sess(sample_parameters=sample_parameters, participant_id=session)
     experiment, choices, rewards = run_experiment(agent, environment, n_trials, session)
     experiment_list.append(experiment)
     
@@ -798,7 +824,7 @@ def create_dataset(
   return dataset, experiment_list, parameter_list
 
 
-def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Union[AgentQ, AgentNetwork, AgentSindy]):
+def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Union[AgentQ, AgentNetwork, AgentSpice]):
   """Compute Q-Values of a specific agent for a specific experiment sequence with given actions and rewards.
 
   Args:
@@ -817,7 +843,7 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
     participant_id = int(experiment[0, -1])
   else:
     raise TypeError("experiment is of not of class numpy.ndarray or torch.Tensor")
-
+  
   Qs = np.zeros((choices.shape[0], agent._n_actions))
   qs = np.zeros((choices.shape[0], agent._n_actions))
   cs = np.zeros((choices.shape[0], agent._n_actions))

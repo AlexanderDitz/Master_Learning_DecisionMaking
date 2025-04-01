@@ -4,17 +4,9 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import rnn_main
 
-# names = [
-#     'spice',
-#     'mcmc_ApBr',
-#     'mcmc_ApAnBrAcBc',
-# ]
-
-# for name in names:
-    # print(f"Fitting SPICE model to {name} data...")
 _, loss = rnn_main.main(
     checkpoint=False,
-    epochs=128,
+    epochs=4096,
     
     # data='data/parameter_recovery_participants/data_128p_0.csv',
     # model='params/parameter_recovery_participants/params_128p_0.pkl',
@@ -22,13 +14,20 @@ _, loss = rnn_main.main(
     # data = 'data/optuna/data_128p_0.csv',
     # model = 'params/params_128p_0.pkl',
     
-    model=f'params/eckstein2022/params_eckstein2022.pkl',
-    data=f'data/eckstein2022/eckstein2022.csv',
+    # model='params/benchmarking/rnn_eckstein.pkl',
+    # data='data/2arm/eckstein2022_291_processed.csv',
     
-    # model=f'params/sugawara2021/params_sugawara2021.pkl',
-    # data=f'data/sugawara2021/sugawara2021.csv',
+    model='params/sugawara2021/params_sugawara2021.pkl',
+    data='data/sugawara2021/sugawara2021.csv',
     
     n_actions=2,
+    
+    # optuna params for SEQ
+    # dropout=0.31905877051758935
+    # hidden_size=22
+    # embedding_size=9
+    # n_steps=62,
+    # learning_rate=0.00036,
     
     # optuna params for GRU
     embedding_size=22,
@@ -57,5 +56,5 @@ _, loss = rnn_main.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=2,
+    participant_id=3,
 )

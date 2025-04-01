@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator
 
 sys.path.append('resources')
 from resources.rnn import RLRNN
-from resources.bandits import AgentSindy, AgentNetwork, get_update_dynamics, BanditSession
+from resources.bandits import AgentSpice, AgentNetwork, get_update_dynamics, BanditSession
 from resources.sindy_utils import create_dataset, check_library_setup
 from resources.sindy_training import fit_sindy as fit_sindy
 from resources.rnn_utils import DatasetRNN
@@ -224,7 +224,7 @@ class rl_sindy_theorist(BaseEstimator):
             try:
                 # set up SINDy-Agent
                 agent_rnn.new_sess(experiment_list[id].session[0])
-                self.sindy_agents[id] = AgentSindy(
+                self.sindy_agents[id] = AgentSpice(
                     sindy_models=sindy_models, 
                     n_actions=self.n_actions, 
                     beta_reward=agent_rnn._beta_reward,
