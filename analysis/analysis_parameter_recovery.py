@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from copy import copy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.setup_agents import setup_agent_spice
@@ -72,7 +73,7 @@ mapping_x_value_choice_not_chosen = {
 }
 
 mapping_betas = {
-    'x_learning_rate_reward': lambda agent_or_data: 1, # no scaling of learning rate; agent_or_data.get_betas()[] if isinstance(agent_or_data, AgentSindy) else agent_or_data['beta_reward'],
+    'x_learning_rate_reward': lambda agent_or_data: agent_or_data.get_betas()['x_value_reward'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_reward'], # Question: no scaling of learning rate?
     'x_value_reward_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_reward'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_reward'],
     'x_value_choice_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_choice'],
     'x_value_choice_not_chosen': lambda agent_or_data: agent_or_data.get_betas()['x_value_choice'] if isinstance(agent_or_data, AgentSpice) else agent_or_data['beta_choice'],
@@ -179,7 +180,7 @@ def n_true_params(true_coefs):
 
 random_sampling = [0.25, 0.5, 0.75]
 n_sessions = [16]#, 32, 64, 128, 256]#, 512]
-iterations = 3
+iterations = 1
 
 base_name_data = 'data/parameter_recovery/data_SESSp_IT.csv'
 base_name_params = 'params/parameter_recovery/params_SESSp_IT.pkl'
@@ -263,7 +264,7 @@ for index_sess, sess in enumerate(n_sessions):
             
             # get all true parameters of current participant from dataset
             data_coefs_all = data.loc[data[kw_participant_id]==participant].iloc[-1]
-            index_params = n_true_params(data_coefs_all)
+            index_params = n_true_params(copy(data_coefs_all))
             
             sindy_coefs_array = []
             data_coefs_array = []
@@ -272,7 +273,7 @@ for index_sess, sess in enumerate(n_sessions):
             index_all_candidate_terms = 0
             for index_library, library in enumerate(mapping_libraries):
                 # get sindy coefficients
-                sindy_coefs_library = sindy_models[library][participant].model.steps[-1][1].coef_[0]
+                sindy_coefs_library = sindy_models[library][participant].coefficients()[0]
                 # drop every entry feature that contains a u-feature (i.e. dummy-feature)
                 feature_names_library = sindy_models[library][participant].get_feature_names()
                 index_keep = ['dummy' not in feature for feature in feature_names_library]
@@ -337,16 +338,16 @@ for index_sess, sess in enumerate(n_sessions):
                     false_neg_count[len(n_sessions)+index_rnd, index_params] += false_neg
 
                     # add identification rates
-                    true_pos_rates[len(n_sessions)+index_rnd, it, index_params] += true_pos if not np.isnan(true_pos) else 0
-                    true_neg_rates[len(n_sessions)+index_rnd, it, index_params] += true_neg if not np.isnan(true_neg) else 0
-                    false_pos_rates[len(n_sessions)+index_rnd, it, index_params] += false_pos if not np.isnan(false_pos) else 0
-                    false_neg_rates[len(n_sessions)+index_rnd, it, index_params] += false_neg if not np.isnan(false_neg) else 0
+                    true_pos_rates[len(n_sessions)+index_rnd, it, index_params] += true_pos_rel if not np.isnan(true_pos_rel) else 0
+                    true_neg_rates[len(n_sessions)+index_rnd, it, index_params] += true_neg_rel if not np.isnan(true_neg_rel) else 0
+                    false_pos_rates[len(n_sessions)+index_rnd, it, index_params] += false_pos_rel if not np.isnan(false_pos_rel) else 0
+                    false_neg_rates[len(n_sessions)+index_rnd, it, index_params] += false_neg_rel if not np.isnan(false_neg_rel) else 0
                     
                     # add identification rate counter
-                    true_pos_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_pos) else 0
-                    true_neg_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_neg) else 0
-                    false_pos_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_pos) else 0
-                    false_neg_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_neg) else 0
+                    true_pos_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_pos_rel) else 0
+                    true_neg_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(true_neg_rel) else 0
+                    false_pos_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_pos_rel) else 0
+                    false_neg_rates_count[len(n_sessions)+index_rnd, it, index_params] += 1 if not np.isnan(false_neg_rel) else 0
 
 
 # ------------------------------------------------
@@ -428,11 +429,6 @@ false_neg_sessions_std = np.nanstd(false_neg_rates, axis=1)
 # ------------------------------------------------
 # post-processing identification counts
 # ------------------------------------------------
-
-# true_pos_count = np.nansum(true_pos_count, axis=1)
-# true_neg_count = np.nansum(true_neg_count, axis=1)
-# false_pos_count = np.nansum(false_pos_count, axis=1)
-# false_neg_count = np.nansum(false_neg_count, axis=1)
 
 accuracy = (true_pos_count + true_neg_count) / (true_pos_count + true_neg_count + false_pos_count + false_neg_count)
 true_pos_rate = true_pos_count / (true_pos_count + false_neg_count)

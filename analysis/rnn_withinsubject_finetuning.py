@@ -16,11 +16,11 @@ from collections import defaultdict
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from resources.model_evaluation import bayesian_information_criterion, log_likelihood
-from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, get_update_dynamics
+from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, AgentSpice, get_update_dynamics
 from resources.rnn import RLRNN
 from resources.rnn_utils import DatasetRNN
 from resources.rnn_training import fit_model
-from resources.sindy_training import fit_model as fit_model_sindy
+from resources.sindy_training import fit_spice
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -28,9 +28,9 @@ torch.manual_seed(42)
 start_time = time.time()
 
 # QUICK CONFIG
-epochs_rnn =2048
-scheduler = True
-n_trials_optuna = 50
+epochs_rnn = 1#2048
+scheduler = False#True
+n_trials_optuna = 1#50
 
 logging.basicConfig(
     level=logging.INFO,
@@ -219,13 +219,17 @@ def objective(trial, train_dataset, val_dataset, n_participants):
     """
     list_rnn_modules, list_control_parameters, _, _ = define_sindy_configuration()
     
-    # dropout = trial.suggest_float('dropout', 0., 0.5)
     learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
-    # hidden_size = trial.suggest_int('hidden_size', 8, 32)
+    l1_weight_decay = trial.suggest_float('l1_weight_decay', 1e-6, 1e-3, log=True)
+    l2_weight_decay = trial.suggest_float('l2_weight_decay', 1e-6, 1e-3, log=True)
+    sindy_optimizer_alpha = trial.suggest_float('l1_weight_decay', 1e-2, 1e0, log=True)
+    sindy_threshold = trial.suggest_float('l2_weight_decay', 1e-3, 1e-1, log=True)    
     embedding_size = trial.suggest_int('embedding_size', 8, 32)
     n_steps = trial.suggest_int('n_steps', 1, 100)
+    # hidden_size = trial.suggest_int('hidden_size', 8, 32)
+    # dropout = trial.suggest_float('dropout', 0., 0.5)
     
-    logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}")
+    logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}, l1_weight_decay={l1_weight_decay:.6f}, l2_weight_decay={l2_weight_decay:.6f}, sindy_optimizer_alpha={sindy_optimizer_alpha:.6f}, sindy_threshold={sindy_threshold:.6f}")
     
     model_rnn = RLRNN(
         n_actions=n_actions,
@@ -233,13 +237,15 @@ def objective(trial, train_dataset, val_dataset, n_participants):
         hidden_size=8,#hidden_size,
         embedding_size=embedding_size,
         dropout=0,#dropout,
+        l1_weight_decay=l1_weight_decay,
+        l2_weight_decay=l2_weight_decay,
         list_signals=list_rnn_modules + list_control_parameters
     )
     
     optimizer_rnn = torch.optim.Adam(model_rnn.parameters(), lr=learning_rate)
     
     try:
-        model_rnn, optimizer_rnn, final_train_loss = fit_model(
+        model_rnn, optimizer_rnn, final_train_loss_rnn = fit_model(
             model=model_rnn,
             optimizer=optimizer_rnn,
             dataset_train=train_dataset,
@@ -247,39 +253,54 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             epochs=epochs_rnn,
             n_steps=n_steps,
             scheduler=scheduler,
-            convergence_threshold=1e-14,
+            convergence_threshold=0,
         )
-        
-        logger.info(f"Trial {trial.number}: RNN Train Loss: {final_train_loss:.7f}")
         
         agent_rnn = AgentNetwork(model_rnn=model_rnn, n_actions=n_actions)
         
+        list_rnn_modules, list_control_parameters, library_setup, filter_setup = define_sindy_configuration()
+        agent_spice, final_train_loss_spice = fit_spice(
+            agent=agent_rnn, 
+            data=train_dataset, 
+            get_loss=True,
+            rnn_modules=list_rnn_modules,
+            control_parameters=list_control_parameters,
+            library_setup=library_setup,
+            filter_setup=filter_setup,
+            optimizer_alpha=sindy_optimizer_alpha,
+            optimizer_threshold=sindy_threshold,
+            )
+        n_parameters_spice = agent_spice.count_parameters(mapping_modules_values={module: 'x_value_choice' if 'choice' in module else 'x_value_reward' for module in agent_spice._model.submodules_sindy})
+        
+        logger.info(f"Trial {trial.number}: RNN Train Loss: {final_train_loss_rnn:.7f}; SPICE Train Loss: {final_train_loss_spice}")
+        
         val_loss = 0.0
-        n_eval = 0
+        n_trials_eval = 0
         
         val_participant_ids = torch.unique(val_dataset.xs[:, 0, -1]).tolist()
         logger.info(f"Trial {trial.number}: Validation set has {len(val_participant_ids)} participants")
         
         for pid in val_participant_ids:
             mask = (val_dataset.xs[:, 0, -1] == pid)
-                
+            
             xs_val = val_dataset.xs[mask]
             ys_val = val_dataset.ys[mask]
             
-            agent_rnn.new_sess(participant_id=pid)
+            agent_spice.new_sess(participant_id=pid)
             
             # Get dynamics (choices and probabilities)
             _, probs, _ = get_update_dynamics(xs_val[0], agent_rnn)
-            choices_np = ys_val[0].cpu().numpy()
+            choices_np = ys_val[0, :len(probs)].cpu().numpy()
             
             # Calculate negative log likelihood
-            loss = -np.mean(np.sum(choices_np * np.log(probs + 1e-10), axis=1))
-
+            # loss = -np.mean(np.sum(choices_np * np.log(probs + 1e-10), axis=1))
+            loss = bayesian_information_criterion(data=choices_np, probs=probs, n_parameters=n_parameters_spice[pid])
+            
             val_loss += loss
-            n_eval += 1
+            n_trials_eval += len(probs)
         
-        avg_val_loss = val_loss / n_eval if n_eval > 0 else float('inf')
-        logger.info(f"Trial {trial.number}: Average Validation Loss: {avg_val_loss:.4f}, Eval count: {n_eval}")
+        avg_val_loss = val_loss / n_trials_eval if n_trials_eval > 0 else float('inf')
+        logger.info(f"Trial {trial.number}: Average Validation Loss: {avg_val_loss:.4f}, Eval count: {n_trials_eval}")
         
         return avg_val_loss
     
@@ -320,17 +341,13 @@ def evaluate_with_sindy(model_rnn, val_dataset, participant_ids, n_participants)
             logger.info(f"Fitting SINDy model for participant {pid}")
             
             # Create SINDy agent just for this participant
-            participant_sindy = fit_model_sindy(
+            participant_sindy, _ = fit_spice(
                 rnn_modules=list_rnn_modules,
                 control_parameters=list_control_parameters,
                 agent=agent_rnn,
                 data=participant_dataset,
-                off_policy=True,
-                polynomial_degree=2,
                 library_setup=library_setup,
                 filter_setup=filter_setup,
-                optimizer_threshold=0.05,
-                optimizer_alpha=1,
                 verbose=True
             )
             

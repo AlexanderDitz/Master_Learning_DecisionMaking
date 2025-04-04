@@ -11,9 +11,10 @@ from resources.rnn import RLRNN
 from resources.bandits import AgentQ, AgentNetwork, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits
 from resources.sindy_utils import check_library_setup
 from resources.rnn_utils import parameter_file_naming
-from resources.sindy_training import fit_model as fit_model_sindy
+from resources.sindy_training import fit_spice
 from utils.convert_dataset import convert_dataset
 from utils.plotting import plot_session as plot_session
+from utils.setup_agents import setup_agent_rnn
 
 warnings.filterwarnings("ignore")
 
@@ -21,14 +22,15 @@ def main(
     model: str = None,
     data: str = None,
     
-    # generated training dataset parameters
-    n_trials = 256,
+    # generated dataset parameters
     participant_id: int = None,
     
     # sindy parameters
     optimizer_threshold = 0.05,
     polynomial_degree = 2,
     optimizer_alpha = 1,
+    n_trials_off_policy = 1024,
+    n_sessions_off_policy = 0,
     verbose = True,
     
     # ground truth parameters
@@ -41,13 +43,13 @@ def main(
     alpha_choice = 0.,
     alpha_counterfactual = 0.,
     parameter_variance = 0.,
-    reward_prediction_error: Callable = None,
     
     # environment parameters
     n_actions = 2,
     sigma = .2,
     counterfactual = False,
     
+    get_loss: bool = False,
     analysis: bool = False, 
     ):
 
@@ -99,8 +101,8 @@ def main(
     dataprocessing_setup = {
         'x_learning_rate_reward': [0, 0, 0],
         'x_value_reward_not_chosen': [0, 0, 0],
-        'x_value_choice_chosen': [1, 0, 0],
-        'x_value_choice_not_chosen': [1, 0, 0],
+        'x_value_choice_chosen': [1, 1, 0],
+        'x_value_choice_not_chosen': [1, 1, 0],
         # 'c_action': [0, 0, 0],
         # 'c_reward': [0, 0, 0],
         'c_value_reward': [0, 0, 0],
@@ -108,17 +110,30 @@ def main(
     
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):
         raise ValueError('Library setup does not match feature list.')
+        
+    # ---------------------------------------------------------------------------------------------------
+    # RNN Setup
+    # ---------------------------------------------------------------------------------------------------
+    
+    # set up rnn agent and expose q-values to train sindy
+    if model is None:
+        params_path = parameter_file_naming('params/params', beta_reward=beta_reward, alpha_reward=alpha, alpha_penalty=alpha_penalty, beta_choice=beta_choice, alpha_choice=alpha_choice, forget_rate=forget_rate, confirmation_bias=confirmation_bias, alpha_counterfactual=alpha_counterfactual, variance=parameter_variance, verbose=True)
+    else:
+        params_path = model
+    
+    agent_rnn = setup_agent_rnn(
+        path_model=params_path,
+        list_sindy_signals=list_rnn_modules+list_control_parameters,
+    )
     
     # ---------------------------------------------------------------------------------------------------
     # Data setup
     # ---------------------------------------------------------------------------------------------------
     
     agent = None
-    participant_ids = None
     if data is None:
         # set up ground truth agent and environment
         environment = BanditsDrift(sigma=sigma, n_actions=n_actions, counterfactual=counterfactual)
-        # environment = EnvironmentBanditsSwitch(sigma, n_actions=n_actions, counterfactual=counterfactual)
         agent = AgentQ(
             n_actions=n_actions, 
             beta_reward=beta_reward, 
@@ -130,67 +145,35 @@ def main(
             confirmation_bias=confirmation_bias, 
             alpha_counterfactual=alpha_counterfactual,
             )
-        if reward_prediction_error is not None:
-            agent.set_reward_prediction_error(reward_prediction_error)
-        dataset_test, _, _ = create_dataset_bandits(agent, environment, 100, 1)
-        dataset_train, _, _ = create_dataset_bandits(agent, environment, n_trials, 1)
+        
+        participant_ids = np.arange(agent_rnn._model.n_participants, dtype=int)
+        dataset_test, _, _ = create_dataset_bandits(agent, environment, 100, len(participant_ids))
     else:
         # get data from experiments for later evaluation
         dataset_test, _, df, _ = convert_dataset(data)
-        participant_ids = dataset_test.xs[..., -1].unique().cpu().numpy()
-        
-        # set up environment to run with trained RNN to collect data
-        environment = BanditsDrift(sigma=sigma, n_actions=n_actions, counterfactual=counterfactual) # TODO: compute counterfactual from data based on rewards       
-        agent_dummy = AgentQ(n_actions=n_actions, alpha_reward=0.5, beta_reward=1.0)
-        dataset_train, _, _ = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials, n_sessions=len(participant_ids))
-        dataset_train.xs[..., -1] = torch.tensor(participant_ids)
-            
-    # ---------------------------------------------------------------------------------------------------
-    # RNN Setup
-    # ---------------------------------------------------------------------------------------------------
-    
-    # set up rnn agent and expose q-values to train sindy
-    if model is None:
-        params_path = parameter_file_naming('params/params', beta_reward=beta_reward, alpha_reward=alpha, alpha_penalty=alpha_penalty, beta_choice=beta_choice, alpha_choice=alpha_choice, forget_rate=forget_rate, confirmation_bias=confirmation_bias, alpha_counterfactual=alpha_counterfactual, variance=parameter_variance, verbose=True)
-    else:
-        params_path = model
-    state_dict = torch.load(params_path, map_location=torch.device('cpu'))['model']
-    participant_embedding_index = [i for i, s in enumerate(list(state_dict.keys())) if 'participant_embedding' in s]
-    participant_embedding_bool = True if len(participant_embedding_index) > 0 else False
-    n_participants = 0 if not participant_embedding_bool else state_dict[list(state_dict.keys())[participant_embedding_index[0]]].shape[0]
-    # n_participants = len(participant_ids)
-    key_hidden_size = [key for key in state_dict if 'x' in key.lower()][0]  # first key that contains the hidden_size
-    hidden_size = state_dict[key_hidden_size].shape[0]
-    rnn = RLRNN(
-        n_actions=n_actions, 
-        hidden_size=hidden_size,
-        n_participants=n_participants, 
-        list_signals=sindy_feature_list, 
-        )
-    print('Loaded model ' + params_path)
-    rnn.load_state_dict(state_dict)
-    agent_rnn = AgentNetwork(rnn, n_actions, deterministic=True)
-    if participant_ids is None:
-        participant_ids = np.arange(n_participants)
+        participant_ids = dataset_test.xs[..., -1].unique().int().cpu().numpy()
     
     # ---------------------------------------------------------------------------------------------------
     # SINDy training
     # ---------------------------------------------------------------------------------------------------
     
     # setup the SINDy-agent
-    agent_sindy = fit_model_sindy(
+    agent_spice, loss_spice = fit_spice(
         rnn_modules=list_rnn_modules,
         control_parameters=list_control_parameters,
         agent=agent_rnn,
-        data=environment,
-        n_sessions=len(participant_ids),
-        n_trials_off_policy=n_trials,
+        data=dataset_test,
+        n_sessions_off_policy=n_sessions_off_policy,
+        n_trials_off_policy=n_trials_off_policy,
         polynomial_degree=polynomial_degree,
         library_setup=library_setup,
         filter_setup=filter_setup,
         dataprocessing=dataprocessing_setup,
         optimizer_threshold=optimizer_threshold,
         optimizer_alpha=optimizer_alpha,
+        get_loss=get_loss,
+        participant_id=participant_id,
+        shuffle=True,
         verbose=verbose,
     )
 
@@ -202,19 +185,13 @@ def main(
         
         participant_id_test = participant_id if participant_id is not None else participant_ids[0]
         
-        if dataset_test is None:
-            dataset_test = [dataset_train[participant_id_test]]
-        
         agent_rnn.new_sess(participant_id=participant_id_test)
-        agent_sindy.new_sess(participant_id=participant_id_test)
+        agent_spice.new_sess(participant_id=participant_id_test)
         
         # print sindy equations from tested sindy agent
-        print('\nDiscovered SINDy models:')
+        print('\nDiscovered SPICE models:')
         for model in list_rnn_modules:
-            agent_sindy._model.submodules_sindy[model][participant_id_test].print()
-        betas = agent_sindy.get_betas()
-        # print(f'(beta_reward) = {betas['x_value_reward']:.3f}')
-        # print(f'(beta_choice) = {betas['x_value_choice']:.3f}')
+            agent_spice._model.submodules_sindy[model][participant_id_test].print()
         print('\n')
         
         # set up ground truth agent by getting parameters from dataset if specified
@@ -231,43 +208,41 @@ def main(
         
         # get analysis plot
         if agent is not None:
-            agents = {'groundtruth': agent, 'rnn': agent_rnn, 'sindy': agent_sindy}
+            agents = {'groundtruth': agent, 'rnn': agent_rnn, 'sindy': agent_spice}
             plt_title = r'$GT:\beta_{reward}=$'+str(np.round(agent._beta_reward, 2)) + r'; $\beta_{choice}=$'+str(np.round(agent._beta_choice, 2))+'\n'
         else:
-            agents = {'rnn': agent_rnn, 'sindy': agent_sindy}
+            agents = {'rnn': agent_rnn, 'sindy': agent_spice}
             plt_title = ''
             
-        fig, axs = plot_session(agents, dataset_test.xs[0])
-        betas = agent_rnn.get_betas()
+        fig, axs = plot_session(agents, dataset_test.xs[participant_id_test])
+        betas = agent_spice.get_betas()
         plt_title += r'SINDy: $\beta_{reward}=$'+str(np.round(betas['x_value_reward'], 2)) + r'; $\beta_{choice}=$'+str(np.round(betas['x_value_choice'], 2))
         
         fig.suptitle(plt_title)
         plt.show()
         
     features = {}
-    for model in agent_sindy._model.submodules_sindy:
+    for model in agent_spice._model.submodules_sindy:
         features[model] = {}
-        for pid in agent_sindy._model.submodules_sindy[model]:
-            features_i = agent_sindy._model.submodules_sindy[model][pid].get_feature_names()
-            coeffs_i = [c for c in agent_sindy._model.submodules_sindy[model][pid].coefficients()[0]]
-            index_u = []
-            for i, f in enumerate(features_i):
-                if 'dummy' in f:
-                    index_u.append(i)
-            features_i = [item for idx, item in enumerate(features_i) if idx not in index_u]
-            coeffs_i = [item for idx, item in enumerate(coeffs_i) if idx not in index_u]
-            features[model][pid] = tuple(features_i)
+        for pid in agent_spice._model.submodules_sindy[model]:
+            features_i = np.array(agent_spice._model.submodules_sindy[model][pid].get_feature_names())
+            coeffs_i = agent_spice._model.submodules_sindy[model][pid].coefficients()[0]
+            index_u = [not 'dummy' in f for f in features_i]
+            features_i = features_i[index_u]
+            coeffs_i = coeffs_i[index_u]
+            # features[model][pid] = tuple(features_i)
             features[model][pid] = tuple(coeffs_i)
     
     features['beta_reward'] = {}
     features['beta_choice'] = {}
     for pid in participant_ids:
-        agent_sindy.new_sess(participant_id=pid)
-        betas = agent_sindy.get_betas()
+        pid = int(pid)
+        agent_spice.new_sess(participant_id=pid)
+        betas = agent_spice.get_betas()
         features['beta_reward'][pid] = betas['x_value_reward']
         features['beta_choice'][pid] = betas['x_value_choice']
         
-    return agent_sindy, features
+    return agent_spice, features, loss_spice
 
 
 if __name__=='__main__':

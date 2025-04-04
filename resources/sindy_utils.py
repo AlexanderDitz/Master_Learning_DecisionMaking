@@ -94,32 +94,33 @@ def create_dataset(
   else:
     trimming = 0
   
-  # perform agent updates to record values over trials
-  agent.new_sess(participant_id=participant_id)
-  agent = get_update_dynamics(data.xs[0], agent)[-1]
-  
-  # sort the data of one session into the corresponding signals
-  for key in keys_x+keys_c:
-    if len(agent._model.get_recording(key)) > 0:
-      # get all recorded values for the current session of one specific key 
-      recording = agent._model.get_recording(key)
-      # create tensor from list of tensors 
-      values = np.concatenate(recording)[trimming:]
-      # remove insignificant updates with a high-pass filter: check if dv/dt > threshold; otherwise set v(t=1) = v(t=0)
-      dvdt = np.abs(np.diff(values, axis=1))
-      for i_action in range(values.shape[-1]):
-        values[:, 1, i_action] = np.where(dvdt[:, 0, i_action] > highpass_threshold_dt, values[:, 1, i_action], values[:, 0, i_action])
-      # TODO: in the case of binary reward: add a little bit of noise on top to prevent r^2 terms in sindy models
-      # if key == 'c_r':
-      # in the case of 1D values along actions dim: Create 2D values by repeating along the actions dim (e.g. reward in non-counterfactual experiments) 
-      if values.shape[-1] == 1:
-          values = np.repeat(values, agent._n_actions, -1)
-      # add values of interest of one session as trajectory
-      for i_action in range(agent._n_actions):
-        if key in keys_x:
-          x_train[key] += [v for v in values[:, :, i_action]]
-        elif key in keys_c:
-          control[key] += [v for v in values[:, :, i_action]]
+  for session in data.xs:
+    # perform agent updates to record values over trials
+    agent.new_sess(participant_id=participant_id)
+    agent = get_update_dynamics(session, agent)[-1]
+    
+    # sort the data of one session into the corresponding signals
+    for key in keys_x+keys_c:
+      if len(agent._model.get_recording(key)) > 0:
+        # get all recorded values for the current session of one specific key 
+        recording = agent._model.get_recording(key)
+        # create tensor from list of tensors 
+        values = np.concatenate(recording)[trimming:]
+        # remove insignificant updates with a high-pass filter: check if dv/dt > threshold; otherwise set v(t=1) = v(t=0)
+        dvdt = np.abs(np.diff(values, axis=1))
+        for i_action in range(values.shape[-1]):
+          values[:, 1, i_action] = np.where(dvdt[:, 0, i_action] > highpass_threshold_dt, values[:, 1, i_action], values[:, 0, i_action])
+        # TODO: in the case of binary reward: add a little bit of noise on top to prevent r^2 terms in sindy models
+        # if key == 'c_r':
+        # in the case of 1D values along actions dim: Create 2D values by repeating along the actions dim (e.g. reward in non-counterfactual experiments) 
+        if values.shape[-1] == 1:
+            values = np.repeat(values, agent._n_actions, -1)
+        # add values of interest of one session as trajectory
+        for i_action in range(agent._n_actions):
+          if key in keys_x:
+            x_train[key] += [v for v in values[:, :, i_action]]
+          elif key in keys_c:
+            control[key] += [v for v in values[:, :, i_action]]
   
   feature_names = keys_x + keys_c
   

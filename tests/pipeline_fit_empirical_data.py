@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from benchmarking.hierarchical_bayes_numpyro import main as mcmc_training
 from utils.create_dataset_AgentMCMC import main as create_dataset_mcmc
 from utils.create_dataset_AgentSPICE import main as create_dataset_spice
-from rnn_main import main as rnn_training
+from pipeline_rnn import main as rnn_training
 
 # MCMC training configuration
 num_samples = 4096
@@ -17,6 +17,9 @@ training_test_ratio = 0.8
 # SPICE training configuration
 epochs = 4096
 scheduler = True
+
+# Data generation configuration
+n_trials_per_session = 500
 
 # empirical data
 data = 'data/eckstein2022/eckstein2022.csv'
@@ -58,7 +61,7 @@ rnn_training(
 
 # models = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 models = ['ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr']
-output_file = 'params/sugawara2021/params_sugawara2021.nc'
+output_file = 'params/eckstein2022/params_eckstein2022.nc'
 
 for model in models:
     print(f"Fitting model {model} to empirical data...")
@@ -86,29 +89,29 @@ for model in models:
     print(f"Generating data with model {model}...")
     if model != 'Spice':
         create_dataset_mcmc(
-            path_model='params/sugawara2021/params_sugawara2021_'+model+'.nc',
+            path_model='params/eckstein2022/params_eckstein2022_'+model+'.nc',
             path_data=data,
             path_save=data.replace('.', '_training_'+model+'.'),
-            n_trials_per_session=300,
+            n_trials_per_session=n_trials_per_session,
             )
         create_dataset_mcmc(
-            path_model='params/sugawara2021/params_sugawara2021_'+model+'.nc',
+            path_model='params/eckstein2022/params_eckstein2022_'+model+'.nc',
             path_data=data,
             path_save=data.replace('.', '_testing_'+model+'.'),
-            n_trials_per_session=300,
+            n_trials_per_session=n_trials_per_session,
             )
     else:
         create_dataset_spice(
-            path_model='params/sugawara2021/params_sugawara2021.pkl',
+            path_model='params/eckstein2022/params_eckstein2022.pkl',
             path_data=data,
             path_save=data.replace('.', '_training_'+model+'.'),
-            n_trials_per_session=300,
+            n_trials_per_session=n_trials_per_session,
         )
         create_dataset_spice(
-            path_model='params/sugawara2021/params_sugawara2021.pkl',
+            path_model='params/eckstein2022/params_eckstein2022.pkl',
             path_data=data,
             path_save=data.replace('.', '_testing_'+model+'.'),
-            n_trials_per_session=300,
+            n_trials_per_session=n_trials_per_session,
         )
 
 # ----------------------------------------------------------------------------------
@@ -116,11 +119,11 @@ for model in models:
 # ----------------------------------------------------------------------------------
 
 for simulated_model in models:
-    data = f"data/sugawara2021/sugawara2021_training_{simulated_model}.csv"
+    data = f"data/eckstein2022/eckstein2022_training_{simulated_model}.csv"
     for fitted_model in models:
         if fitted_model != 'Spice':
             print(f"Fitting model {fitted_model} to data {simulated_model}...")
-            output_file = f"params/sugawara2021/params_sugawara2021_{simulated_model}.nc"
+            output_file = f"params/eckstein2022/params_eckstein2022_{simulated_model}.nc"
 
             mcmc_training(
                 file=data, 
@@ -137,7 +140,7 @@ for simulated_model in models:
                 checkpoint=False,
                 epochs=epochs,
                 
-                model = f"params/sugawara2021/params_sugawara2021_{simulated_model}_{fitted_model}.pkl",
+                model = f"params/eckstein2022/params_eckstein2022_{simulated_model}_{fitted_model}.pkl",
                 data = data,
                 
                 n_actions=2,

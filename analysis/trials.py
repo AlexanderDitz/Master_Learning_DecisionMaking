@@ -15,7 +15,7 @@ from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, AgentSpice, ge
 from resources.rnn import RLRNN
 from resources.rnn_utils import DatasetRNN
 from resources.rnn_training import fit_model
-from resources.sindy_training import fit_model as fit_model_sindy
+from resources.sindy_training import fit_spice
 np.random.seed(42)
 torch.manual_seed(42)
 
@@ -212,11 +212,11 @@ def run_training_and_evaluation(dataset, label):
     agent_rnn = AgentNetwork(model_rnn=model_rnn, n_actions=n_actions)
     
     logger.info("\nFitting SINDy...")
-    agent_sindy = fit_model_sindy(
+    agent_sindy, _ = fit_spice(
         rnn_modules=list_rnn_modules,
         control_parameters=list_control_parameters,
         agent=agent_rnn,
-        data=dataset,
+        data_off_policy=dataset,
         off_policy=True, 
         polynomial_degree=2,
         library_setup=library_setup,

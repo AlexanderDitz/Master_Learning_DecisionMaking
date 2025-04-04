@@ -8,7 +8,7 @@ import pandas as pd
 import argparse
 import pickle
     
-# @jax.jit(static_argnames=['model','hierarchical'])
+# @jax.0(static_argnames=['model','hierarchical'])
 def rl_model(model, choice, reward, hierarchical):
 
     def scaled_beta(a, b, low, high):

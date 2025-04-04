@@ -12,15 +12,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import get_update_dynamics
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 
-
-def average_trial_likelihood(data: np.ndarray, probs: np.ndarray):
-    avg_trial_likelihood = None
     
-    trial_likelihood = np.sum(data * probs, axis=-1)
-    avg_trial_likelihood = np.mean(trial_likelihood)
-    return avg_trial_likelihood
-    
-def log_likelihood(data: np.ndarray, probs: np.ndarray):
+def log_likelihood(data: np.ndarray, probs: np.ndarray, **kwargs):
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1 
     
@@ -37,7 +30,7 @@ def log_likelihood(data: np.ndarray, probs: np.ndarray):
     # Sum log-likelihoods over all observations
     return np.sum(log_likelihoods)
 
-def bayesian_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None):
+def bayesian_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None, **kwargs):
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1
     # n_parameters: integer number of trainable model parameters
@@ -48,7 +41,7 @@ def bayesian_information_criterion(data: np.ndarray, probs: np.ndarray, n_parame
     n_samples = (data[:, 0] != -1).sum()
     return -2 * ll + n_parameters * np.log(n_samples)
 
-def akaike_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None):
+def akaike_information_criterion(data: np.ndarray, probs: np.ndarray, n_parameters: int, ll: np.ndarray = None, **kwargs):
     # data: array of binary observations (0 or 1)
     # probs: array of predicted probabilities for outcome 1
     # n_parameters: integer number of trainable model parameters
@@ -58,7 +51,7 @@ def akaike_information_criterion(data: np.ndarray, probs: np.ndarray, n_paramete
     
     return -2 * ll + 2 * n_parameters
 
-def get_scores(data: np.ndarray, probs: np.ndarray, n_parameters: int) -> float:
+def get_scores(data: np.ndarray, probs: np.ndarray, n_parameters: int, **kwargs) -> float:
         ll = log_likelihood(data=data, probs=probs)
         bic = bayesian_information_criterion(data=data, probs=probs, n_parameters=n_parameters, ll=ll)
         aic = akaike_information_criterion(data=data, probs=probs, n_parameters=n_parameters, ll=ll)
