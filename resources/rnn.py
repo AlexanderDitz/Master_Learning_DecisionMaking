@@ -253,15 +253,17 @@ class BaseRNN(nn.Module):
 
         elif key_module in self.submodules_rnn.keys():
             # rnn module
-            record_signal = True if not self.training else False
             
-            # Linear handling
             inputs = torch.concat((value, inputs, participant_embedding), dim=-1)
             update_value = self.submodules_rnn[key_module](inputs)
-            
             next_value = value + update_value
+            
             if activation_rnn is not None:
                 next_value = activation_rnn(next_value)
+                
+            if not self.training:
+                # record sample for SINDy training 
+                self.record_signal(key_module, value.view(-1, self._n_actions), next_value.view(-1, self._n_actions))
             
         elif key_module in self.submodules_eq.keys():
             # hard-coded equation
@@ -276,10 +278,6 @@ class BaseRNN(nn.Module):
         
         # clip next_value to a specific range
         next_value = torch.clip(input=next_value, min=-1e1, max=1e1)
-        
-        if record_signal:
-            # record sample for SINDy training 
-            self.record_signal(key_module, value.view(-1, self._n_actions), next_value.view(-1, self._n_actions))
         
         if scaling:
             # scale by inverse noise temperature
@@ -324,7 +322,7 @@ class RLRNN(BaseRNN):
         
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
-        if embedding_size > 0:
+        if embedding_size > 1:
             self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1

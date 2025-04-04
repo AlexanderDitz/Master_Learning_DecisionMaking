@@ -2,7 +2,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import rnn_main
+import pipeline_rnn
 
 path_datasets = 'data/parameter_recovery/'
 path_params = 'params/parameter_recovery/'
@@ -14,7 +14,7 @@ for d in datasets:
     dataset = os.path.join(path_datasets, d)
     model = os.path.join(path_params, d.replace('.csv', f'.pkl').replace('data', 'params'))
     
-    _, loss = rnn_main.main(
+    _, loss = pipeline_rnn.main(
         checkpoint=False,
         epochs=4096,
         

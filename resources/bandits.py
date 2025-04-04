@@ -838,21 +838,28 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   if isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
     if isinstance(experiment, torch.Tensor):
       experiment = experiment.detach().cpu().numpy()
-    choices = np.argmax(experiment[:, 0:agent._n_actions], axis=-1, keepdims=True)
+    choices = experiment[:, :agent._n_actions]
     rewards = experiment[:, agent._n_actions:2*agent._n_actions]
     participant_id = int(experiment[0, -1])
   else:
     raise TypeError("experiment is of not of class numpy.ndarray or torch.Tensor")
   
-  Qs = np.zeros((choices.shape[0], agent._n_actions))
-  qs = np.zeros((choices.shape[0], agent._n_actions))
-  cs = np.zeros((choices.shape[0], agent._n_actions))
-  alphas = np.zeros((choices.shape[0], agent._n_actions))
-  choice_probs = np.zeros((choices.shape[0], agent._n_actions))
+  # get number of actual trials
+  n_trials = len(choices) - np.argmax(choices[::-1][:, 0] != -1)
+  choices = choices[:n_trials]
+  rewards = rewards[:n_trials]
+  
+  # initialize storages
+  Qs = np.zeros((n_trials, agent._n_actions))
+  qs = np.zeros((n_trials, agent._n_actions))
+  cs = np.zeros((n_trials, agent._n_actions))
+  alphas = np.zeros((n_trials, agent._n_actions))
+  choice_probs = np.zeros((n_trials, agent._n_actions))
 
+  # reset agent states according to ID
   agent.new_sess(participant_id=participant_id)
   
-  for trial in range(choices.shape[0]):
+  for trial in range(n_trials):
     # track all states
     Qs[trial] = agent.q
     qs[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
@@ -860,8 +867,8 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
     alphas[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
     
     choice_probs[trial] = agent.get_choice_probs()
-    agent.update(int(choices[trial]), rewards[trial], participant_id)
-
+    agent.update(np.argmax(choices[trial], axis=-1), rewards[trial], participant_id)
+  
   return (Qs, qs, cs, alphas), choice_probs, agent
 
 

@@ -20,7 +20,7 @@ from resources.bandits import BanditsDrift, AgentQ, AgentNetwork, get_update_dyn
 from resources.rnn import RLRNN
 from resources.rnn_utils import DatasetRNN
 from resources.rnn_training import fit_model
-from resources.sindy_training import fit_model as fit_model_sindy
+from resources.sindy_training import fit_spice
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -316,11 +316,11 @@ def evaluate_with_sindy(model_rnn, train_dataset, val_dataset, val_participant_i
             logger.info(f"Fitting SINDy model for validation participant {pid}")
             
             # Create SINDy agent just for this participant
-            participant_sindy = fit_model_sindy(
+            participant_sindy, _ = fit_spice(
                 rnn_modules=list_rnn_modules,
                 control_parameters=list_control_parameters,
                 agent=agent_rnn,
-                data=participant_dataset,
+                data_off_policy=participant_dataset,
                 off_policy=True,
                 polynomial_degree=2,
                 library_setup=library_setup,

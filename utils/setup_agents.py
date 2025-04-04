@@ -10,7 +10,7 @@ import pickle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn import RLRNN
 from resources.bandits import AgentSpice, AgentNetwork, AgentQ
-from resources.sindy_training import fit_model
+from resources.sindy_training import fit_spice
 from utils.convert_dataset import convert_dataset
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 
@@ -77,7 +77,6 @@ def setup_agent_spice(
     sindy_library_setup: Dict[str, List],
     sindy_filter_setup: Dict[str, List],
     sindy_dataprocessing: Dict[str, List],
-    n_trials = 1024,
     threshold = 0.05,
     regularization = 1,
     participant_id: int = None,
@@ -88,7 +87,7 @@ def setup_agent_spice(
     agent_rnn = setup_agent_rnn(path_model=path_model, list_sindy_signals=rnn_modules+control_parameters)
     dataset = convert_dataset(file=path_data)[0]
     
-    agent_spice = fit_model(
+    agent_spice, _ = fit_spice(
         agent=agent_rnn,
         data=dataset,
         rnn_modules=rnn_modules,
@@ -98,7 +97,8 @@ def setup_agent_spice(
         filter_setup=sindy_filter_setup,
         dataprocessing=sindy_dataprocessing,
         participant_id=participant_id,
-        n_trials_off_policy=n_trials,
+        n_sessions_off_policy=0,
+        n_trials_off_policy=1024,
         optimizer_alpha=regularization,
         optimizer_threshold=threshold,
         deterministic=deterministic,

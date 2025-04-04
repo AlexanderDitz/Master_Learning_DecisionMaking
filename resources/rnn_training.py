@@ -15,6 +15,7 @@ def batch_train(
     optimizer: torch.optim.Optimizer = None,
     n_steps: int = -1,
     l1_weight_decay: float = 1e-4,
+    l2_weight_decay: float = 1e-4,
     loss_fn: nn.modules.loss._Loss = nn.CrossEntropyLoss(),
     ):
 
@@ -53,19 +54,22 @@ def batch_train(
         
         if torch.is_grad_enabled():
             
-            # L1 weight decay to enforce sparsification in the network
-            
+            # L1 weight decay to enforce sparsification in the network (except for participant embedding)
             l1_reg = l1_weight_decay * torch.stack([
                 param.abs().sum()
                 for name, param in model.named_parameters()
                 if "embedding" not in name
                 ]).sum()
             
-            l2_reg = l1_weight_decay * torch.stack([
-                param.pow(2).sum()
-                for name, param in model.named_parameters()
-                if "embedding" in name
-                ]).sum()
+            # L2 weight decay on participant embedding to enforce smoother gradients between participants and prevent overfitting
+            if model.embedding_size > 1:
+                l2_reg = l2_weight_decay * torch.stack([
+                    param.pow(2).sum()
+                    for name, param in model.named_parameters()
+                    if "embedding" in name
+                    ]).sum()
+            else:
+                l2_reg = 0
             
             loss = loss_step + l1_reg + l2_reg
             
@@ -89,6 +93,7 @@ def fit_model(
     scheduler: bool = False,
     n_steps: int = -1,
     l1_weight_decay: float = 1e-4,
+    l2_weight_decay: float = 1e-4,
     verbose: bool = True,
     ):
     """_summary_
@@ -178,6 +183,7 @@ def fit_model(
                     optimizer=optimizer,
                     n_steps=n_steps,
                     l1_weight_decay=l1_weight_decay,
+                    l2_weight_decay=l2_weight_decay,
                 )
                 loss_train += loss_i
             loss_train /= iterations_per_epoch

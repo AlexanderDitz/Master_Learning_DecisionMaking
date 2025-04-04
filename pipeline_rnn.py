@@ -66,6 +66,9 @@ def main(
   if not os.path.exists('params'):
     os.makedirs('params')
 
+  if participant_id is None:
+    participant_id = 0
+  
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   
   dataset_test = None

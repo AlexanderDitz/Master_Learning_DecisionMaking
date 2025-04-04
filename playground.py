@@ -1,8 +1,19 @@
-import pandas as pd
 import numpy as np
 
-file = "data/raw_data/sugawara2021.csv"
+# Example choices array
+choices = np.array([1, 0, 0, 1, 1, 1, 1, 0, 0, 0])
 
-df = pd.read_csv(file)
+# Find switch points
+switches = np.where(np.diff(choices) != 0)[0]
 
-print(np.unique(df[df['type']==4]['choice'].values))
+# Create boolean index array
+index_array = np.zeros_like(choices, dtype=bool)
+
+# Mark switch points and next three trials
+for switch in switches:
+    index_array[switch:switch+2] = True  # Mark switch and next three trials
+
+# Ensure we don't go out of bounds
+index_array = index_array[:len(choices)]
+
+print(index_array)

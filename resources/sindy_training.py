@@ -3,12 +3,15 @@ import numpy as np
 from math import comb
 import torch
 from copy import deepcopy
+from tqdm import tqdm
 
 import pysindy as ps
 
 from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset
 from resources.rnn_utils import DatasetRNN
-from resources.bandits import AgentNetwork, AgentSpice, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits
+from resources.bandits import AgentNetwork, AgentSpice, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits, get_update_dynamics
+from resources.model_evaluation import akaike_information_criterion as loss_metric
+# from resources.model_evaluation import log_likelihood as loss_metric
 
 
 def fit_sindy(
@@ -18,10 +21,9 @@ def fit_sindy(
     polynomial_degree: int = 1, 
     library_setup: Dict[str, List[str]] = {},
     filter_setup: Dict[str, Tuple[str, float]] = {},
-    verbose: bool = False,
-    get_loss: bool = False,
     optimizer_threshold: float = 0.05,
     optimizer_alpha: float = 1,
+    verbose: bool = False,
     ):
     
     if feature_names is None:
@@ -81,9 +83,8 @@ def fit_sindy(
         
         # setup sindy model for current x-feature
         sindy_models[x_feature] = ps.SINDy(
-            # optimizer=ps.STLSQ(threshold=optimizer_threshold, alpha=optimizer_alpha, verbose=verbose),
-            optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose),
-            feature_library=ps.PolynomialLibrary(polynomial_degree, include_bias=True),
+            optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose, max_iter=100),
+            feature_library=ps.PolynomialLibrary(polynomial_degree),
             discrete_time=True,
             feature_names=feature_names_i,
         )
@@ -91,33 +92,30 @@ def fit_sindy(
         # fit sindy model
         sindy_models[x_feature].fit(x_i, u=control_i, t=1, multiple_trajectories=True, ensemble=False)
         
+        
         # post-process sindy weights
-        coefs = sindy_models[x_feature].coefficients()
-        for index_feature, feature in enumerate(sindy_models[x_feature].get_feature_names()):
-            if np.abs(coefs[0, index_feature]) < optimizer_threshold:
-                sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 0.
-            if feature == x_feature and np.abs(1-coefs[0, index_feature]) < optimizer_threshold:
-                sindy_models[x_feature].model.steps[-1][1].coef_[0, index_feature] = 1.
-                
-        if get_loss:
-            loss_model = 1-sindy_models[x_feature].score(x_i, u=control_i, t=1, multiple_trajectories=True)
-            loss += loss_model
-            if verbose:
-                print(f'Score for {x_feature}: {loss_model}')
+        # sindy_model_x_feature = deepcopy(sindy_models[x_feature])
+        # coefs = sindy_model_x_feature.coefficients()
+        # optimizer_threshold = 0.01
+        # for index_feature, feature in enumerate(sindy_model_x_feature.get_feature_names()):
+        #     if np.abs(coefs[0, index_feature]) < optimizer_threshold:
+        #         sindy_model_x_feature.model.steps[-1][1].coef_[0, index_feature] = 0.
+        #     if feature == x_feature and np.abs(1-coefs[0, index_feature]) < optimizer_threshold:
+        #         sindy_model_x_feature.model.steps[-1][1].coef_[0, index_feature] = 1.
+        
+        # sindy_models[x_feature] = sindy_model_x_feature
+        
         if verbose:
             sindy_models[x_feature].print()
     
-    if get_loss:
-        return sindy_models, loss
-    else:
-        return sindy_models
+    return sindy_models
     
     
-def fit_model(
+def fit_spice(
     rnn_modules: List[np.ndarray],
     control_parameters: List[np.ndarray], 
     agent: AgentNetwork,
-    data: DatasetRNN,
+    data: DatasetRNN = None,
     polynomial_degree: int = 2, 
     library_setup: Dict[str, List[str]] = {},
     filter_setup: Dict[str, Tuple[str, float]] = {},
@@ -126,41 +124,74 @@ def fit_model(
     participant_id: int = None,
     shuffle: bool = False,
     dataprocessing: Dict[str, List] = None,
-    off_policy: bool = True,
-    n_trials_off_policy: int = 1024,
+    n_trials_off_policy: int = 2048,
+    n_sessions_off_policy: int = 1,
     deterministic: bool = True,
-    # get_loss: bool = False,
+    get_loss: bool = False,
     verbose: bool = False,
-    ) -> AgentSpice:
+    ) -> Tuple[AgentSpice, float]:
+    """_summary_
+
+    Args:
+        rnn_modules (List[np.ndarray]): _description_
+        control_parameters (List[np.ndarray]): _description_
+        agent (AgentNetwork): _description_
+        data (DatasetRNN, optional): _description_. Defaults to None.
+        off_policy (bool, optional): _description_. Defaults to True.
+        polynomial_degree (int, optional): _description_. Defaults to 2.
+        library_setup (Dict[str, List[str]], optional): _description_. Defaults to {}.
+        filter_setup (Dict[str, Tuple[str, float]], optional): _description_. Defaults to {}.
+        optimizer_threshold (float, optional): _description_. Defaults to 0.05.
+        optimizer_alpha (float, optional): _description_. Defaults to 1.
+        participant_id (int, optional): _description_. Defaults to None.
+        shuffle (bool, optional): _description_. Defaults to False.
+        dataprocessing (Dict[str, List], optional): _description_. Defaults to None.
+        n_trials_off_policy (int, optional): _description_. Defaults to 1024.
+        deterministic (bool, optional): _description_. Defaults to True.
+        get_loss (bool, optional): _description_. Defaults to False.
+        verbose (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        Tuple[AgentSpice, float]: _description_
+    """
     
     if participant_id is not None:
         participant_ids = [participant_id]
-        data = DatasetRNN(xs=data.xs[participant_id][None], ys=data.ys[participant_id][None])
-    else:
+    elif data is not None and participant_id is None:
         participant_ids = data.xs[..., -1].unique().int().cpu().numpy()
-    
-    if off_policy:
+    else:
+        raise ValueError("Either data or participant_id are required.")
+        
+    if n_sessions_off_policy > 0:
         # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
         # The trained RNN will then perform value updates to get off-policy data
         environment = BanditsDrift(sigma=0.2, n_actions=agent._n_actions)
         agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.5, beta_reward=1.0)
-        dataset_off_policy = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=1)[0]
+        dataset_fit = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=n_sessions_off_policy)[0]
         # repeat the off-policy data for every participant and add the corresponding participant ID
-        xs_off_policy, ys_off_policy = torch.zeros((data.xs.shape[0], n_trials_off_policy, data.xs.shape[-1])), torch.zeros((data.ys.shape[0], n_trials_off_policy, data.ys.shape[-1]))
-        for index_data in range(len(data)):
-            xs_off_policy[index_data] = dataset_off_policy.xs
-            xs_off_policy[index_data, :, -1] = data.xs[index_data, :1, -1].repeat(n_trials_off_policy)
-            ys_off_policy[index_data] = dataset_off_policy.ys
-        data = DatasetRNN(xs=xs_off_policy, ys=ys_off_policy)
+        xs_fit = dataset_fit.xs.repeat(len(participant_ids), 1, 1)
+        ys_fit = dataset_fit.ys.repeat(len(participant_ids), 1, 1)
+        # set participant ids correctly
+        for index_pid in range(0, len(participant_ids)):
+            xs_fit[n_sessions_off_policy*index_pid:n_sessions_off_policy*(index_pid+1):, :, -1] = participant_ids[index_pid]
+        dataset_fit = DatasetRNN(xs=xs_fit, ys=ys_fit)
+        
+    elif n_sessions_off_policy <= 0 and data is not None:
+        dataset_fit = data
+        if participant_id is not None:
+            mask_participant_id = dataset_fit.xs[:, 0, -1] == participant_id
+            dataset_fit = DatasetRNN(*dataset_fit[mask_participant_id])
+    elif n_sessions_off_policy == 0 and data is None:
+        raise ValueError("One of the arguments data or n_sessions_off_policy (> 0) must be given. If n_sessions_off_policy > 0 the SINDy modules will be fitted on the off-policy data regardless of data. If n_sessions_off_policy = 0 then data will be used to fit the SINDy modules.")
     
     sindy_models = {rnn_module: {} for rnn_module in rnn_modules}
-    for participant_id in participant_ids:
+    for pid in tqdm(participant_ids):
         # extract all necessary data from the RNN (memory state) and align with the control inputs (action, reward)
-        mask_participant = data.xs[:, 0, -1] == participant_id
+        mask_participant_id = dataset_fit.xs[:, 0, -1] == pid
         variables, control_parameters, feature_names, _ = create_dataset(
             agent=agent,
-            data=DatasetRNN(*data[mask_participant]),
-            participant_id=participant_id,
+            data=DatasetRNN(*dataset_fit[mask_participant_id]),
+            participant_id=pid,
             shuffle=shuffle,
             dataprocessing=dataprocessing,
         )
@@ -179,9 +210,24 @@ def fit_model(
         )
         
         for rnn_module in rnn_modules:
-            sindy_models[rnn_module][participant_id] = sindy_models_id[rnn_module]
+            sindy_models[rnn_module][pid] = sindy_models_id[rnn_module]
 
     # set up a SINDy-based agent by replacing the RNN-modules with the respective SINDy-model
     agent_spice = AgentSpice(model_rnn=deepcopy(agent._model), sindy_modules=sindy_models, n_actions=agent._n_actions, deterministic=deterministic)
     
-    return agent_spice
+    # compute loss
+    loss = None
+    if get_loss and data is None:
+        raise ValueError("When get_loss is True, data must be given to compute the loss. Off-policy data won't be considered to compute the loss.")
+    elif get_loss and data is not None:
+        loss = 0
+        n_trials_total = 0
+        mapping_modules_values = {module: 'x_value_choice' if 'choice' in module else 'x_value_reward' for module in agent_spice._model.submodules_sindy}
+        n_parameters = agent_spice.count_parameters(mapping_modules_values=mapping_modules_values)
+        for pid in participant_ids:
+            xs, ys = data.xs.cpu().numpy(), data.ys.cpu().numpy()
+            probs = get_update_dynamics(experiment=xs[pid], agent=agent_spice)[1]
+            loss += loss_metric(data=ys[pid, :len(probs)], probs=probs, n_parameters=n_parameters[pid])
+            n_trials_total += len(probs)
+        loss = loss/n_trials_total
+    return agent_spice, loss

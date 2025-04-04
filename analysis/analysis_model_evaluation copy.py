@@ -27,8 +27,6 @@ path_model_rnn = 'params/eckstein2022/params_eckstein2022_looooong.pkl'
 path_model_benchmark = 'params/eckstein2022/params_eckstein2022_MODEL.nc'
 path_model_baseline = 'params/eckstein2022/params_eckstein2022_ApBr.nc'
 
-train_test_ratio = 0.8
-
 models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnAcBcBr']
 dataset, experiment_list, _, _ = convert_dataset(path_data)
@@ -84,19 +82,19 @@ sindy_filter_setup = {
 }
 sindy_dataprocessing = None
 
-agent_spice = setup_agent_spice(
-    path_model=path_model_rnn,
-    path_data=path_data,
-    rnn_modules=rnn_modules,
-    control_parameters=control_parameters,
-    sindy_library_setup=sindy_library_setup,
-    sindy_filter_setup=sindy_filter_setup,
-    sindy_dataprocessing=sindy_dataprocessing,
-    sindy_library_polynomial_degree=2,
-    regularization=0.1,
-    threshold=0.05,
-)
-n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
+# agent_spice = setup_agent_spice(
+#     path_model=path_model_rnn,
+#     path_data=path_data,
+#     rnn_modules=rnn_modules,
+#     control_parameters=control_parameters,
+#     sindy_library_setup=sindy_library_setup,
+#     sindy_filter_setup=sindy_filter_setup,
+#     sindy_dataprocessing=sindy_dataprocessing,
+#     sindy_library_polynomial_degree=2,
+#     regularization=0.1,
+#     threshold=0.05,
+# )
+# n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
 n_parameters_spice = 0
 
 
@@ -109,27 +107,37 @@ failed_attempts = 0
 for index_session in tqdm(range(len(dataset))):
     try:
         n_trials = len(experiment_list[index_session].choices)
-        n_trials_test = int(n_trials * (1-train_test_ratio))
         # use whole session to include warm-up phase; make sure to exclude warm-up phase when computing metrics
         session = dataset.xs[index_session, :n_trials]
         choices = session[..., :agent_rnn._n_actions].cpu().numpy()
-        choices_test = choices[n_trials_test:]
         
-        probs = get_update_dynamics(experiment=session, agent=agent_spice)[1][n_trials_test:]
-        scores_spice = np.array(get_scores(data=choices_test, probs=probs, n_parameters=n_parameters_spice_all[index_session]))
-        n_parameters_spice += n_parameters_spice_all[index_session]
+        # filter for action switches plus 3 subsequent trials
+        n_subsequent_trials = 2
+        # Find switch points
+        switches = np.where(np.diff(np.argmax(choices, axis=-1)) != 0)[0]
+        # Create boolean index array
+        index_array = np.zeros(choices.shape[0], dtype=bool)
+        # Mark switch points and next three trials
+        for switch in switches:
+            index_array[switch:switch+n_subsequent_trials+1] = True  # Mark switch and next three trials
+        # Ensure we don't go out of bounds
+        index_array = index_array[:len(choices)]
         
-        probs = get_update_dynamics(experiment=session, agent=agent_baseline[index_session])[1][n_trials_test:]
-        scores_baseline = np.array(get_scores(data=choices_test, probs=probs, n_parameters=n_parameters_baseline))
+        # probs = get_update_dynamics(experiment=session, agent=agent_spice)[1]
+        # scores_spice = np.array(get_scores(data=choices[index_array], probs=probs[index_array], n_parameters=n_parameters_spice_all[index_session]))
+        # n_parameters_spice += n_parameters_spice_all[index_session]
         
-        probs = get_update_dynamics(experiment=session, agent=agent_rnn)[1][n_trials_test:]
-        scores_rnn = np.array(get_scores(data=choices_test, probs=probs, n_parameters=n_parameters_rnn))
+        probs = get_update_dynamics(experiment=session, agent=agent_baseline[index_session])[1]
+        scores_baseline = np.array(get_scores(data=choices[index_array], probs=probs[index_array], n_parameters=n_parameters_baseline))
+        
+        probs = get_update_dynamics(experiment=session, agent=agent_rnn)[1]
+        scores_rnn = np.array(get_scores(data=choices[index_array], probs=probs[index_array], n_parameters=n_parameters_rnn))
         
         # get scores of all benchmark models but keep only the best one for each session
         scores_benchmark = []
         for index_model, model in enumerate(models_benchmark):
-            probs = get_update_dynamics(experiment=session, agent=agent_benchmark[model][index_session])[1][n_trials_test:]
-            scores_benchmark.append(np.array(get_scores(data=choices_test, probs=probs, n_parameters=mapping_n_parameters_benchmark[model])))
+            probs = get_update_dynamics(experiment=session, agent=agent_benchmark[model][index_session])[1]
+            scores_benchmark.append(np.array(get_scores(data=choices[index_array], probs=probs[index_array], n_parameters=mapping_n_parameters_benchmark[model])))
         scores_benchmark = np.stack(scores_benchmark)
         index_best_benchmark = np.argmin(scores_benchmark, axis=0)
         # take NLL as indicating score
@@ -140,7 +148,7 @@ for index_session in tqdm(range(len(dataset))):
         scores[0] += scores_baseline
         scores[1] += scores_benchmark[index_best_benchmark]
         scores[2] += scores_rnn
-        scores[3] += scores_spice
+        # scores[3] += scores_spice
     except:
         failed_attempts += 1
 
