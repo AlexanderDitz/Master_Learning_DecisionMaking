@@ -1,14 +1,14 @@
 {
   "dataset": "data_128p_0.csv",
   "best_params": {
-    "learning_rate": 0.00015397188405831617,
-    "l1_weight_decay": 0.0005289453589556826,
-    "l2_weight_decay": 2.067458480266274e-05,
-    "embedding_size": 32,
-    "n_steps": 59
+    "embedding_size": 30,
+    "learning_rate": 0.0007378990096627615,
+    "l1_weight_decay": 6.870981975332955e-06,
+    "l2_weight_decay": 0.0007106111374332544,
+    "n_steps": 87
   },
-  "best_val_loss": 2.359644954374472,
-  "final_train_loss": 2.041322390238444,
+  "best_val_loss": 1.3495527873974893,
+  "final_train_loss": 0.3075945973396301,
   "sindy_bic": NaN,
   "sindy_ll": NaN,
   "participant_equations": {},

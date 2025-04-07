@@ -314,7 +314,7 @@ class RLRNN(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward', 'c_value_reward'],
+        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
@@ -334,10 +334,10 @@ class RLRNN(BaseRNN):
         self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
-        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         
         # set up hard-coded equations
         self.submodules_eq['x_value_reward_chosen'] = lambda value, inputs: value + inputs[..., 1] * (inputs[..., 0] - value)
@@ -367,7 +367,7 @@ class RLRNN(BaseRNN):
                 key_module='x_learning_rate_reward',
                 key_state='x_learning_rate_reward',
                 action=action,
-                inputs=(reward, self.state['x_value_reward']),
+                inputs=(reward, self.state['x_value_reward'], self.state['x_value_choice']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
@@ -387,7 +387,7 @@ class RLRNN(BaseRNN):
                 key_module='x_value_reward_not_chosen',
                 key_state='x_value_reward',
                 action=1-action,
-                inputs=None,
+                inputs=(self.state['x_value_choice']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 )
@@ -397,7 +397,7 @@ class RLRNN(BaseRNN):
                 key_module='x_value_choice_chosen',
                 key_state='x_value_choice',
                 action=action,
-                inputs=None,
+                inputs=(self.state['x_value_reward']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
@@ -408,7 +408,7 @@ class RLRNN(BaseRNN):
                 key_module='x_value_choice_not_chosen',
                 key_state='x_value_choice',
                 action=1-action,
-                inputs=None,
+                inputs=(self.state['x_value_reward']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
@@ -433,6 +433,7 @@ class RLRNN(BaseRNN):
             self.record_signal('c_action', action)
             self.record_signal('c_reward', reward)
             self.record_signal('c_value_reward', self.state['x_value_reward'])
+            self.record_signal('c_value_choice', self.state['x_value_choice'])
         
         # post-process the forward pass; give here as inputs the logits, batch_first and all values from the memory state
         logits = self.post_forward_pass(logits, batch_first)

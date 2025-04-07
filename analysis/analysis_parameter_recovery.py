@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from copy import copy
+from sklearn.linear_model import LinearRegression
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.setup_agents import setup_agent_spice
@@ -23,6 +24,8 @@ mapping_x_learning_rate_reward = {
     'c_reward': lambda alpha_reward, alpha_penalty: alpha_reward,
     
     'c_value_reward': lambda alpha_reward, alpha_penalty: 0,
+
+    'c_value_choice': lambda alpha_reward, alpha_penalty: 0,
     
     'x_learning_rate_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
     'c_value_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
@@ -47,6 +50,8 @@ mapping_x_value_reward_not_chosen = {
     
     # 'c_reward': lambda forget_rate: 0,
     
+    'c_value_choice': lambda forget_rate: 0,
+    
     # 'x_value_reward_not_chosen c_reward': lambda forget_rate: 0,
     # 'c_reward x_value_reward_not_chosen': lambda forget_rate: 0,
     
@@ -61,6 +66,8 @@ mapping_x_value_choice_chosen = {
     # 'x_C': lambda alpha_choice: 1-alpha_choice,
     'x_value_choice_chosen': lambda alpha_choice: 0,
     
+    'c_value_reward': lambda alpha_choice: 0,
+    
     'x_value_choice_chosen^2': lambda alpha_choice: 0,
 }
 
@@ -68,6 +75,8 @@ mapping_x_value_choice_not_chosen = {
     '1': lambda alpha_choice: 0,
     
     'x_value_choice_not_chosen': lambda alpha_choice: 0,
+    
+    'c_value_reward': lambda alpha_choice: 0,    
     
     'x_value_choice_not_chosen^2': lambda alpha_choice: 0,
 }
@@ -94,6 +103,7 @@ mapping_variable_names = {
     'x_value_choice_not_chosen': r'$q_{c,t}$',
     'c_reward': r'$r$',
     'c_value_reward': r'$q_{r}$',
+    'c_value_choice': r'$q_{c}$',
 }
 
 
@@ -161,6 +171,10 @@ def n_true_params(true_coefs):
         true_coefs['forget_rate'] = 0
         true_coefs['beta_reward'] = 0
     
+    # set alpha_penalty to 0 if alpha_penalty == alpha_reward
+    if true_coefs['alpha_reward'] == true_coefs['alpha_penalty']:
+        true_coefs['alpha_penalty'] = 0
+    
     # choice-based parameter group
     # if true_coefs['beta_choice'] == 0 or true_coefs['alpha_choice'] == 0:
     #     true_coefs['beta_choice'] = 0
@@ -179,19 +193,22 @@ def n_true_params(true_coefs):
 # -----------------------------------------------------------------------------------------------
 
 random_sampling = [0.25, 0.5, 0.75]
-n_sessions = [16]#, 32, 64, 128, 256]#, 512]
-iterations = 1
+n_sessions = [16, 32, 64, 128, 256]#, 512]
+iterations = 4
 
 base_name_data = 'data/parameter_recovery/data_SESSp_IT.csv'
 base_name_params = 'params/parameter_recovery/params_SESSp_IT.pkl'
 kw_participant_id = 'session'
 
-# sindy configuration
+# setup spice agent
 rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-control_parameters = ['c_action', 'c_reward', 'c_value_reward']
-sindy_library_polynomial_degree = 2
+control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
+sindy_library_polynomial_degree = 1
 sindy_library_setup = {
-    'x_learning_rate_reward': ['c_reward', 'c_value_reward'],
+    'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
+    'x_value_reward_not_chosen': ['c_value_choice'],
+    'x_value_choice_chosen': ['c_value_reward'],
+    'x_value_choice_not_chosen': ['c_value_reward'],
 }
 sindy_filter_setup = {
     'x_learning_rate_reward': ['c_action', 1, True],
@@ -199,7 +216,14 @@ sindy_filter_setup = {
     'x_value_choice_chosen': ['c_action', 1, True],
     'x_value_choice_not_chosen': ['c_action', 0, True],
 }
-sindy_dataprocessing = None
+sindy_dataprocessing = None#{
+#     'x_learning_rate_reward': [0, 0, 0],
+#     'x_value_reward_not_chosen': [0, 0, 0],
+#     'x_value_choice_chosen': [1, 1, 0],
+#     'x_value_choice_not_chosen': [1, 1, 0],
+#     'c_value_reward': [0, 0, 0],
+#     'c_value_choice': [1, 1, 0],
+# }
 
 # meta parameters
 mapping_lens = {'x_V_LR': 10, 'x_V_nc': 3, 'x_C': 3, 'x_C_nc': 3}
@@ -212,24 +236,24 @@ n_params_q = 5
 # -----------------------------------------------------------------------------------------------
 
 # parameter correlation coefficients
-true_params = [np.zeros((sess*iterations, n_candidate_terms)) for sess in n_sessions]
-recovered_params = [np.zeros((sess*iterations, n_candidate_terms)) for sess in n_sessions]
+true_params = []#[np.zeros((sess*iterations, n_candidate_terms)) for sess in n_sessions]
+recovered_params = []#[np.zeros((sess*iterations, n_candidate_terms)) for sess in n_sessions]
 
 # parameter identification matrices
-true_pos_count = np.zeros((len(n_sessions)+len(random_sampling), n_params_q+1))
-true_neg_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q+1))
-false_pos_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q+1))
-false_neg_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q+1))
+true_pos_count = np.zeros((len(n_sessions)+len(random_sampling), n_params_q))
+true_neg_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q))
+false_pos_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q))
+false_neg_count = np.zeros((len(n_sessions)+len(random_sampling),  n_params_q))
 
-true_pos_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
-true_neg_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
-false_pos_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
-false_neg_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q+1))
+true_pos_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q))
+true_neg_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q))
+false_pos_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q))
+false_neg_rates = np.zeros((len(n_sessions)+len(random_sampling), iterations,  n_params_q))
 
-true_pos_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
-true_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
-false_pos_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
-false_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q+1))
+true_pos_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q))
+true_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q))
+false_pos_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q))
+false_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iterations, n_params_q))
 
 
 # -----------------------------------------------------------------------------------------------
@@ -264,7 +288,7 @@ for index_sess, sess in enumerate(n_sessions):
             
             # get all true parameters of current participant from dataset
             data_coefs_all = data.loc[data[kw_participant_id]==participant].iloc[-1]
-            index_params = n_true_params(copy(data_coefs_all))
+            index_params = n_true_params(copy(data_coefs_all)) - 1
             
             sindy_coefs_array = []
             data_coefs_array = []
@@ -290,6 +314,12 @@ for index_sess, sess in enumerate(n_sessions):
             
             sindy_coefs_array = np.array(sindy_coefs_array)
             data_coefs_array = np.array(data_coefs_array)
+            
+            # initialize param storages if empty
+            if len(true_params) == 0:
+                for s in n_sessions:
+                    true_params.append(np.zeros((s*iterations, len(feature_names))))
+                    recovered_params.append(np.zeros((s*iterations, len(feature_names))))
             
             # add true and recovered parameters for later parameter correlation
             true_params[index_sess][sess*it+index_participant] = data_coefs_array
@@ -473,7 +503,7 @@ identification_x_axis_labels = [
     ['$n_{parameters}$', '$n_{parameters}$'],
 ]
 
-bin_edges_params = np.arange(0, n_params_q+1)
+bin_edges_params = np.arange(1, n_params_q+1)
 identification_x_axis_ticks = [
     [bin_edges_params, bin_edges_params],
     [bin_edges_params, bin_edges_params],
@@ -520,7 +550,7 @@ for index_row, row in enumerate(identification_matrix_mean):
                 ax=axs[index_row, index_col],
                 cbar=True if index_col == len(identification_matrix_mean[0])-1 else False, 
                 cbar_ax=axs[index_row, len(identification_matrix_mean[0])],
-                xticklabels=np.arange(0, n_params_q+1) if index_row == len(identification_matrix_mean)-1 else ['']*n_params_q, 
+                xticklabels=np.arange(1, n_params_q+1) if index_row == len(identification_matrix_mean)-1 else ['']*n_params_q, 
                 yticklabels=y_tick_labels if index_col == 0 else ['']*len(n_sessions), 
                 vmin=v_min,
                 vmax=v_max,
@@ -543,13 +573,13 @@ for index_row, row in enumerate(identification_matrix_mean):
             for index_sample_size, sample_size in enumerate(y_tick_labels):
                 std = np.std(col[index_sample_size])
                 ax.fill_between(
-                    x=np.arange(0, n_params_q+1),
+                    x=np.arange(0, n_params_q),
                     y1=col[index_sample_size] + identification_matrix_std[index_row][index_col][index_sample_size],
                     y2=col[index_sample_size] - identification_matrix_std[index_row][index_col][index_sample_size],
                     alpha=alphas[index_sample_size]
                     )
                 ax.plot(
-                    np.arange(0, n_params_q+1),
+                    np.arange(0, n_params_q),
                     col[index_sample_size],
                     marker='.',
                     linestyle=linestyles[index_sample_size],
@@ -592,7 +622,7 @@ for index_row, row in enumerate(identification_metrics_matrix):
                 ax=axs[index_row, index_col],
                 cbar=True if index_col == len(identification_metrics_matrix[0])-1 else False, 
                 cbar_ax=axs[index_row, len(identification_metrics_matrix[0])],
-                xticklabels=np.arange(0, n_params_q+1) if index_row == len(identification_metrics_matrix)-1 else ['']*n_params_q, 
+                xticklabels=np.arange(1, n_params_q+1) if index_row == len(identification_metrics_matrix)-1 else ['']*n_params_q, 
                 yticklabels=y_tick_labels if index_col == 0 else ['']*len(n_sessions), 
                 vmin=v_min,
                 vmax=v_max,
@@ -655,46 +685,99 @@ plt.show()
 #     ax.set_title(n_sessions[index_sess])
 # plt.show()
 
-#  scatter plot
+# #  scatter plot
 
+# fig, axs = plt.subplots(
+#     nrows=max((len(n_sessions), 2)),
+#     ncols=len(feature_names),
+#     )
+
+# for index_sess in range(len(n_sessions)):
+#     for index_feature in range(len(feature_names)):
+#         ax = axs[index_sess, index_feature]
+        
+#         ax.scatter(
+#             true_params[index_sess][:, index_feature], 
+#             recovered_params[index_sess][:, index_feature], 
+#             marker='o', 
+#             color='tab:red', 
+#             alpha=0.2,
+#             )
+#         ax.plot(np.linspace(0, 1, 100), np.linspace(0, 1, 100), '--', color='tab:gray')
+        
+#         # Axes settings
+#         ax.set_ylim(0, 1)
+#         ax.set_xlim(0, 1)
+        
+#         if index_sess != len(n_sessions) - 1:
+#             ax.tick_params(axis='x', which='both', labelbottom=False)  # No x-axis ticks
+#         else:
+#             ax.set_xlabel('True', fontsize=10)
+#             ax.tick_params(axis='x', labelsize=8)
+        
+#         if index_feature != 0:
+#             ax.tick_params(axis='y', which='both', labelleft=False)  # No y-axis ticks
+#         else:
+#             ax.set_ylabel(f'{n_sessions[index_sess]} participants\nRecovered', fontsize=10)
+#             ax.tick_params(axis='y', labelsize=8)
+        
+#         if index_sess == 0:
+#             ax.set_title(feature_names[index_feature], fontsize=10)
+        
+# plt.show()
+
+# scatter plot
 fig, axs = plt.subplots(
     nrows=max((len(n_sessions), 2)),
     ncols=len(feature_names),
-    )
+)
 
 for index_sess in range(len(n_sessions)):
     for index_feature in range(len(feature_names)):
         ax = axs[index_sess, index_feature]
-        
+
+        # Scatter plot
         ax.scatter(
             true_params[index_sess][:, index_feature], 
             recovered_params[index_sess][:, index_feature], 
             marker='o', 
             color='tab:red', 
             alpha=0.2,
-            )
-        ax.plot(np.linspace(0, 1, 100), np.linspace(0, 1, 100), '--', color='tab:gray')
+        )
+
+        # Reference line
+        ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
         
+        # Calculate linear regression for trend line
+        model = LinearRegression()
+        model.fit(true_params[index_sess][:, index_feature].reshape(-1, 1), recovered_params[index_sess][:, index_feature])
+        trend_line = model.predict(np.linspace(0, 1, 100).reshape(-1, 1))
+        
+        # Plot dashed trend line
+        ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
+
         # Axes settings
         ax.set_ylim(0, 1)
         ax.set_xlim(0, 1)
-        
+
         if index_sess != len(n_sessions) - 1:
             ax.tick_params(axis='x', which='both', labelbottom=False)  # No x-axis ticks
         else:
             ax.set_xlabel('True', fontsize=10)
             ax.tick_params(axis='x', labelsize=8)
-        
+
         if index_feature != 0:
             ax.tick_params(axis='y', which='both', labelleft=False)  # No y-axis ticks
         else:
             ax.set_ylabel(f'{n_sessions[index_sess]} participants\nRecovered', fontsize=10)
             ax.tick_params(axis='y', labelsize=8)
-        
+
         if index_sess == 0:
             ax.set_title(feature_names[index_feature], fontsize=10)
-        
+
+# Show plot
 plt.show()
+
 
 # box plot
 # like scatter plot before but with box-whisker per true-parameter range (e.g. 0.1) instead of single dots
@@ -740,6 +823,9 @@ for index_sess in range(len(n_sessions)):
 
         # Reference line
         ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
+        
+        # Plot dashed trend line
+        # ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
         
         # Axes settings
         ax.set_ylim(-.1, 1.1)
