@@ -214,6 +214,10 @@ class AgentQ:
       # Positivity bias (https://www.sciencedirect.com/science/article/pii/S1364661322000894#bb0010)
       # Explanation for confirmation bias: reduce the learning rate relative to the current belief by weighting with a factor relative to the learning rate
       alpha[action] -= alpha[action] * self._confirmation_bias * self._state['x_value_reward'][action]
+      
+      # Just for testing: diminish learning rate with increasing choice value
+      # alpha[action] = np.clip(alpha[action] - self._state['x_value_choice'][action] * 0.25, 0.1, 1.0)
+      
     self._state['x_learning_rate_reward'] = alpha
     
     # Reward-prediction-error

@@ -12,32 +12,57 @@ from resources.bandits import get_update_dynamics, AgentSpice
 from resources.model_evaluation import log_likelihood, bayesian_information_criterion, akaike_information_criterion
 
 # Simulation settings
-models = ["Baseline", "Benchmark", "Spice"]
+models = ["Baseline", "Benchmark"]#, "Spice"]
 n_actions = 2
+
+# # Use testing data to avoid overfitting
+# path_data = {
+#     "Baseline": "data/sugawara2021/sugawara2021_testing_ApBr.csv",
+#     "Benchmark": "data/sugawara2021/sugawara2021_testing_ApAnAcBcBr.csv",
+#     "Spice": "data/sugawara2021/sugawara2021_testing_Spice.csv",
+# }
+
+# path_model = {
+#     "Baseline": {
+#         "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_ApBr.nc",
+#         "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_ApBr.nc",
+#         "Spice": "params/sugawara2021/params_sugawara2021_Spice_ApBr.nc",
+#         },
+#     "Benchmark": {
+#         "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_ApAnAcBcBr.nc",
+#         "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_ApAnAcBcBr.nc",
+#         "Spice": "params/sugawara2021/params_sugawara2021_Spice_ApAnAcBcBr.nc",    
+#         },
+#     "Spice": {
+#         "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_Spice.pkl",
+#         "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_Spice.pkl",
+#         "Spice": "params/sugawara2021/params_sugawara2021_Spice_Spice.pkl",
+#         },
+#     }
 
 # Use testing data to avoid overfitting
 path_data = {
-    "Baseline": "data/sugawara2021/sugawara2021_testing_ApBr.csv",
-    "Benchmark": "data/sugawara2021/sugawara2021_testing_ApAnAcBcBr.csv",
-    "Spice": "data/sugawara2021/sugawara2021_testing_Spice.csv",
+    "Baseline": "data/parameter_recovery/data_128p_0_ApBr.csv",
+    "Benchmark": "data/parameter_recovery/data_128p_0_ApAnBcBr.csv",
+    # "Spice": "data/sugawara2021/sugawara2021_testing_Spice.csv",
 }
 
 path_model = {
     "Baseline": {
-        "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_ApBr.nc",
-        "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_ApBr.nc",
-        "Spice": "params/sugawara2021/params_sugawara2021_Spice_ApBr.nc",
+        "Baseline": "params/parameter_recovery/params_128p_0_ApBr_ApBr.nc",
+        "Benchmark": "params/parameter_recovery/params_128p_0_ApAnBcBr_ApBr.nc",
+        # "Spice": "params/sugawara2021/params_sugawara2021_Spice_ApBr.nc",
         },
     "Benchmark": {
-        "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_ApAnAcBcBr.nc",
-        "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_ApAnAcBcBr.nc",
-        "Spice": "params/sugawara2021/params_sugawara2021_Spice_ApAnAcBcBr.nc",    
+        "Baseline": "params/parameter_recovery/params_128p_0_ApBr_ApAnBcBr.nc",
+        "Benchmark": "params/parameter_recovery/params_128p_0_ApAnBcBr_ApAnBcBr.nc",
+        # "Spice": "params/sugawara2021/params_sugawara2021_Spice_ApAnAcBcBr.nc",    
         },
-    "Spice": {
-        "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_Spice.pkl",
-        "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_Spice.pkl",
-        "Spice": "params/sugawara2021/params_sugawara2021_Spice_Spice.pkl",
-        },
+    # "Spice": {
+    #     "Baseline": "params/sugawara2021/params_sugawara2021_ApBr_Spice.pkl",
+    #     "Benchmark": "params/sugawara2021/params_sugawara2021_ApAnAcBcBr_Spice.pkl",
+        # "Spice": "params/sugawara2021/params_sugawara2021_Spice_Spice.pkl",
+        # },
     }
 
 # SINDy configuration

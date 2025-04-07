@@ -76,10 +76,10 @@ def main(path_model, path_data, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    model = 'ApAnAcBcBr'
-    path_model = 'benchmarking/params/sugawara2021/hierarchical/traces_'+model+'.nc'
-    path_data = 'data/sugawara2021/sugawara2021.csv'
-    n_trials_per_session = 300
+    model = 'ApBr'
+    path_model = f'params/parameter_recovery/params_128p_0_{model}.nc'
+    path_data = 'data/parameter_recovery/data_128p_0.csv'
+    n_trials_per_session = 1000
     
     main(
         path_model=path_model,

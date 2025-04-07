@@ -143,8 +143,8 @@ def setup_agent_mcmc(
             alpha_reward=parameters['alpha_pos'],
             alpha_penalty=parameters['alpha_neg'],
             alpha_choice=parameters['alpha_c'],
-            beta_reward=parameters['beta_r'],
-            beta_choice=parameters['beta_c'],
+            beta_reward=parameters['beta_r']*15, # same scaling as in mcmc model
+            beta_choice=parameters['beta_c']*15, # same scaling as in mcmc model
         ))
     
     return agents

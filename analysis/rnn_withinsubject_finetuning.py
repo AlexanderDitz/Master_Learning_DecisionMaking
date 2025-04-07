@@ -188,30 +188,29 @@ def define_sindy_configuration():
     """
     Define configuration for SINDy model.
     """
-    list_rnn_modules = [
-        'x_learning_rate_reward',
-        'x_value_reward_not_chosen',
-        'x_value_choice_chosen',
-        'x_value_choice_not_chosen'
-    ]
-
-    list_control_parameters = ['c_action', 'c_reward', 'c_value_reward']
-
-    library_setup = {
-        'x_learning_rate_reward': ['c_reward', 'c_value_reward'],
-        'x_value_reward_not_chosen': [],
-        'x_value_choice_chosen': [],
-        'x_value_choice_not_chosen': [],
+    rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
+    control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
+    sindy_library_setup = {
+        'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
+        'x_value_reward_not_chosen': ['c_value_choice'],
+        'x_value_choice_chosen': ['c_value_reward'],
+        'x_value_choice_not_chosen': ['c_value_reward'],
     }
-
-    filter_setup = {
+    sindy_filter_setup = {
         'x_learning_rate_reward': ['c_action', 1, True],
         'x_value_reward_not_chosen': ['c_action', 0, True],
         'x_value_choice_chosen': ['c_action', 1, True],
         'x_value_choice_not_chosen': ['c_action', 0, True],
     }
-    
-    return list_rnn_modules, list_control_parameters, library_setup, filter_setup
+    # sindy_dataprocessing = {
+    #     'x_learning_rate_reward': [0, 0, 0],
+    #     'x_value_reward_not_chosen': [0, 0, 0],
+    #     'x_value_choice_chosen': [1, 1, 0],
+    #     'x_value_choice_not_chosen': [1, 1, 0],
+    #     'c_value_reward': [0, 0, 0],
+    #     'c_value_choice': [1, 1, 0],
+    # }
+    return rnn_modules, control_parameters, sindy_library_setup, sindy_filter_setup
 
 def objective(trial, train_dataset, val_dataset, n_participants):
     """
@@ -219,17 +218,17 @@ def objective(trial, train_dataset, val_dataset, n_participants):
     """
     list_rnn_modules, list_control_parameters, _, _ = define_sindy_configuration()
     
+    embedding_size = trial.suggest_int('embedding_size', 8, 32)
     learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
     l1_weight_decay = trial.suggest_float('l1_weight_decay', 1e-6, 1e-3, log=True)
-    l2_weight_decay = trial.suggest_float('l2_weight_decay', 1e-6, 1e-3, log=True)
-    sindy_optimizer_alpha = trial.suggest_float('l1_weight_decay', 1e-2, 1e0, log=True)
-    sindy_threshold = trial.suggest_float('l2_weight_decay', 1e-3, 1e-1, log=True)    
-    embedding_size = trial.suggest_int('embedding_size', 8, 32)
+    l2_weight_decay = trial.suggest_float('l2_weight_decay', 1e-6, 1e-3, log=True)  
     n_steps = trial.suggest_int('n_steps', 1, 100)
+    sindy_optimizer_alpha = trial.suggest_float('sindy_optimizer_alpha', 1e-2, 1e0, log=True)
+    sindy_optimizer_threshold = trial.suggest_float('sindy_optimizer_threshold', 1e-3, 1e-1, log=True)  
     # hidden_size = trial.suggest_int('hidden_size', 8, 32)
     # dropout = trial.suggest_float('dropout', 0., 0.5)
     
-    logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}, l1_weight_decay={l1_weight_decay:.6f}, l2_weight_decay={l2_weight_decay:.6f}, sindy_optimizer_alpha={sindy_optimizer_alpha:.6f}, sindy_threshold={sindy_threshold:.6f}")
+    logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}, l1_weight_decay={l1_weight_decay:.6f}, l2_weight_decay={l2_weight_decay:.6f}, sindy_optimizer_alpha={sindy_optimizer_alpha:.6f}, sindy_optimizer_threshold={sindy_optimizer_threshold:.6f}")
     
     model_rnn = RLRNN(
         n_actions=n_actions,
@@ -268,7 +267,7 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             library_setup=library_setup,
             filter_setup=filter_setup,
             optimizer_alpha=sindy_optimizer_alpha,
-            optimizer_threshold=sindy_threshold,
+            optimizer_threshold=sindy_optimizer_threshold,
             )
         n_parameters_spice = agent_spice.count_parameters(mapping_modules_values={module: 'x_value_choice' if 'choice' in module else 'x_value_reward' for module in agent_spice._model.submodules_sindy})
         
@@ -309,7 +308,7 @@ def objective(trial, train_dataset, val_dataset, n_participants):
         logger.error(traceback.format_exc())
         return float('inf')
 
-def evaluate_with_sindy(model_rnn, val_dataset, participant_ids, n_participants):
+def evaluate_with_sindy(model_rnn, val_dataset, participant_ids, n_participants, best_params):
     """
     Evaluate using SINDy by fitting separate models for each participant's validation trials.
     """
@@ -348,7 +347,10 @@ def evaluate_with_sindy(model_rnn, val_dataset, participant_ids, n_participants)
                 data=participant_dataset,
                 library_setup=library_setup,
                 filter_setup=filter_setup,
-                verbose=True
+                verbose=True,
+                n_sessions_off_policy=0,
+                optimizer_alpha=best_params['sindy_optimizer_alpha'],
+                optimizer_threshold=best_params['sindy_optimizer_threshold'],
             )
             
             participant_equations[pid] = {}
@@ -561,7 +563,7 @@ def main():
         
         # Evaluate with SINDy to get BIC and LL
         avg_bic, avg_ll, participant_equations, participant_metrics = evaluate_with_sindy(
-            model_rnn, val_dataset, participant_ids, n_participants
+            model_rnn, val_dataset, participant_ids, n_participants, best_params
         )
         
         result = {

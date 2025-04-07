@@ -16,22 +16,29 @@ for d in datasets:
     
     _, loss = pipeline_rnn.main(
         checkpoint=False,
-        epochs=4096,
+        epochs=16,#4096,
         
         data=dataset,
         model=model,
 
         n_actions=2,
         
-        # optuna params for GRU
-        embedding_size=22,
+        # final params
+        # embedding_size=22,
+        # n_steps=32,
+        # learning_rate=0.00023,
+        # train_test_ratio=1.0,
+        # scheduler=True,
+        
+        # toy params for quick run
+        learning_rate=1e-3,
         n_steps=32,
-        learning_rate=0.00023,
+        embedding_size=22,
+        train_test_ratio=0.5,
+        scheduler=False,
         
         batch_size=-1,
         sequence_length=-1,
-        train_test_ratio=0.5,
-        scheduler=True,
         bagging=True,
         )
 

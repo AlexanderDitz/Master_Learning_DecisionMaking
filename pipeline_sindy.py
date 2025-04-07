@@ -59,19 +59,18 @@ def main(
     
     # tracked variables and control signals in the RNN
     list_rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    list_control_parameters = ['c_action', 'c_reward', 'c_value_reward']
+    list_control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
     sindy_feature_list = list_rnn_modules + list_control_parameters
 
     # library setup: 
     # which terms are allowed as control inputs in each SINDy model
     # key is the SINDy model name, value is a list of allowed control inputs from the list of control signals 
     library_setup = {
-        # 'x_value_reward_chosen': ['c_reward'] -> Remove this one from the library as we are not going to identify the dynamics of a hard-coded equation
-        'x_learning_rate_reward': ['c_reward', 'c_value_reward'],
-        'x_value_reward_not_chosen': [],
-        'x_value_choice_chosen': [],
-        'x_value_choice_not_chosen': [],
-        }
+        'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
+        'x_value_reward_not_chosen': ['c_value_choice'],
+        'x_value_choice_chosen': ['c_value_reward'],
+        'x_value_choice_not_chosen': ['c_value_reward'],
+    }
 
     # data-filter setup: 
     # which samples are allowed as training samples in each SINDy model based on the given filter condition (conditions are always equality conditions)
@@ -107,6 +106,15 @@ def main(
         # 'c_reward': [0, 0, 0],
         'c_value_reward': [0, 0, 0],
     }
+    
+    # dataprocessing_setup = {
+    #     'x_learning_rate_reward': [0, 0, 0],
+    #     'x_value_reward_not_chosen': [0, 0, 0],
+    #     'x_value_choice_chosen': [1, 1, 0],
+    #     'x_value_choice_not_chosen': [1, 1, 0],
+    #     'c_value_reward': [0, 0, 0],
+    #     'c_value_choice': [1, 1, 0],
+    # }
     
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):
         raise ValueError('Library setup does not match feature list.')
@@ -146,13 +154,25 @@ def main(
             alpha_counterfactual=alpha_counterfactual,
             )
         
+        if participant_id is not None or participant_id != 0:
+            participant_id = 0
         participant_ids = np.arange(agent_rnn._model.n_participants, dtype=int)
-        dataset_test, _, _ = create_dataset_bandits(agent, environment, 100, len(participant_ids))
+        dataset_test, _, _ = create_dataset_bandits(agent, environment, 200, len(participant_ids))
     else:
         # get data from experiments for later evaluation
         dataset_test, _, df, _ = convert_dataset(data)
         participant_ids = dataset_test.xs[..., -1].unique().int().cpu().numpy()
-    
+
+        # TODO: DELETE AGAIN!!!!!
+        # TESTING: bring some noise into sequence length
+        if not (dataset_test.xs.cpu().numpy() == -1).any():
+            n_trials = dataset_test.xs.shape[1]
+            for index_session in range(len(dataset_test)):
+                n_trials_short = int(np.random.uniform(low=0, high=n_trials*0.5))
+                dataset_test.xs[index_session, -n_trials_short:, :-1] = -1
+                dataset_test.ys[index_session, -n_trials_short:] = -1
+        
+        
     # ---------------------------------------------------------------------------------------------------
     # SINDy training
     # ---------------------------------------------------------------------------------------------------
