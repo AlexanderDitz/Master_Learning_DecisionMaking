@@ -13,7 +13,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     # model = 'params/sugawara2021/params_sugawara2021.pkl',
     # data = 'data/sugawara2021/sugawara2021.csv',
     
-    model = 'params/eckstein2022/params_eckstein2022_long_interconnected_nodetach.pkl',
+    model = 'params/eckstein2022/params_eckstein2022.pkl',
     data = 'data/eckstein2022/eckstein2022.csv',
     
     # general recovery parameters
@@ -21,7 +21,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     
     # sindy parameters
     polynomial_degree=1,
-    optimizer_alpha=.01,
+    optimizer_alpha=0,
     optimizer_threshold=0.05,
     n_trials_off_policy=1024,
     n_sessions_off_policy=0,
