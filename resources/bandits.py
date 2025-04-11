@@ -363,11 +363,18 @@ class AgentNetwork:
     def get_logit(self):
       """Return the value of the agent's current state."""
       betas = self.get_betas()
-      logits = np.sum(
-        np.concatenate([
-          self._state[key] * betas[key] for key in self._state if 'x_value' in key
-          ]), 
-        axis=0)
+      if betas is not None:
+        logits = np.sum(
+          np.concatenate([
+            self._state[key] * betas[key] for key in self._state if 'x_value' in key
+            ]), 
+          axis=0)
+      else:
+        logits = np.sum(
+          np.concatenate([
+            self._state[key] for key in self._state if 'x_value' in key
+            ]),
+          axis=0)
       return logits
     
     def get_choice_probs(self) -> np.ndarray:
@@ -452,14 +459,18 @@ class AgentSpice(AgentNetwork):
       betas = self.get_betas()
       # count all non-zero coefficients in SINDy modules with considering the corresponding beta value which potentially can set all influences of this module to 0 
       for submodule in submodules:
-        n_parameters_module = submodules[submodule][participant_id].coefficients()
+        parameters_module = submodules[submodule][participant_id].coefficients()
         # n_parameters_module = n_parameters_module * (n_parameters_module > 0.05)
-        beta_value_module = betas[mapping_modules_values[submodule]]
-        n_parameters[participant_id] += (n_parameters_module * beta_value_module != 0).sum()
-      # include beta parameters if non-zero
-      for value in betas:
-        if betas[value] != 0:
-          n_parameters[participant_id] += 1
+        if betas is not None:
+          beta_value_module = betas[mapping_modules_values[submodule]]
+          n_parameters[participant_id] += (parameters_module * beta_value_module != 0).sum()
+        else:
+          n_parameters[participant_id] += (parameters_module != 0).sum()
+      if betas is not None:
+        # include beta parameters if non-zero
+        for value in betas:
+          if betas[value] != 0:
+            n_parameters[participant_id] += 1
     return n_parameters
 
 
