@@ -853,16 +853,15 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   if isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
     if isinstance(experiment, torch.Tensor):
       experiment = experiment.detach().cpu().numpy()
-    choices = experiment[:, :agent._n_actions]
-    rewards = experiment[:, agent._n_actions:2*agent._n_actions]
+    if len(experiment.shape) == 3:
+      experiment = experiment.squeeze(0)
+    # get number of actual trials
+    n_trials = len(experiment) - np.argmax(experiment[::-1][:, 0] != -1)
+    choices = experiment[:n_trials, :agent._n_actions]
+    rewards = experiment[:n_trials, agent._n_actions:2*agent._n_actions]
     participant_id = int(experiment[0, -1])
   else:
     raise TypeError("experiment is of not of class numpy.ndarray or torch.Tensor")
-  
-  # get number of actual trials
-  n_trials = len(choices) - np.argmax(choices[::-1][:, 0] != -1)
-  choices = choices[:n_trials]
-  rewards = rewards[:n_trials]
   
   # initialize storages
   Qs = np.zeros((n_trials, agent._n_actions))

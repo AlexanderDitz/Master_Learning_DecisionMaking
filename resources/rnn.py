@@ -360,6 +360,12 @@ class RLRNN(BaseRNN):
         # beta_value_reward = self.betas['x_value_reward'](participant_embedding)
         # beta_value_choice = self.betas['x_value_choice'](participant_embedding)
         
+        # get scaling factors
+        scaling_factors = {}
+        for key in self.state:
+            if key in self.betas:
+                scaling_factors[key] = self.betas[key] if isinstance(self.betas[key], nn.Parameter) else self.betas[key](participant_embedding)
+            
         for timestep, action, reward in zip(timesteps, actions, rewards):
             
             # updates for x_value_reward
@@ -419,12 +425,6 @@ class RLRNN(BaseRNN):
             self.state['x_learning_rate_reward'] = learning_rate_reward
             self.state['x_value_reward'] = next_value_reward_chosen + next_value_reward_not_chosen
             self.state['x_value_choice'] = next_value_choice_chosen + next_value_choice_not_chosen
-            
-            # get scaling factors
-            scaling_factors = {}
-            for key in self.state:
-                if key in self.betas:
-                    scaling_factors[key] = self.betas[key] if isinstance(self.betas[key], nn.Parameter) else self.betas[key](participant_embedding)
             
             # Now keep track of the logit in the output array
             logits[timestep] = self.state['x_value_reward'] * scaling_factors['x_value_reward'] + self.state['x_value_choice'] * scaling_factors['x_value_choice']

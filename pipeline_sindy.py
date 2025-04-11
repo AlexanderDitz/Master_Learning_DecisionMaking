@@ -100,8 +100,8 @@ def main(
     dataprocessing_setup = {
         'x_learning_rate_reward': [0, 0, 0],
         'x_value_reward_not_chosen': [0, 0, 0],
-        'x_value_choice_chosen': [1, 1, 0],
-        'x_value_choice_not_chosen': [1, 1, 0],
+        'x_value_choice_chosen': [0, 0, 0],
+        'x_value_choice_not_chosen': [0, 0, 0],
         # 'c_action': [0, 0, 0],
         # 'c_reward': [0, 0, 0],
         'c_value_reward': [0, 0, 0],
@@ -162,7 +162,7 @@ def main(
         # get data from experiments for later evaluation
         dataset_test, _, df, _ = convert_dataset(data)
         participant_ids = dataset_test.xs[..., -1].unique().int().cpu().numpy()
-
+        
         # TODO: DELETE AGAIN!!!!!
         # TESTING: bring some noise into sequence length
         if not (dataset_test.xs.cpu().numpy() == -1).any():
