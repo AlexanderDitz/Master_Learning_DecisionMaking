@@ -31,7 +31,7 @@ def fit_sindy(
             raise ValueError('If library_setup is provided, feature_names must be provided as well.')
         if len(filter_setup) > 0:
             raise ValueError('If datafilter_setup is provided, feature_names must be provided as well.')
-        feature_names = [f'x{i}' for i in range(variables[0].shape[-1])]
+        feature_names = [f'x{i}' for i in range(len(variables))]
     
     # get all x-features
     x_features = [feature for feature in feature_names if feature.startswith('x_')]
@@ -46,15 +46,21 @@ def fit_sindy(
     # train one sindy model per variable
     sindy_models = {feature: None for feature in x_features}
     loss = 0
-    for i, x_feature in enumerate(x_features):
+    for index_feature, x_feature in enumerate(x_features):
         if verbose:
             print(f'\nSINDy model for {x_feature}:')
         
         # sort signals into corresponding arrays    
-        x_i = [x.reshape(-1, 1) for x in variables[:, :, i]]  # get current x-feature as target variable
-        x_to_control = variables[:, :, i != np.arange(variables.shape[-1])]  # get all other x-features as control variables
-        control_i = [c for c in np.concatenate([x_to_control, control], axis=-1)]  # concatenate control variables with control features
-        feature_names_i = [x_feature] + np.array(x_features)[i != np.arange(variables.shape[-1])].tolist() + c_features
+        x_i = [x[:, index_feature].reshape(-1, 1) for x in variables] # get current x-feature as target variable
+        # get all other x-features as control variables
+        control_i = []
+        for index_group in range(len(x_i)):
+            control_i.append(
+                np.concatenate(
+                    (variables[index_group][:, np.arange(len(x_features))!=index_feature], control[index_group]), axis=-1
+                    )
+                )
+        feature_names_i = [x_feature] + [x_f for index_x_f, x_f in enumerate(x_features) if index_x_f != index_feature] + c_features
         
         # filter target variable and control features according to filter conditions
         if x_feature in filter_setup:
@@ -70,7 +76,8 @@ def fit_sindy(
         
         # add a dummy control feature if no control features are remaining - otherwise sindy breaks --> TODO: find out why
         if control_i is None or len(control_i) == 0:
-            control_i = [np.zeros_like(x_i[0]) for _ in range(len(x_i))]
+            raise NotImplementedError('')
+            control_i = None
             feature_names_i = feature_names_i + ['dummy']
         
         # set up increasing thresholds with polynomial degree
@@ -93,7 +100,6 @@ def fit_sindy(
         
         # fit sindy model
         sindy_models[x_feature].fit(x_i, u=control_i, t=1, multiple_trajectories=True, ensemble=False)
-        
         
         # post-process sindy weights
         # sindy_model_x_feature = deepcopy(sindy_models[x_feature])
@@ -168,7 +174,7 @@ def fit_spice(
         # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
         # The trained RNN will then perform value updates to get off-policy data
         environment = BanditsDrift(sigma=0.2, n_actions=agent._n_actions)
-        agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.5, beta_reward=1.0)
+        agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.1, beta_reward=10.0)
         dataset_fit = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=n_sessions_off_policy)[0]
         # repeat the off-policy data for every participant and add the corresponding participant ID
         xs_fit = dataset_fit.xs.repeat(len(participant_ids), 1, 1)

@@ -3,6 +3,7 @@ import torch
 from sklearn.metrics import log_loss, mean_squared_error
 from typing import Iterable, List, Dict, Tuple, Callable, Union
 import matplotlib.pyplot as plt
+import itertools
 
 import pysindy as ps
 
@@ -73,6 +74,7 @@ def create_dataset(
   participant_id: int,
   dataprocessing: Dict[str, List] = None,
   shuffle: bool = False,
+  groupby: str = 'c_action',
   ):
   
   highpass_threshold_dt = 0.05
@@ -105,33 +107,45 @@ def create_dataset(
         # get all recorded values for the current session of one specific key 
         recording = agent._model.get_recording(key)
         # create tensor from list of tensors 
-        values = np.concatenate(recording)[trimming:]
+        values = np.concatenate(recording)[trimming:, 0]
         # remove insignificant updates with a high-pass filter: check if dv/dt > threshold; otherwise set v(t=1) = v(t=0)
-        dvdt = np.abs(np.diff(values, axis=1))
-        for i_action in range(values.shape[-1]):
-          values[:, 1, i_action] = np.where(dvdt[:, 0, i_action] > highpass_threshold_dt, values[:, 1, i_action], values[:, 0, i_action])
-        # TODO: in the case of binary reward: add a little bit of noise on top to prevent r^2 terms in sindy models
-        # if key == 'c_r':
+        # dvdt = np.abs(np.diff(values, axis=-2))
+        # for i_action in range(values.shape[-1]):
+        #   values[:, 1, i_action] = np.where(dvdt[:, 0, i_action] > highpass_threshold_dt, values[:, 1, i_action], values[:, 0, i_action])
         # in the case of 1D values along actions dim: Create 2D values by repeating along the actions dim (e.g. reward in non-counterfactual experiments) 
         if values.shape[-1] == 1:
             values = np.repeat(values, agent._n_actions, -1)
         # add values of interest of one session as trajectory
         for i_action in range(agent._n_actions):
           if key in keys_x:
-            x_train[key] += [v for v in values[:, :, i_action]]
+            x_train[key] += [v for v in values[:, i_action]]
           elif key in keys_c:
-            control[key] += [v for v in values[:, :, i_action]]
+            control[key] += [v for v in values[:, i_action]]
   
   feature_names = keys_x + keys_c
   
   # make arrays from dictionaries
-  x_train_array = np.zeros((len(x_train[keys_x[0]]), 2, len(keys_x)))
-  control_array = np.zeros((len(x_train[keys_x[0]]), 2, len(keys_c)))
+  x_train_array = np.zeros((len(x_train[keys_x[0]]), len(keys_x)))
+  control_array = np.zeros((len(x_train[keys_x[0]]), len(keys_c)))
   for index_key, key in enumerate(keys_x):
-    x_train_array[:, :, index_key] = np.stack(x_train[key])
+    x_train_array[:, index_key] = np.array(x_train[key])
   for index_key, key in enumerate(keys_c):
-    control_array[:, :, index_key] = np.stack(control[key])
+    control_array[:, index_key] = np.array(control[key])
   
+  # reshape along 'c_action' dimension into chunks of sequences where 'c_action' does not change
+  # Use itertools.groupby to find the indices of groups in the target sequence
+  groups = [(key, list(group)) for key, group in itertools.groupby(enumerate(control['c_action']), key=lambda x: x[1])]
+  
+  # Extract the indices for each group
+  group_indices = [list(map(lambda x: x[0], group)) for _, group in groups]
+  
+  # Group each input sequence based on the indices
+  grouped_x_train = []
+  grouped_control = []
+  for indices in group_indices:
+    grouped_x_train.append(x_train_array[indices])
+    grouped_control.append(control_array[indices])
+    
   # data processing
   x_mins, x_maxs, c_mins, c_maxs = [], [], [], []
   
@@ -170,7 +184,7 @@ def create_dataset(
     x_train_array = x_train_array[shuffle_idx]
     control_array = control_array[shuffle_idx]
   
-  return x_train_array, control_array, feature_names, beta_scaling
+  return grouped_x_train, grouped_control, feature_names, beta_scaling
 
 
 def check_library_setup(library_setup: Dict[str, List[str]], feature_names: List[str], verbose=False) -> bool:
@@ -193,35 +207,33 @@ def check_library_setup(library_setup: Dict[str, List[str]], feature_names: List
   
 
 def remove_control_features(control_variables: List[np.ndarray], feature_names: List[str], target_feature_names: List[str]) -> List[np.ndarray]:
-  control_new = []
-  for control in control_variables:
-    remaining_control_variables = [control[:, feature_names.index(feature)] for feature in target_feature_names]
-    if len(remaining_control_variables) > 0:
-      control_new.append(np.stack(remaining_control_variables, axis=-1))
-    else:
-      control_new = None
-      break
-  return control_new
-
-
-def conditional_filtering(x_train: List[np.ndarray], control: List[np.ndarray], feature_names: List[str], relevant_feature: str, condition: float, remove_relevant_feature=True) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-  x_train_relevant = []
-  control_relevant = []
-  x_features = [feature_names[0]]  #[feature for feature in feature_names if feature.startswith('x')]
-  control_features = feature_names[1:]  #[feature for feature in feature_names if feature.startswith('c')]
-  for i, x, c in zip(range(len(x_train)), x_train, control):
-    if relevant_feature in feature_names:
-      i_relevant = control_features.index(relevant_feature)
-      if c[0, i_relevant] == condition:
-        x_train_relevant.append(x)
-        control_relevant.append(c)
-        if remove_relevant_feature:
-          control_relevant[-1] = np.delete(control_relevant[-1], i_relevant, axis=-1)
+  index_target_features = []
+  for index_f, f_name in enumerate(feature_names):
+    if f_name in target_feature_names:
+      index_target_features.append(index_f)
+  index_target_features = np.array(index_target_features)
   
-  if remove_relevant_feature:
-    control_features.remove(relevant_feature)
+  for index_group in range(len(control_variables)):
+    control_variables[index_group] = control_variables[index_group][:, index_target_features]
+      
+  return control_variables
+
+def conditional_filtering(x_train: List[np.ndarray], control: List[np.ndarray], feature_names: List[str], feature_filter: str, condition: float, remove_feature_filter=True) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+  x_filtered = []
+  control_filtered = []
+  index_filter = feature_names.index(feature_filter)-1
+  for index_group in range(len(x_train)):
+    if control[index_group][0, index_filter] == condition:
+      x_filtered.append(x_train[index_group])
+      control_filtered.append(control[index_group])
+
+  if remove_feature_filter:
+    feature_names.pop(index_filter+1)
+    for index_group in range(len(x_filtered)):
+      control_filtered[index_group] = control_filtered[index_group][:, np.arange(len(feature_names))!=index_filter]
     
-  return x_train_relevant, control_relevant, x_features+control_features
+    
+  return x_filtered, control_filtered, feature_names
 
 
 def sindy_loss_x(agent: Union[AgentSpice, AgentNetwork], data: List[BanditSession], loss_fn: Callable = log_loss):
