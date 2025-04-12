@@ -71,7 +71,6 @@ def make_sindy_data(
 def create_dataset(
   agent: AgentNetwork,
   data: DatasetRNN,
-  participant_id: int,
   dataprocessing: Dict[str, List] = None,
   shuffle: bool = False,
   groupby: str = 'c_action',
@@ -98,7 +97,6 @@ def create_dataset(
   
   for session in data.xs:
     # perform agent updates to record values over trials
-    agent.new_sess(participant_id=participant_id)
     agent = get_update_dynamics(session, agent)[-1]
     
     # sort the data of one session into the corresponding signals
@@ -107,15 +105,12 @@ def create_dataset(
         # get all recorded values for the current session of one specific key 
         recording = agent._model.get_recording(key)
         # create tensor from list of tensors 
-        values = np.concatenate(recording)[trimming:, 0]
+        values = np.concatenate(recording)[trimming:]
         # remove insignificant updates with a high-pass filter: check if dv/dt > threshold; otherwise set v(t=1) = v(t=0)
         # dvdt = np.abs(np.diff(values, axis=-2))
         # for i_action in range(values.shape[-1]):
         #   values[:, 1, i_action] = np.where(dvdt[:, 0, i_action] > highpass_threshold_dt, values[:, 1, i_action], values[:, 0, i_action])
         # in the case of 1D values along actions dim: Create 2D values by repeating along the actions dim (e.g. reward in non-counterfactual experiments) 
-        if values.shape[-1] == 1:
-            values = np.repeat(values, agent._n_actions, -1)
-        # add values of interest of one session as trajectory
         for i_action in range(agent._n_actions):
           if key in keys_x:
             x_train[key] += [v for v in values[:, i_action]]
@@ -132,9 +127,9 @@ def create_dataset(
   for index_key, key in enumerate(keys_c):
     control_array[:, index_key] = np.array(control[key])
   
-  # reshape along 'c_action' dimension into chunks of sequences where 'c_action' does not change
+  # reshape along groupby argument dimension into chunks of sequences where groupby values does not change
   # Use itertools.groupby to find the indices of groups in the target sequence
-  groups = [(key, list(group)) for key, group in itertools.groupby(enumerate(control['c_action']), key=lambda x: x[1])]
+  groups = [(key, list(group)) for key, group in itertools.groupby(enumerate(control[groupby]), key=lambda x: x[1])]
   
   # Extract the indices for each group
   group_indices = [list(map(lambda x: x[0], group)) for _, group in groups]

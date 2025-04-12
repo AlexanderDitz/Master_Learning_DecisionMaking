@@ -165,12 +165,12 @@ def main(
         
         # TODO: DELETE AGAIN!!!!!
         # TESTING: bring some noise into sequence length
-        if not (dataset_test.xs.cpu().numpy() == -1).any():
-            n_trials = dataset_test.xs.shape[1]
-            for index_session in range(len(dataset_test)):
-                n_trials_short = int(np.random.uniform(low=0, high=n_trials*0.5))
-                dataset_test.xs[index_session, -n_trials_short:, :-1] = -1
-                dataset_test.ys[index_session, -n_trials_short:] = -1
+        # if not (dataset_test.xs.cpu().numpy() == -1).any():
+        #     n_trials = dataset_test.xs.shape[1]
+        #     for index_session in range(len(dataset_test)):
+        #         n_trials_short = int(np.random.uniform(low=0, high=n_trials*0.5))
+        #         dataset_test.xs[index_session, -n_trials_short:, :-1] = -1
+        #         dataset_test.ys[index_session, -n_trials_short:] = -1
         
         
     # ---------------------------------------------------------------------------------------------------

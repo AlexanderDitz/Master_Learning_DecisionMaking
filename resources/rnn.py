@@ -127,7 +127,7 @@ class BaseRNN(nn.Module):
     def set_device(self, device: torch.device): 
         self.device = device
         
-    def record_signal(self, key, old_value, new_value: Optional[torch.Tensor] = None):
+    def record_signal(self, key, value: torch.Tensor):
         """appends a new timestep sample to the recording. A timestep sample consists of the value at timestep t-1 and the value at timestep t
 
         Args:
@@ -136,13 +136,7 @@ class BaseRNN(nn.Module):
             new_value (_type_): value at timestep t of shape (batch_size, feature_dim)
         """
         
-        if new_value is None:
-            new_value = torch.zeros_like(old_value) - 1
-        
-        old_value = old_value.view(-1, 1, old_value.shape[-1]).clone().detach().cpu().numpy()
-        new_value = new_value.view(-1, 1, new_value.shape[-1]).clone().detach().cpu().numpy()
-        sample = np.concatenate([old_value, new_value], axis=1)
-        self.recording[key].append(sample)
+        self.recording[key].append(value.clone().detach().cpu().numpy())
         
     def get_recording(self, key):
         return self.recording[key]
@@ -261,9 +255,9 @@ class BaseRNN(nn.Module):
             if activation_rnn is not None:
                 next_value = activation_rnn(next_value)
                 
-            if not self.training:
-                # record sample for SINDy training 
-                self.record_signal(key_module, value.view(-1, self._n_actions), next_value.view(-1, self._n_actions))
+            # if not self.training:
+            #     # record sample for SINDy training 
+            #     self.record_signal(key_module, next_value.view(-1, self._n_actions))
             
         elif key_module in self.submodules_eq.keys():
             # hard-coded equation
@@ -429,11 +423,16 @@ class RLRNN(BaseRNN):
             # Now keep track of the logit in the output array
             logits[timestep] = self.state['x_value_reward'] * scaling_factors['x_value_reward'] + self.state['x_value_choice'] * scaling_factors['x_value_choice']
             
-            # record the inputs for training SINDy later on
-            self.record_signal('c_action', action)
-            self.record_signal('c_reward', reward)
-            self.record_signal('c_value_reward', self.state['x_value_reward'])
-            self.record_signal('c_value_choice', self.state['x_value_choice'])
+            # record the variables and control inputs for SINDy training
+            if not self.training:
+                self.record_signal('x_learning_rate_reward', self.state['x_learning_rate_reward'])
+                self.record_signal('x_value_reward_not_chosen', self.state['x_value_reward'])
+                self.record_signal('x_value_choice_chosen', self.state['x_value_choice'])
+                self.record_signal('x_value_choice_not_chosen', self.state['x_value_choice'])
+                self.record_signal('c_action', action)
+                self.record_signal('c_reward', reward)
+                self.record_signal('c_value_reward', self.state['x_value_reward'])
+                self.record_signal('c_value_choice', self.state['x_value_choice'])
         
         # post-process the forward pass; give here as inputs the logits, batch_first and all values from the memory state
         logits = self.post_forward_pass(logits, batch_first)

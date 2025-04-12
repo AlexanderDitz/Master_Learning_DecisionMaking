@@ -8,10 +8,7 @@ import pipeline_sindy
 agent_spice, features, loss = pipeline_sindy.main(
     
     # data='data/parameter_recovery/data_128p_0.csv',
-    # model='params/parameter_recovery/params_128p_0_connected.pkl',
-    
-    # model = 'params/sugawara2021/params_sugawara2021.pkl',
-    # data = 'data/sugawara2021/sugawara2021.csv',
+    # model='params/parameter_recovery/params_128p_0.pkl',
     
     model = 'params/eckstein2022/params_eckstein2022.pkl',
     data = 'data/eckstein2022/eckstein2022.csv',
@@ -21,10 +18,10 @@ agent_spice, features, loss = pipeline_sindy.main(
     
     # sindy parameters
     polynomial_degree=1,
-    optimizer_alpha=0.1,
+    optimizer_alpha=.1,
     optimizer_threshold=0.05,
-    n_trials_off_policy=1024,
-    n_sessions_off_policy=1,
+    n_trials_off_policy=1000,
+    n_sessions_off_policy=2,
     verbose=True,
     
     # generated training dataset parameters
