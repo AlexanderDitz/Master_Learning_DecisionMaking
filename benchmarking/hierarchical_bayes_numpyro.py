@@ -16,6 +16,7 @@ def rl_model(model, choice, reward, hierarchical):
             dist.Beta(a, b),  # Beta distribution in [0, 1]
             dist.transforms.AffineTransform(0, high - low)  # Scale to e.g. [low=0, high=10]
             )
+    beta_scaling = 15
     
     if hierarchical == 1:
         # # Priors for group-level parameters
@@ -91,13 +92,13 @@ def rl_model(model, choice, reward, hierarchical):
 
             if model[3]:
                 # beta_c = numpyro.sample("beta_c", scaled_beta(beta_c_mean * beta_c_kappa, (1 - beta_c_mean) * beta_c_kappa, 0, 15))[:, None]
-                beta_c = numpyro.sample("beta_c", dist.Beta(beta_c_mean * beta_c_kappa, (1 - beta_c_mean) * beta_c_kappa))[:, None] * 15
+                beta_c = numpyro.sample("beta_c", dist.Beta(beta_c_mean * beta_c_kappa, (1 - beta_c_mean) * beta_c_kappa))[:, None] * beta_scaling
             else:
                 beta_c = jnp.full((n_participants, 1), 0.0)
 
             if model[4]:
                 # beta_r = numpyro.sample("beta_r", scaled_beta(beta_r_mean * beta_r_kappa, (1 - beta_r_mean) * beta_r_kappa, 0, 15))[:, None]
-                beta_r = numpyro.sample("beta_r", dist.Beta(beta_r_mean * beta_r_kappa, (1 - beta_r_mean) * beta_r_kappa))[:, None] * 15
+                beta_r = numpyro.sample("beta_r", dist.Beta(beta_r_mean * beta_r_kappa, (1 - beta_r_mean) * beta_r_kappa))[:, None] * beta_scaling
             else:
                 beta_r = jnp.full((n_participants, 1), 1.0)
                 
@@ -144,7 +145,7 @@ def rl_model(model, choice, reward, hierarchical):
         ys = ys.at[i].set(y)
     
     # Use numpyro.plate for sampling
-    next_choice_0 = choice[1:, :, -2]  # show whenever option 0 was selected
+    next_choice_0 = choice[1:, :, 0]  # show whenever option 0 was selected
     valid_mask = (next_choice_0 >= 0) & (next_choice_0 <= 1)
     # Apply the mask to the observations
     if hierarchical == 1:

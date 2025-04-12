@@ -76,7 +76,7 @@ def fit_sindy(
         
         # add a dummy control feature if no control features are remaining - otherwise sindy breaks --> TODO: find out why
         if control_i is None or len(control_i) == 0:
-            raise NotImplementedError('')
+            raise NotImplementedError('No control signal is currently not implemented')
             control_i = None
             feature_names_i = feature_names_i + ['dummy']
         
@@ -174,8 +174,30 @@ def fit_spice(
         # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
         # The trained RNN will then perform value updates to get off-policy data
         environment = BanditsDrift(sigma=0.2, n_actions=agent._n_actions)
-        agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.1, beta_reward=10.0)
-        dataset_fit = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=n_sessions_off_policy)[0]
+        # agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.1, beta_reward=10.0)
+        # dataset_fit = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=n_sessions_off_policy)[0]
+        
+        # create a dummy dataset where each choice is chosen for n times and then an action switch occures
+        xs_fit = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*agent._n_actions+1)) - 1
+        n_trials_same_action = 20
+        for session in range(n_sessions_off_policy):
+            # initialize first action
+            current_action = torch.zeros(agent._n_actions)
+            current_action[0] = 1
+            for trial in range(n_trials_off_policy):
+                current_action_index = torch.argmax(current_action).int().item()
+                reward = torch.tensor(environment.step(current_action_index))
+                xs_fit[session, trial, :-1] = torch.concat((current_action, reward))
+                # action switch - go to next possible action item and if final go to first one
+                if trial >= n_trials_same_action and trial % n_trials_same_action == 0:
+                    current_action[current_action_index] = 0
+                    current_action[current_action_index+1 if current_action_index+1 < len(current_action) else 0] = 1
+                    
+        # setup of dataset
+        ys_fit = xs_fit[:, 1:, :agent._n_actions]
+        xs_fit = xs_fit[:, :-1]
+        dataset_fit = DatasetRNN(xs_fit, ys_fit)
+        
         # repeat the off-policy data for every participant and add the corresponding participant ID
         xs_fit = dataset_fit.xs.repeat(len(participant_ids), 1, 1)
         ys_fit = dataset_fit.ys.repeat(len(participant_ids), 1, 1)
@@ -199,7 +221,6 @@ def fit_spice(
         variables, control_parameters, feature_names, _ = create_dataset(
             agent=agent,
             data=DatasetRNN(*dataset_fit[mask_participant_id]),
-            participant_id=pid,
             shuffle=shuffle,
             dataprocessing=dataprocessing,
         )
