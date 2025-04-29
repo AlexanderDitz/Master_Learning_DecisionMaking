@@ -351,8 +351,6 @@ class RLRNN(BaseRNN):
         
         # Here we compute now the participant embeddings for each entry in the batch
         participant_embedding = self.participant_embedding(participant_id[:, 0].int())
-        # beta_value_reward = self.betas['x_value_reward'](participant_embedding)
-        # beta_value_choice = self.betas['x_value_choice'](participant_embedding)
         
         # get scaling factors
         scaling_factors = {}
