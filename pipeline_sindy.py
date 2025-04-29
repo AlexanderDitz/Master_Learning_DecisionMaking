@@ -105,16 +105,8 @@ def main(
         # 'c_action': [0, 0, 0],
         # 'c_reward': [0, 0, 0],
         'c_value_reward': [0, 0, 0],
+        'c_value_choice': [0, 0, 0],
     }
-    
-    # dataprocessing_setup = {
-    #     'x_learning_rate_reward': [0, 0, 0],
-    #     'x_value_reward_not_chosen': [0, 0, 0],
-    #     'x_value_choice_chosen': [1, 1, 0],
-    #     'x_value_choice_not_chosen': [1, 1, 0],
-    #     'c_value_reward': [0, 0, 0],
-    #     'c_value_choice': [1, 1, 0],
-    # }
     
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):
         raise ValueError('Library setup does not match feature list.')
@@ -180,7 +172,7 @@ def main(
     # setup the SINDy-agent
     agent_spice, loss_spice = fit_spice(
         rnn_modules=list_rnn_modules,
-        control_parameters=list_control_parameters,
+        control_signals=list_control_parameters,
         agent=agent_rnn,
         data=dataset_test,
         n_sessions_off_policy=n_sessions_off_policy,

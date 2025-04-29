@@ -169,7 +169,7 @@ agent_rnn = AgentNetwork(model_rnn=model_rnn, n_actions=n_actions)
 
 agent_sindy, _ = fit_model_sindy(
     rnn_modules=list_rnn_modules,
-    control_parameters=list_control_parameters,
+    control_signals=list_control_parameters,
     agent=agent_rnn,
     data=combined_dataset,
     n_sessions_off_policy=1,

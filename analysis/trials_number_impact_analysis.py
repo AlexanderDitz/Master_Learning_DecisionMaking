@@ -148,7 +148,7 @@ def run_training_and_evaluation(dataset, label):
     logger.info("\nFitting SINDy...")
     agent_sindy, _ = fit_spice(
         rnn_modules=list_rnn_modules,
-        control_parameters=list_control_parameters,
+        control_signals=list_control_parameters,
         agent=agent_rnn,
         data_off_policy=dataset,
         off_policy=True,            
