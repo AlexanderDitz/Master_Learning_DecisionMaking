@@ -7,20 +7,16 @@ import pipeline_rnn
 
 _, loss = pipeline_rnn.main(
     checkpoint=False,
-    epochs=4096,#65536,
-    # epochs=1024,
+    epochs=512,#65536,
     
-    data='data/parameter_recovery/data_128p_0.csv',
-    model='params/parameter_recovery/params_128p_0_connected.pkl',
+    data='data/parameter_recovery/data_32p_0.csv',
+    model='params/parameter_recovery_2/params_32p_0.pkl',
     
     # data = 'data/optuna/data_128p_0.csv',
     # model = 'params/params_128p_0.pkl',
     
-    # model=f'params/eckstein2022/params_eckstein2022_connected.pkl',
+    # model=f'params/eckstein2022/params_eckstein2022_test.pkl',
     # data=f'data/eckstein2022/eckstein2022.csv',
-    
-    # model=f'params/sugawara2021/params_sugawara2021.pkl',
-    # data=f'data/sugawara2021/sugawara2021.csv',
     
     n_actions=2,
     
@@ -34,7 +30,7 @@ _, loss = pipeline_rnn.main(
     # toy params for quick run
     # learning_rate=1e-3,
     # n_steps=32,
-    # embedding_size=22,
+    # embedding_size=0,
     # train_test_ratio=1.0,
     # scheduler=False,
     

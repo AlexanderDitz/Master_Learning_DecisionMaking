@@ -90,8 +90,9 @@ def fit_sindy(
         
         # setup sindy model for current x-feature
         sindy_models[x_feature] = ps.SINDy(
-            # optimizer=ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold),
-            optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose, max_iter=100),
+            # optimizer=ps.STLSQ(),
+            optimizer=ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold),
+            # optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose, max_iter=100),
             # optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100),
             feature_library=ps.PolynomialLibrary(polynomial_degree),
             discrete_time=True,
@@ -211,7 +212,8 @@ def fit_spice(
         if participant_id is not None:
             mask_participant_id = dataset_fit.xs[:, 0, -1] == participant_id
             dataset_fit = DatasetRNN(*dataset_fit[mask_participant_id])
-    elif n_sessions_off_policy == 0 and data is None:
+            # dataset_fit = DatasetRNN(*dataset_fit[participant_id])
+    elif n_sessions_off_policy <= 0 and data is None:
         raise ValueError("One of the arguments data or n_sessions_off_policy (> 0) must be given. If n_sessions_off_policy > 0 the SINDy modules will be fitted on the off-policy data regardless of data. If n_sessions_off_policy = 0 then data will be used to fit the SINDy modules.")
     
     sindy_models = {rnn_module: {} for rnn_module in rnn_modules}
@@ -221,6 +223,7 @@ def fit_spice(
         variables, control_parameters, feature_names, _ = create_dataset(
             agent=agent,
             data=DatasetRNN(*dataset_fit[mask_participant_id]),
+            # data=DatasetRNN(*dataset_fit[pid]),
             shuffle=shuffle,
             dataprocessing=dataprocessing,
         )
