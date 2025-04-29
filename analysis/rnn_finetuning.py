@@ -318,7 +318,7 @@ def evaluate_with_sindy(model_rnn, train_dataset, val_dataset, val_participant_i
             # Create SINDy agent just for this participant
             participant_sindy, _ = fit_spice(
                 rnn_modules=list_rnn_modules,
-                control_parameters=list_control_parameters,
+                control_signals=list_control_parameters,
                 agent=agent_rnn,
                 data_off_policy=participant_dataset,
                 off_policy=True,

@@ -17,26 +17,21 @@ from resources.model_evaluation import akaike_information_criterion as loss_metr
 def fit_sindy(
     variables: List[np.ndarray], 
     control: List[np.ndarray] = None, 
-    feature_names: List[str] = None, 
+    rnn_modules: List[str] = None,
+    control_signals: List[str] = None, 
     polynomial_degree: int = 1, 
     library_setup: Dict[str, List[str]] = {},
     filter_setup: Dict[str, Tuple[str, float]] = {},
+    optimizer: int = 0,
     optimizer_threshold: float = 0.05,
     optimizer_alpha: float = 1,
     verbose: bool = False,
     ):
     
-    if feature_names is None:
-        if len(library_setup) > 0:
-            raise ValueError('If library_setup is provided, feature_names must be provided as well.')
-        if len(filter_setup) > 0:
-            raise ValueError('If datafilter_setup is provided, feature_names must be provided as well.')
-        feature_names = [f'x{i}' for i in range(len(variables))]
-    
     # get all x-features
-    x_features = [feature for feature in feature_names if feature.startswith('x_')]
+    x_features = rnn_modules
     # get all control features
-    c_features = [feature for feature in feature_names if feature.startswith('c_')]
+    c_features = control_signals
     
     # make sure that all x_features are in the library_setup
     for feature in x_features:
@@ -53,14 +48,17 @@ def fit_sindy(
         # sort signals into corresponding arrays    
         x_i = [x[:, index_feature].reshape(-1, 1) for x in variables] # get current x-feature as target variable
         # get all other x-features as control variables
-        control_i = []
-        for index_group in range(len(x_i)):
-            control_i.append(
-                np.concatenate(
-                    (variables[index_group][:, np.arange(len(x_features))!=index_feature], control[index_group]), axis=-1
-                    )
-                )
-        feature_names_i = [x_feature] + [x_f for index_x_f, x_f in enumerate(x_features) if index_x_f != index_feature] + c_features
+        # control_i = []
+        # for index_group in range(len(x_i)):
+        #     control_i.append(
+        #         np.concatenate(
+        #             (variables[index_group][:, np.arange(len(x_features))!=index_feature], control[index_group]), axis=-1
+        #             )
+        #         )
+        control_i = control
+        
+        # feature_names_i = [x_feature] + [x_f for index_x_f, x_f in enumerate(x_features) if index_x_f != index_feature] + c_features
+        feature_names_i = [x_feature] + c_features
         
         # filter target variable and control features according to filter conditions
         if x_feature in filter_setup:
@@ -68,7 +66,7 @@ def fit_sindy(
                 # check that filter_setup[x_feature] is a list of filter-conditions 
                 filter_setup[x_feature] = [filter_setup[x_feature]]
             for filter_condition in filter_setup[x_feature]:
-                x_i, control_i, feature_names_i = conditional_filtering(x_i, control_i, feature_names_i, filter_condition[0], filter_condition[1], filter_condition[2])
+                x_i, control_i, feature_names_i = conditional_filtering(x_train=x_i, control=control_i, feature_names=feature_names_i, feature_filter=filter_condition[0], condition=filter_condition[1], remove_feature_filter=False)#remove_feature_filter=filter_condition[2]
         
         # remove unnecessary control features according to library setup
         control_i = remove_control_features(control_i, feature_names_i[1:], library_setup[x_feature])
@@ -88,17 +86,23 @@ def fit_sindy(
             thresholds[0, index:n_polynomial_combinations[d]] = d * optimizer_threshold
             index = n_polynomial_combinations[d]
         
+        if optimizer == 0:
+            optimizer = ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True)
+        elif optimizer == 1:
+            optimizer = ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100)
+            
         # setup sindy model for current x-feature
         sindy_models[x_feature] = ps.SINDy(
+            optimizer=optimizer,
             # optimizer=ps.STLSQ(),
-            optimizer=ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold),
+            # optimizer=ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True),
             # optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose, max_iter=100),
-            # optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100),
+            # optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100, tol=0.0001),
             feature_library=ps.PolynomialLibrary(polynomial_degree),
             discrete_time=True,
             feature_names=feature_names_i,
         )
-        
+
         # fit sindy model
         sindy_models[x_feature].fit(x_i, u=control_i, t=1, multiple_trajectories=True, ensemble=False)
         
@@ -122,7 +126,7 @@ def fit_sindy(
     
 def fit_spice(
     rnn_modules: List[np.ndarray],
-    control_parameters: List[np.ndarray], 
+    control_signals: List[np.ndarray], 
     agent: AgentNetwork,
     data: DatasetRNN = None,
     polynomial_degree: int = 2, 
@@ -220,19 +224,21 @@ def fit_spice(
     for pid in tqdm(participant_ids):
         # extract all necessary data from the RNN (memory state) and align with the control inputs (action, reward)
         mask_participant_id = dataset_fit.xs[:, 0, -1] == pid
-        variables, control_parameters, feature_names, _ = create_dataset(
+        rnn_variables, control_parameters, _, _ = create_dataset(
             agent=agent,
             data=DatasetRNN(*dataset_fit[mask_participant_id]),
-            # data=DatasetRNN(*dataset_fit[pid]),
+            rnn_modules=rnn_modules,
+            control_signals=control_signals,
             shuffle=shuffle,
             dataprocessing=dataprocessing,
         )
 
         # fit one SINDy-model per RNN-module
         sindy_models_id = fit_sindy(
-            variables=variables,
+            variables=rnn_variables,
             control=control_parameters,
-            feature_names=feature_names,
+            rnn_modules=rnn_modules,
+            control_signals=control_signals,
             polynomial_degree=polynomial_degree,
             library_setup=library_setup,
             filter_setup=filter_setup,

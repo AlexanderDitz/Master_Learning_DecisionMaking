@@ -263,7 +263,7 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             data=train_dataset, 
             get_loss=True,
             rnn_modules=list_rnn_modules,
-            control_parameters=list_control_parameters,
+            control_signals=list_control_parameters,
             library_setup=library_setup,
             filter_setup=filter_setup,
             optimizer_alpha=sindy_optimizer_alpha,
@@ -342,7 +342,7 @@ def evaluate_with_sindy(model_rnn, val_dataset, participant_ids, n_participants,
             # Create SINDy agent just for this participant
             participant_sindy, _ = fit_spice(
                 rnn_modules=list_rnn_modules,
-                control_parameters=list_control_parameters,
+                control_signals=list_control_parameters,
                 agent=agent_rnn,
                 data=participant_dataset,
                 library_setup=library_setup,

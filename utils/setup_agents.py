@@ -91,7 +91,7 @@ def setup_agent_spice(
         agent=agent_rnn,
         data=dataset,
         rnn_modules=rnn_modules,
-        control_parameters=control_parameters,
+        control_signals=control_parameters,
         polynomial_degree=sindy_library_polynomial_degree,
         library_setup=sindy_library_setup,
         filter_setup=sindy_filter_setup,

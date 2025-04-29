@@ -864,10 +864,10 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
     raise TypeError("experiment is of not of class numpy.ndarray or torch.Tensor")
   
   # initialize storages
-  Qs = np.zeros((n_trials, agent._n_actions))
-  qs = np.zeros((n_trials, agent._n_actions))
-  cs = np.zeros((n_trials, agent._n_actions))
-  alphas = np.zeros((n_trials, agent._n_actions))
+  q = np.zeros((n_trials, agent._n_actions))
+  q_reward = np.zeros((n_trials, agent._n_actions))
+  q_choice = np.zeros((n_trials, agent._n_actions))
+  learning_rate_reward = np.zeros((n_trials, agent._n_actions))
   choice_probs = np.zeros((n_trials, agent._n_actions))
 
   # reset agent states according to ID
@@ -875,15 +875,15 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   
   for trial in range(n_trials):
     # track all states
-    Qs[trial] = agent.q
-    qs[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
-    cs[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros(agent._n_actions)
-    alphas[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
+    q[trial] = agent.q
+    q_reward[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
+    q_choice[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros(agent._n_actions)
+    learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
     
     choice_probs[trial] = agent.get_choice_probs()
     agent.update(np.argmax(choices[trial], axis=-1), rewards[trial], participant_id)
   
-  return (Qs, qs, cs, alphas), choice_probs, agent
+  return (q, q_reward, q_choice, learning_rate_reward), choice_probs, agent
 
 
 ###############

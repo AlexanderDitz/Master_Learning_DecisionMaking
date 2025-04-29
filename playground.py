@@ -1,11 +1,16 @@
-import pandas as pd
+import numpy as np
 
-path = "Participant_export_Basic_Programming_in_Python.csv"
+n_trials = 1000
 
-mails = pd.read_csv(path, sep=";")["E-mail"]
+n_trials_row = 20
+zeros = np.zeros(n_trials_row)
+ones = np.ones(n_trials_row)
+trials = []
 
-str_mails = ""
-for mail in mails:
-    str_mails += mail + " "
-
-print(str_mails)
+for i in range(n_trials//n_trials_row):
+    if i%2==0:
+        trials.append(ones)
+    else:
+        trials.append(zeros)
+trials = np.concatenate(trials)
+print(trials[0], trials[-1])

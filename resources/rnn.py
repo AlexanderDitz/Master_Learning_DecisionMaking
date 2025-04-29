@@ -4,6 +4,7 @@ import torch.nn.functional as f
 from typing import Optional, Tuple, Dict, Iterable, Callable, Union, List
 import pysindy as ps
 import numpy as np
+from copy import deepcopy
 
 
 class GRUModule(nn.Module):
@@ -136,7 +137,7 @@ class BaseRNN(nn.Module):
             new_value (_type_): value at timestep t of shape (batch_size, feature_dim)
         """
         
-        self.recording[key].append(value.clone().detach().cpu().numpy())
+        self.recording[key].append(value.detach().cpu().numpy())
         
     def get_recording(self, key):
         return self.recording[key]
@@ -271,7 +272,7 @@ class BaseRNN(nn.Module):
             next_value = next_value * action
         
         # clip next_value to a specific range
-        next_value = torch.clip(input=next_value, min=-1e1, max=1e1)
+        # next_value = torch.clip(input=next_value, min=-1e1, max=1e1)
         
         if scaling:
             # scale by inverse noise temperature
@@ -332,6 +333,10 @@ class RLRNN(BaseRNN):
         self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
+        # self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
+        # self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        # self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        # self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
         
         # set up hard-coded equations
         self.submodules_eq['x_value_reward_chosen'] = lambda value, inputs: value + inputs[..., 1] * (inputs[..., 0] - value)
@@ -360,12 +365,19 @@ class RLRNN(BaseRNN):
             
         for timestep, action, reward in zip(timesteps, actions, rewards):
             
+            if not self.training and len(self.submodules_sindy)==0:
+                self.record_signal('c_action', action)
+                self.record_signal('c_reward', reward)
+                self.record_signal('c_value_reward', self.state['x_value_reward'])
+                self.record_signal('c_value_choice', self.state['x_value_choice'])
+            
             # updates for x_value_reward
             learning_rate_reward = self.call_module(
                 key_module='x_learning_rate_reward',
                 key_state='x_learning_rate_reward',
                 action=action,
                 inputs=(reward, self.state['x_value_reward'], self.state['x_value_choice']),
+                # inputs=(reward, self.state['x_value_reward']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
@@ -386,6 +398,7 @@ class RLRNN(BaseRNN):
                 key_state='x_value_reward',
                 action=1-action,
                 inputs=(self.state['x_value_choice']),
+                # inputs=None,
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 )
@@ -422,16 +435,17 @@ class RLRNN(BaseRNN):
             logits[timestep] = self.state['x_value_reward'] * scaling_factors['x_value_reward'] + self.state['x_value_choice'] * scaling_factors['x_value_choice']
             
             # record the variables and control inputs for SINDy training
-            if not self.training:
+            if not self.training and len(self.submodules_sindy)==0:
                 self.record_signal('x_learning_rate_reward', self.state['x_learning_rate_reward'])
                 self.record_signal('x_value_reward_not_chosen', self.state['x_value_reward'])
                 self.record_signal('x_value_choice_chosen', self.state['x_value_choice'])
                 self.record_signal('x_value_choice_not_chosen', self.state['x_value_choice'])
-                self.record_signal('c_action', action)
-                self.record_signal('c_reward', reward)
-                self.record_signal('c_value_reward', self.state['x_value_reward'])
-                self.record_signal('c_value_choice', self.state['x_value_choice'])
-        
+
+                # self.record_signal('c_action', action)
+                # self.record_signal('c_reward', reward)
+                # self.record_signal('c_value_reward', self.state['x_value_reward'])
+                # self.record_signal('c_value_choice', self.state['x_value_choice'])
+            
         # post-process the forward pass; give here as inputs the logits, batch_first and all values from the memory state
         logits = self.post_forward_pass(logits, batch_first)
                 

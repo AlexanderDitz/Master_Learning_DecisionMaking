@@ -4,6 +4,7 @@ from sklearn.metrics import log_loss, mean_squared_error
 from typing import Iterable, List, Dict, Tuple, Callable, Union
 import matplotlib.pyplot as plt
 import itertools
+import random
 
 import pysindy as ps
 
@@ -71,20 +72,18 @@ def make_sindy_data(
 def create_dataset(
   agent: AgentNetwork,
   data: DatasetRNN,
+  rnn_modules: List,
+  control_signals: List,
   dataprocessing: Dict[str, List] = None,
   shuffle: bool = False,
   groupby: str = 'c_action',
   ):
   
-  highpass_threshold_dt = 0.05
+  highpass_threshold_dt = 0.0001
   n_trials = data.xs.shape[1]
-  keys_x = [key for key in agent._model.recording.keys() if key.startswith('x_')]
-  # remove keys that are available in agent._model.submodules_eq (non-rnn-modules; hard-coded modules)
-  for key in agent._model.submodules_eq:
-    if key in keys_x:
-      keys_x.remove(key)
+  keys_x = rnn_modules
   
-  keys_c = [key for key in agent._model.recording.keys() if key.startswith('c_')]
+  keys_c = control_signals
   
   x_train = {key: [] for key in keys_x}
   control = {key: [] for key in keys_c}
@@ -105,79 +104,78 @@ def create_dataset(
         # get all recorded values for the current session of one specific key 
         recording = agent._model.get_recording(key)
         # create tensor from list of tensors 
-        values = np.concatenate(recording)[trimming:]
+        values = np.concatenate(recording)[trimming:, 0]
         # remove insignificant updates with a high-pass filter: check if dv/dt > threshold; otherwise set v(t=1) = v(t=0)
-        # dvdt = np.abs(np.diff(values, axis=-2))
-        # for i_action in range(values.shape[-1]):
-        #   values[:, 1, i_action] = np.where(dvdt[:, 0, i_action] > highpass_threshold_dt, values[:, 1, i_action], values[:, 0, i_action])
-        # in the case of 1D values along actions dim: Create 2D values by repeating along the actions dim (e.g. reward in non-counterfactual experiments) 
-        for i_action in range(agent._n_actions):
-          if key in keys_x:
-            x_train[key] += [v for v in values[:, i_action]]
-          elif key in keys_c:
-            control[key] += [v for v in values[:, i_action]]
+        # dvdt = np.abs(np.diff(values))
+        # for index_time in range(1, dvdt.shape[0]):
+        #   values[index_time] = np.where(dvdt[index_time-1] > highpass_threshold_dt, values[index_time], values[index_time-1])
+        
+        if key in keys_x:
+          x_train[key].append(values)
+        elif key in keys_c:
+          control[key].append(values)
+          
+  feature_names = None
   
-  feature_names = keys_x + keys_c
-  
-  # make arrays from dictionaries
-  x_train_array = np.zeros((len(x_train[keys_x[0]]), len(keys_x)))
-  control_array = np.zeros((len(x_train[keys_x[0]]), len(keys_c)))
-  for index_key, key in enumerate(keys_x):
-    x_train_array[:, index_key] = np.array(x_train[key])
-  for index_key, key in enumerate(keys_c):
-    control_array[:, index_key] = np.array(control[key])
-  
-  # reshape along groupby argument dimension into chunks of sequences where groupby values does not change
+  # group recorded values into sequences by grouping them such that the groupby values do not change for one sequence
+  # -> e.g. only c_action = 1.0 in one sequence; only c_action = 0.0 in next sequence (useful to split into chosen and not chosen)
   # Use itertools.groupby to find the indices of groups in the target sequence
-  groups = [(key, list(group)) for key, group in itertools.groupby(enumerate(control[groupby]), key=lambda x: x[1])]
-  
-  # Extract the indices for each group
-  group_indices = [list(map(lambda x: x[0], group)) for _, group in groups]
-  
-  # Group each input sequence based on the indices
+  # groups = []
   grouped_x_train = []
   grouped_control = []
-  for indices in group_indices:
-    grouped_x_train.append(x_train_array[indices])
-    grouped_control.append(control_array[indices])
+  for index_session, groupby_session in enumerate(control[groupby]):
+    for key_group, group in itertools.groupby(enumerate(groupby_session), key=lambda x: x[1]):
+      indices_group = [g[0] for g in list(group)]
+      grouped_x_train_array = np.zeros((len(indices_group), len(keys_x)))
+      grouped_control_array = np.zeros((len(indices_group), len(keys_c)))
+      for index_key, key in enumerate(keys_x):
+        grouped_x_train_array[:, index_key] = x_train[key][index_session][indices_group]
+      for index_key, key in enumerate(keys_c):
+        grouped_control_array[:, index_key] = control[key][index_session][indices_group]
+      grouped_x_train.append(grouped_x_train_array)
+      grouped_control.append(grouped_control_array)
     
-  # data processing
-  x_mins, x_maxs, c_mins, c_maxs = [], [], [], []
-  
+  # data processing  
   if dataprocessing is not None:
     for index_key, key in enumerate(keys_x):
-      # Check for offset-clearing
+      # Offset-clearing
       if key in dataprocessing.keys() and int(dataprocessing[key][1]):
-        x_mins = np.min(x_train_array[..., index_key])
-        x_train_array[..., index_key] -= x_mins
-      # Check for normalization
+        x_min = np.min(np.concatenate(grouped_x_train)[:, index_key])
+        for index_group in range(len(grouped_x_train)):
+          grouped_x_train[index_group][:, index_key] -= x_min
+      # Normalization
       if key in dataprocessing.keys() and int(dataprocessing[key][2]):
-        raise UserWarning('Normalization is not yet supported as a data processing step.')
-        # x_maxs = np.max(np.abs(x_train_array), axis=0, keepdims=True)[:, :1] + 1e-6
-        # x_train_array /= x_maxs
+        x_min = np.min(np.concatenate(grouped_x_train)[:, index_key])
+        x_max = np.max(np.concatenate(grouped_x_train)[:, index_key])
+        for index_group in range(len(grouped_x_train)):
+          grouped_x_train[index_group][:, index_key] = (grouped_x_train[index_group][:, index_key] - x_min) / (x_max - x_min)
+          
     for index_key, key in enumerate(keys_c):
-      # Check for offset-clearing
+      # Offset-clearing
       if key in dataprocessing.keys() and int(dataprocessing[key][1]):
-        c_mins = np.min(control_array[..., index_key], axis=0)[0]
-        c_mins = c_mins if c_mins != -1 else 0
-        control_array[..., index_key] -= c_mins
-      # Check for normalization
+        x_min = np.min(np.concatenate(grouped_control)[:, index_key])
+        for index_group in range(len(grouped_control)):
+          grouped_control[index_group][:, index_key] -= x_min
+      # Normalization
       if key in dataprocessing.keys() and int(dataprocessing[key][2]):
-        raise UserWarning('Normalization is not yet supported as a data processing step.')
-        # c_maxs = np.max(control_array, axis=0, keepdims=True)[:, 0]
-        # c_maxs[c_maxs == -1] = 1
-        # mask_c_maxs_not_zero = (c_maxs != 0).reshape(-1)
-        # control_array[:, 0, mask_c_maxs_not_zero] /= c_maxs[..., mask_c_maxs_not_zero]
+        x_min = np.min(np.concatenate(grouped_control)[:, index_key])
+        x_max = np.max(np.concatenate(grouped_control)[:, index_key])
+        for index_group in range(len(grouped_control)):
+          grouped_control[index_group][:, index_key] = (grouped_control[index_group][:, index_key] - x_min) / (x_max - x_min)
   
     # compute scaling factor for beta
   #   beta_scaling = np.abs(x_maxs - x_mins).reshape(-1)
   # else:
-  beta_scaling = np.ones((x_train_array.shape[-1]))
+  beta_scaling = None#np.ones((x_train_array.shape[-1]))
   
   if shuffle:
-    shuffle_idx = np.random.permutation(len(x_train_array))
-    x_train_array = x_train_array[shuffle_idx]
-    control_array = control_array[shuffle_idx]
+    # shuffle_idx = np.random.permutation(len(grouped_x_train))
+    # grouped_x_train = grouped_x_train[shuffle_idx]
+    # grouped_control = grouped_control[shuffle_idx]
+    zipped = list(zip(grouped_x_train, grouped_control))
+    random.shuffle(zipped)
+    grouped_x_train, grouped_control = zip(*zipped)
+    grouped_x_train, grouped_control = list(grouped_x_train), list(grouped_control)
   
   return grouped_x_train, grouped_control, feature_names, beta_scaling
 
@@ -210,7 +208,7 @@ def remove_control_features(control_variables: List[np.ndarray], feature_names: 
   
   for index_group in range(len(control_variables)):
     control_variables[index_group] = control_variables[index_group][:, index_target_features]
-      
+    
   return control_variables
 
 def conditional_filtering(x_train: List[np.ndarray], control: List[np.ndarray], feature_names: List[str], feature_filter: str, condition: float, remove_feature_filter=True) -> Tuple[List[np.ndarray], List[np.ndarray]]:
