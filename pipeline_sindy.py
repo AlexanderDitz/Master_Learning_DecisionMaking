@@ -100,12 +100,12 @@ def main(
     dataprocessing_setup = {
         'x_learning_rate_reward': [0, 0, 0],
         'x_value_reward_not_chosen': [0, 0, 0],
-        'x_value_choice_chosen': [0, 0, 0],
-        'x_value_choice_not_chosen': [0, 0, 0],
+        'x_value_choice_chosen': [1, 0, 1],
+        'x_value_choice_not_chosen': [1, 0, 1],
         # 'c_action': [0, 0, 0],
         # 'c_reward': [0, 0, 0],
         'c_value_reward': [0, 0, 0],
-        'c_value_choice': [0, 0, 0],
+        'c_value_choice': [1, 0, 1],
     }
     
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):

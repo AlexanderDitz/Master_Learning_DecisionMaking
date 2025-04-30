@@ -74,7 +74,7 @@ def fit_sindy(
         
         # add a dummy control feature if no control features are remaining - otherwise sindy breaks --> TODO: find out why
         if control_i is None or len(control_i) == 0:
-            raise NotImplementedError('No control signal is currently not implemented')
+            raise NotImplementedError('Having no control signal in a module is currently not implemented')
             control_i = None
             feature_names_i = feature_names_i + ['dummy']
         
@@ -86,18 +86,18 @@ def fit_sindy(
             thresholds[0, index:n_polynomial_combinations[d]] = d * optimizer_threshold
             index = n_polynomial_combinations[d]
         
-        if optimizer == 0:
-            optimizer = ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True)
-        elif optimizer == 1:
-            optimizer = ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100)
+        # if optimizer == 0:
+        #     optimizer = ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True)
+        # elif optimizer == 1:
+        #     optimizer = ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100)
             
         # setup sindy model for current x-feature
         sindy_models[x_feature] = ps.SINDy(
-            optimizer=optimizer,
+            # optimizer=optimizer,
             # optimizer=ps.STLSQ(),
             # optimizer=ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True),
             # optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose, max_iter=100),
-            # optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100, tol=0.0001),
+            optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100, fit_intercept=False),
             feature_library=ps.PolynomialLibrary(polynomial_degree),
             discrete_time=True,
             feature_names=feature_names_i,
@@ -184,7 +184,7 @@ def fit_spice(
         
         # create a dummy dataset where each choice is chosen for n times and then an action switch occures
         xs_fit = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*agent._n_actions+1)) - 1
-        n_trials_same_action = 20
+        n_trials_same_action = 5
         for session in range(n_sessions_off_policy):
             # initialize first action
             current_action = torch.zeros(agent._n_actions)

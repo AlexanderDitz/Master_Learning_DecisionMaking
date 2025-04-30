@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from copy import copy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.model_evaluation import get_scores
@@ -17,13 +18,15 @@ from sklearn.exceptions import ConvergenceWarning  # Import the specific warning
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
+drop_bad_participants = True
+
 path_data = 'data/eckstein2022/eckstein2022.csv'
 path_model_rnn = 'params/eckstein2022/params_eckstein2022.pkl'
 path_model_benchmark = 'params/eckstein2022/params_eckstein2022_MODEL.nc'
 path_model_baseline = 'params/eckstein2022/params_eckstein2022_ApBr.nc'
 
-# path_data = 'data/parameter_recovery/data_32p_0.csv'
-# path_model_rnn = 'params/parameter_recovery/params_32p_0.pkl'
+# path_data = 'data/parameter_recovery/data_16p_0.csv'
+# path_model_rnn = 'params/parameter_recovery/params_16p_0.pkl'
 # path_model_benchmark = None
 # path_model_baseline = None
 
@@ -78,7 +81,6 @@ n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.req
 print("Setting up SPICE agent...")
 rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
 control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
-sindy_library_polynomial_degree = 2
 sindy_library_setup = {
     'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
     'x_value_reward_not_chosen': ['c_value_choice'],
@@ -108,9 +110,9 @@ agent_spice = setup_agent_spice(
     sindy_library_setup=sindy_library_setup,
     sindy_filter_setup=sindy_filter_setup,
     sindy_dataprocessing=sindy_dataprocessing,
-    sindy_library_polynomial_degree=2,
-    regularization=1,
-    threshold=0.005,
+    sindy_library_polynomial_degree=1,
+    regularization=0.1,
+    threshold=0.05,
 )
 n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
 n_parameters_spice = 0
@@ -124,6 +126,7 @@ print('Running model evaluation...')
 scores = np.zeros((4+len(models_benchmark), 3))
 failed_attempts = 0
 considered_trials = 0
+index_participants_list, scores_spice_list, scores_baseline_list, scores_rnn_list, scores_benchmark_list, n_trials_list = [], [], [], [], [], []
 for index_session in tqdm(range(len(dataset))):
     try:
         n_trials = len(experiment_list[index_session].choices)
@@ -133,29 +136,38 @@ for index_session in tqdm(range(len(dataset))):
         choices = session[..., :agent_rnn._n_actions].cpu().numpy()
         choices_test = choices[-n_trials_test:]
         
-        probs = get_update_dynamics(experiment=session, agent=agent_baseline[index_session])[1][n_trials_test:]
-        scores_baseline = np.array(get_scores(data=choices_test, probs=probs[-n_trials_test:], n_parameters=n_parameters_baseline))
+        probs_test = get_update_dynamics(experiment=session, agent=agent_baseline[index_session])[1][-n_trials_test:]
+        scores_baseline = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=n_parameters_baseline))
+        scores_baseline_list.append(scores_baseline[0])
         
-        probs = get_update_dynamics(experiment=session, agent=agent_spice)[1][n_trials_test:]
-        scores_spice = np.array(get_scores(data=choices_test, probs=probs[-n_trials_test:], n_parameters=n_parameters_spice_all[index_session]))
-        n_parameters_spice += n_parameters_spice_all[index_session]
+        probs_test = get_update_dynamics(experiment=session, agent=agent_spice)[1][-n_trials_test:]
+        scores_spice = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=n_parameters_spice_all[index_session]))
+        scores_spice_list.append(scores_spice[0])
+        index_participants_list.append(index_session)
         
-        probs = get_update_dynamics(experiment=session, agent=agent_rnn)[1][n_trials_test:]
-        scores_rnn = np.array(get_scores(data=choices_test, probs=probs[-n_trials_test:], n_parameters=n_parameters_rnn))
+        probs_test = get_update_dynamics(experiment=session, agent=agent_rnn)[1][-n_trials_test:]
+        scores_rnn = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=n_parameters_rnn))
+        scores_rnn_list.append(scores_rnn[0])
         
         # get scores of all benchmark models but keep only the best one for each session
         if path_model_benchmark:
             scores_benchmark = []
             for index_model, model in enumerate(models_benchmark):
-                probs = get_update_dynamics(experiment=session, agent=agent_benchmark[model][index_session])[1][n_trials_test:]
-                scores_benchmark_model = np.array(get_scores(data=choices_test, probs=probs[-n_trials_test:], n_parameters=mapping_n_parameters_benchmark[model]))
+                probs_test = get_update_dynamics(experiment=session, agent=agent_benchmark[model][index_session])[1][-n_trials_test:]
+                scores_benchmark_model = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=mapping_n_parameters_benchmark[model]))
                 scores_benchmark.append(scores_benchmark_model)
-                scores[3+index_model] += scores_benchmark_model
+                scores[4+index_model] += scores_benchmark_model
             scores_benchmark = np.stack(scores_benchmark)
             index_best_benchmark = np.argmin(scores_benchmark, axis=0)
             # take NLL as indicating score
             index_best_benchmark = index_best_benchmark[0]
             n_parameters_benchmark += mapping_n_parameters_benchmark[models_benchmark[index_best_benchmark]]
+        
+        n_trials_list.append(copy(n_trials_test))
+        if np.exp(-scores_spice[0]/(n_trials_test*agent_rnn._n_actions)) < 0.6 and np.exp(-scores_rnn[0]/(n_trials_test*agent_rnn._n_actions)) > 0.63:
+            raise ValueError(f'SPICE NLL ({scores_spice[0]}) is unplausibly high compared to RNN NLL ({scores_rnn[0]}). SPICE fitting seems bad parameterized. Skipping participant {index_session}.')
+        
+        n_parameters_spice += n_parameters_spice_all[index_session]
         
         # track scores
         scores[0] += scores_baseline
@@ -166,13 +178,25 @@ for index_session in tqdm(range(len(dataset))):
         
         # track number of trials
         considered_trials += n_trials_test
-    except:
+    except Exception as e:
+        print(e)
         failed_attempts += 1
-
 
 # ------------------------------------------------------------
 # Post processing
 # ------------------------------------------------------------
+
+# print()
+scores_all = np.concatenate((
+    np.array(index_participants_list).reshape(-1, 1), 
+    np.array(n_trials_list).reshape(-1, 1), 
+    np.array(scores_baseline_list).reshape(-1, 1), 
+    np.array(scores_rnn_list).reshape(-1, 1), 
+    np.array(scores_spice_list).reshape(-1, 1),
+    ), axis=-1)
+
+import pandas as pd
+pd.DataFrame(np.round(scores_all, 2), columns=['Participant', 'Trials', 'Baseline', 'RNN', 'SPICE']).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
 avg_log_likelihood = -scores[:, :1] / (considered_trials * agent_rnn._n_actions)
