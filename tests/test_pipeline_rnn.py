@@ -6,33 +6,33 @@ import pipeline_rnn
 
 
 _, loss = pipeline_rnn.main(
-    checkpoint=False,
-    epochs=512,#65536,
+    checkpoint=True,
+    epochs=0,#65536,
     
-    data='data/parameter_recovery/data_32p_0.csv',
-    model='params/parameter_recovery_2/params_32p_0.pkl',
+    # data='data/parameter_recovery/data_128p_0.csv',
+    # model='params/parameter_recovery_2/params_128p_0.pkl',
     
     # data = 'data/optuna/data_128p_0.csv',
     # model = 'params/params_128p_0.pkl',
     
-    # model=f'params/eckstein2022/params_eckstein2022_test.pkl',
+    # model=f'params/eckstein2022/params_eckstein2022.pkl',
     # data=f'data/eckstein2022/eckstein2022.csv',
     
     n_actions=2,
     
     # final params
-    embedding_size=22,
-    n_steps=32,
-    learning_rate=0.00023,
-    train_test_ratio=1.0,
-    scheduler=True,
+    # embedding_size=22,
+    # n_steps=32,
+    # learning_rate=0.00023,
+    # train_test_ratio=1.0,
+    # scheduler=True,
     
     # toy params for quick run
-    # learning_rate=1e-3,
-    # n_steps=32,
-    # embedding_size=0,
-    # train_test_ratio=1.0,
-    # scheduler=False,
+    learning_rate=1e-3,
+    n_steps=32,
+    embedding_size=0,
+    train_test_ratio=1.0,
+    scheduler=False,
     
     # other training parameters
     batch_size=-1,
@@ -45,7 +45,7 @@ _, loss = pipeline_rnn.main(
     beta_reward=1.,
     alpha_reward=0.25,
     alpha_penalty=0.25,
-    forget_rate=0.,
+    forget_rate=0.3,
     confirmation_bias=0.,
     beta_choice=1.,
     alpha_choice=1.,
@@ -53,5 +53,5 @@ _, loss = pipeline_rnn.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=1,
+    participant_id=2,
 )

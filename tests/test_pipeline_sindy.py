@@ -7,19 +7,19 @@ import pipeline_sindy
 
 agent_spice, features, loss = pipeline_sindy.main(
     
-    data='data/parameter_recovery/data_32p_0.csv',
-    model='params/parameter_recovery/params_32p_0.pkl',
+    # data='data/parameter_recovery/data_32p_0.csv',
+    # model='params/parameter_recovery/params_32p_0.pkl',
     
-    # model = 'params/eckstein2022/params_eckstein2022.pkl',
-    # data = 'data/eckstein2022/eckstein2022.csv',
+    model = 'params/eckstein2022/params_eckstein2022.pkl',
+    data = 'data/eckstein2022/eckstein2022.csv',
     
     # general recovery parameters
-    participant_id=1,
+    participant_id=6,
     
     # sindy parameters
     polynomial_degree=1,
-    optimizer_alpha=.1,
-    optimizer_threshold=0.1,
+    optimizer_alpha=0.1,
+    optimizer_threshold=0.05,
     n_trials_off_policy=1000,
     n_sessions_off_policy=1,
     verbose=True,
