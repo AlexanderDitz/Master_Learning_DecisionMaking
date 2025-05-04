@@ -4,13 +4,13 @@ import warnings
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Callable
+from typing import Callable, Optional
 
 sys.path.append('resources')
 from resources.rnn import RLRNN
-from resources.bandits import AgentQ, AgentNetwork, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits
+from resources.bandits import AgentQ, AgentNetwork, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits, get_update_dynamics
 from resources.sindy_utils import check_library_setup
-from resources.rnn_utils import parameter_file_naming
+from resources.rnn_utils import parameter_file_naming, DatasetRNN
 from resources.sindy_training import fit_spice
 from utils.convert_dataset import convert_dataset
 from utils.plotting import plot_session as plot_session
@@ -26,12 +26,15 @@ def main(
     participant_id: int = None,
     
     # sindy parameters
+    optimizer_type: str = "SR3_L1",
     optimizer_threshold = 0.05,
     polynomial_degree = 2,
     optimizer_alpha = 1,
     n_trials_off_policy = 1024,
     n_sessions_off_policy = 0,
     verbose = True,
+    use_optuna = False,
+    filter_bad_participants = False,  # Added parameter to control filtering
     
     # ground truth parameters
     beta_reward = 3.,
@@ -51,6 +54,7 @@ def main(
     
     get_loss: bool = False,
     analysis: bool = False, 
+    show_plots: bool = True,  # Added parameter to control plot display
     ):
 
     # ---------------------------------------------------------------------------------------------------
@@ -155,19 +159,12 @@ def main(
         dataset_test, _, df, _ = convert_dataset(data)
         participant_ids = dataset_test.xs[..., -1].unique().int().cpu().numpy()
         
-        # TODO: DELETE AGAIN!!!!!
-        # TESTING: bring some noise into sequence length
-        # if not (dataset_test.xs.cpu().numpy() == -1).any():
-        #     n_trials = dataset_test.xs.shape[1]
-        #     for index_session in range(len(dataset_test)):
-        #         n_trials_short = int(np.random.uniform(low=0, high=n_trials*0.5))
-        #         dataset_test.xs[index_session, -n_trials_short:, :-1] = -1
-        #         dataset_test.ys[index_session, -n_trials_short:] = -1
-        
-        
     # ---------------------------------------------------------------------------------------------------
     # SINDy training
     # ---------------------------------------------------------------------------------------------------
+    
+    if use_optuna and verbose:
+        print("\nUsing Optuna to find optimal optimizer configuration for each participant")
     
     # setup the SINDy-agent
     agent_spice, loss_spice = fit_spice(
@@ -181,20 +178,96 @@ def main(
         library_setup=library_setup,
         filter_setup=filter_setup,
         dataprocessing=dataprocessing_setup,
+        optimizer_type=optimizer_type,
         optimizer_threshold=optimizer_threshold,
         optimizer_alpha=optimizer_alpha,
         get_loss=get_loss,
         participant_id=participant_id,
         shuffle=True,
         verbose=verbose,
+        use_optuna=use_optuna,
     )
+
+    # Filter out badly fitted SPICE models
+    filtered_participant_ids = []
+    if filter_bad_participants and agent_spice is not None and dataset_test is not None:
+        if verbose:
+            print("\nFiltering badly fitted SPICE models...")
+            
+        # Create a copy of the valid participant IDs
+        valid_participant_ids = list(participant_ids)
+        
+        for index_session, pid in enumerate(participant_ids):
+            # Skip if participant is not in the SPICE model
+            if pid not in agent_spice._model.submodules_sindy[list_rnn_modules[0]]:
+                continue
+                
+            # Calculate normalized log likelihood for SPICE and RNN
+            mask_participant_id = dataset_test.xs[:, 0, -1] == pid
+            if not mask_participant_id.any():
+                continue
+                
+            participant_data = DatasetRNN(*dataset_test[mask_participant_id])
+            
+            # Get predictions from both models
+            n_trials_test = len(participant_data.xs[0])
+            
+            # Get probabilities from SPICE and RNN models
+            agent_spice.new_sess(participant_id=pid)
+            agent_rnn.new_sess(participant_id=pid)
+            
+            # Get experiment data
+            experiment = participant_data.xs.cpu().numpy()[0]
+            
+            try:
+                # Calculate NLL for both models
+                result_spice = get_update_dynamics(experiment=experiment, agent=agent_spice)
+                result_rnn = get_update_dynamics(experiment=experiment, agent=agent_rnn)
+                probs_spice = result_spice[1]  # Get the second returned value (choice_probs)
+                probs_rnn = result_rnn[1]  # Get the second returned value (choice_probs)   
+                          
+              # Get the probabilities for the chosen actions      
+                # Calculate scores (negative log likelihood)
+                scores_spice = -np.sum(np.log(np.clip(probs_spice, 1e-10, 1.0)))
+                scores_rnn = -np.sum(np.log(np.clip(probs_rnn, 1e-10, 1.0)))
+                
+                # Check if SPICE model is badly fitted
+                spice_per_action_likelihood = np.exp(-scores_spice/(n_trials_test*agent_rnn._n_actions))
+                rnn_per_action_likelihood = np.exp(-scores_rnn/(n_trials_test*agent_rnn._n_actions))
+                
+                if spice_per_action_likelihood < 0.6 and rnn_per_action_likelihood > 0.63:
+                    if verbose:
+                        print(f'SPICE NLL ({scores_spice:.2f}) is unplausibly high compared to RNN NLL ({scores_rnn:.2f}).')
+                        print(f'SPICE fitting seems badly parameterized. Skipping participant {pid}.')
+                    
+                    # Remove this participant from the SPICE model
+                    for module in agent_spice._model.submodules_sindy:
+                        if pid in agent_spice._model.submodules_sindy[module]:
+                            del agent_spice._model.submodules_sindy[module][pid]
+                    
+                    # Remove from valid participant IDs
+                    if pid in valid_participant_ids:
+                        valid_participant_ids.remove(pid)
+                else:
+                    # Keep track of filtered (good) participants
+                    filtered_participant_ids.append(pid)
+            except Exception as e:
+                if verbose:
+                    print(f"Error evaluating participant {pid}: {str(e)}")
+                if pid in valid_participant_ids:
+                    valid_participant_ids.remove(pid)
+        
+        # Update participant_ids to only include valid ones
+        participant_ids = np.array(valid_participant_ids)
+        
+        if verbose:
+            print(f"\nAfter filtering: {len(filtered_participant_ids)} of {len(filtered_participant_ids) + len(participant_ids) - len(filtered_participant_ids)} participants have well-fitted SPICE models.")
 
     # ---------------------------------------------------------------------------------------------------
     # Analysis
     # ---------------------------------------------------------------------------------------------------
     
-    if analysis:
-        
+    if analysis and len(participant_ids) > 0:
         participant_id_test = participant_id if participant_id is not None else participant_ids[0]
         
         agent_rnn.new_sess(participant_id=participant_id_test)
@@ -203,7 +276,10 @@ def main(
         # print sindy equations from tested sindy agent
         print('\nDiscovered SPICE models:')
         for model in list_rnn_modules:
-            agent_spice._model.submodules_sindy[model][participant_id_test].print()
+            if participant_id_test in agent_spice._model.submodules_sindy[model]:
+                agent_spice._model.submodules_sindy[model][participant_id_test].print()
+            else:
+                print(f"No model available for {model}, participant {participant_id_test}")
         print('\n')
         
         # set up ground truth agent by getting parameters from dataset if specified
@@ -218,20 +294,27 @@ def main(
                 alpha_choice = df['alpha_choice'].values[(df['session']==participant_id_test).values][0],
             )
         
-        # get analysis plot
-        if agent is not None:
-            agents = {'groundtruth': agent, 'rnn': agent_rnn, 'sindy': agent_spice}
-            plt_title = r'$GT:\beta_{reward}=$'+str(np.round(agent._beta_reward, 2)) + r'; $\beta_{choice}=$'+str(np.round(agent._beta_choice, 2))+'\n'
-        else:
-            agents = {'rnn': agent_rnn, 'sindy': agent_spice}
-            plt_title = ''
+        # Only show plots if show_plots is True
+        if show_plots:
+            # get analysis plot
+            if agent is not None:
+                agents = {'groundtruth': agent, 'rnn': agent_rnn, 'sindy': agent_spice}
+                plt_title = r'$GT:\beta_{reward}=$'+str(np.round(agent._beta_reward, 2)) + r'; $\beta_{choice}=$'+str(np.round(agent._beta_choice, 2))+'\n'
+            else:
+                agents = {'rnn': agent_rnn, 'sindy': agent_spice}
+                plt_title = ''
+                
+            fig, axs = plot_session(agents, dataset_test.xs[participant_id_test])
+            betas = agent_spice.get_betas()
+            plt_title += r'SINDy: $\beta_{reward}=$'+str(np.round(betas['x_value_reward'], 2)) + r'; $\beta_{choice}=$'+str(np.round(betas['x_value_choice'], 2))
             
-        fig, axs = plot_session(agents, dataset_test.xs[participant_id_test])
-        betas = agent_spice.get_betas()
-        plt_title += r'SINDy: $\beta_{reward}=$'+str(np.round(betas['x_value_reward'], 2)) + r'; $\beta_{choice}=$'+str(np.round(betas['x_value_choice'], 2))
-        
-        fig.suptitle(plt_title)
-        plt.show()
+            fig.suptitle(plt_title)
+            plt.show()
+    
+    # If agent_spice is None, we couldn't fit the model, so return early
+    if agent_spice is None:
+        print("ERROR: Failed to fit SPICE model. Returning None.")
+        return None, None, None
         
     features = {}
     for model in agent_spice._model.submodules_sindy:
@@ -249,42 +332,70 @@ def main(
     features['beta_choice'] = {}
     for pid in participant_ids:
         pid = int(pid)
-        agent_spice.new_sess(participant_id=pid)
-        betas = agent_spice.get_betas()
-        features['beta_reward'][pid] = betas['x_value_reward']
-        features['beta_choice'][pid] = betas['x_value_choice']
+        if pid in agent_spice._model.submodules_sindy[list_rnn_modules[0]]:
+            agent_spice.new_sess(participant_id=pid)
+            betas = agent_spice.get_betas()
+            features['beta_reward'][pid] = betas['x_value_reward']
+            features['beta_choice'][pid] = betas['x_value_choice']
         
     return agent_spice, features, loss_spice
 
 
 if __name__=='__main__':
-    main(
-        model = 'params/benchmarking/rnn_sugawara.pkl',
-        data = 'data/2arm/sugawara2021_143_processed.csv',
-        n_trials=None,
-        n_sessions=None,
-        verbose=False,
-        
-        # sindy parameters
-        polynomial_degree=2,
-        optimizer_threshold=0.05,
-        optimizer_alpha=0,
-
-        # generated training dataset parameters
-        # n_trials_per_session = 200,
-        # n_sessions = 100,
-        
-        # ground truth parameters
-        # alpha = 0.25,
-        # beta = 3,
-        # forget_rate = 0.,
-        # perseverance_bias = 0.25,
-        # alpha_penalty = 0.5,
-        # confirmation_bias = 0.5,
-        # reward_update_rule = lambda q, reward: reward-q,
-        
-        # environment parameters
-        # sigma = 0.1,
-        
-        analysis=True,
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Run SINDy pipeline with optimizer selection")
+    parser.add_argument("--model", type=str, default='params/benchmarking/rnn_sugawara.pkl',
+                        help="Path to model file")
+    parser.add_argument("--data", type=str, default='data/2arm/sugawara2021_143_processed.csv',
+                        help="Path to data file")
+    parser.add_argument("--participant_id", type=int, default=None, 
+                        help="Participant ID")
+    parser.add_argument("--polynomial_degree", type=int, default=2, 
+                        help="Polynomial degree")
+    parser.add_argument("--optimizer_type", type=str, default="SR3_L1", 
+                        choices=["STLSQ", "SR3_L1", "SR3_weighted_l1"],
+                        help="Optimizer type")
+    parser.add_argument("--optimizer_alpha", type=float, default=0.1, 
+                        help="Optimizer alpha")
+    parser.add_argument("--optimizer_threshold", type=float, default=0.05, 
+                        help="Optimizer threshold")
+    parser.add_argument("--use_optuna", action="store_true", 
+                        help="Use Optuna to find the best optimizer for each participant")
+    parser.add_argument("--filter_bad_participants", action="store_true", 
+                        help="Filter out badly fitted participants")
+    parser.add_argument("--n_trials_off_policy", type=int, default=1024, 
+                        help="Number of trials for off-policy data")
+    parser.add_argument("--n_sessions_off_policy", type=int, default=0, 
+                        help="Number of sessions for off-policy data")
+    parser.add_argument("--verbose", action="store_true", 
+                        help="Enable verbose output")
+    parser.add_argument("--analysis", action="store_true", 
+                        help="Perform analysis")
+    parser.add_argument("--get_loss", action="store_true", 
+                        help="Compute loss")
+    parser.add_argument("--show_plots", action="store_true", 
+                        help="Show analysis plots")
+    
+    args = parser.parse_args()
+    
+    agent_spice, features, loss = main(
+        model=args.model,
+        data=args.data,
+        participant_id=args.participant_id,
+        polynomial_degree=args.polynomial_degree,
+        optimizer_type=args.optimizer_type,
+        optimizer_alpha=args.optimizer_alpha,
+        optimizer_threshold=args.optimizer_threshold,
+        n_trials_off_policy=args.n_trials_off_policy,
+        n_sessions_off_policy=args.n_sessions_off_policy,
+        verbose=args.verbose,
+        analysis=args.analysis,
+        get_loss=args.get_loss,
+        use_optuna=args.use_optuna,
+        filter_bad_participants=args.filter_bad_participants,
+        show_plots=args.show_plots,
     )
+    
+    if loss is not None:
+        print(f"Loss: {loss}")
