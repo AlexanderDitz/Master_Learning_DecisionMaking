@@ -28,8 +28,8 @@ torch.manual_seed(42)
 start_time = time.time()
 
 # QUICK CONFIG
-epochs_rnn = 1#2048
-scheduler = False#True
+epochs_rnn = 4096
+scheduler = True
 n_trials_optuna = 1#50
 
 logging.basicConfig(
@@ -124,7 +124,6 @@ def load_and_prepare_data(data_path):
     
     return combined_dataset, n_participants
 
-
 def split_dataset_within_participants(dataset, train_ratio=0.75):
     """
     Split dataset by trials within each participant.
@@ -216,32 +215,31 @@ def objective(trial, train_dataset, val_dataset, n_participants):
     """
     Optuna objective function for hyperparameter optimization.
     """
-    list_rnn_modules, list_control_parameters, _, _ = define_sindy_configuration()
+    list_rnn_modules, list_control_parameters, library_setup, filter_setup = define_sindy_configuration()
     
-    embedding_size = trial.suggest_int('embedding_size', 8, 32)
-    learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
-    l1_weight_decay = trial.suggest_float('l1_weight_decay', 1e-6, 1e-3, log=True)
-    l2_weight_decay = trial.suggest_float('l2_weight_decay', 1e-6, 1e-3, log=True)  
-    n_steps = trial.suggest_int('n_steps', 1, 100)
-    sindy_optimizer_alpha = trial.suggest_float('sindy_optimizer_alpha', 1e-2, 1e0, log=True)
-    sindy_optimizer_threshold = trial.suggest_float('sindy_optimizer_threshold', 1e-3, 1e-1, log=True)  
-    # hidden_size = trial.suggest_int('hidden_size', 8, 32)
-    # dropout = trial.suggest_float('dropout', 0., 0.5)
+    # embedding_size = trial.suggest_int('embedding_size', 8, 32)
+    # learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
+    l1_weight_decay = trial.suggest_float('l1_weight_decay', 1e-6, 1e-2, log=True)
+    l2_weight_decay = trial.suggest_float('l2_weight_decay', 1e-6, 1e-2, log=True)  
+    # n_steps = trial.suggest_int('n_steps', 1, 100)
+    # sindy_optimizer_alpha = trial.suggest_float('sindy_optimizer_alpha', 1e-2, 1, log=True)
+    # sindy_optimizer_threshold = trial.suggest_float('sindy_optimizer_threshold', 1e-3, 1e-1, log=True)
     
-    logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}, l1_weight_decay={l1_weight_decay:.6f}, l2_weight_decay={l2_weight_decay:.6f}, sindy_optimizer_alpha={sindy_optimizer_alpha:.6f}, sindy_optimizer_threshold={sindy_optimizer_threshold:.6f}")
+    # logger.info(f"Trial {trial.number}: lr={learning_rate:.6f}, embedding_size={embedding_size}, n_steps={n_steps}, l1_weight_decay={l1_weight_decay:.6f}, l2_weight_decay={l2_weight_decay:.6f}, sindy_optimizer_alpha={sindy_optimizer_alpha:.6f}, sindy_optimizer_threshold={sindy_optimizer_threshold:.6f}")
+    logger.info(f"Trial {trial.number}: l1_weight_decay={l1_weight_decay:.6f}, l2_weight_decay={l2_weight_decay:.6f}")
     
     model_rnn = RLRNN(
         n_actions=n_actions,
         n_participants=n_participants,
-        hidden_size=8,#hidden_size,
-        embedding_size=embedding_size,
-        dropout=0,#dropout,
+        hidden_size=8,
+        embedding_size=32,
+        dropout=0,
         l1_weight_decay=l1_weight_decay,
         l2_weight_decay=l2_weight_decay,
         list_signals=list_rnn_modules + list_control_parameters
     )
     
-    optimizer_rnn = torch.optim.Adam(model_rnn.parameters(), lr=learning_rate)
+    optimizer_rnn = torch.optim.Adam(model_rnn.parameters(), lr=1e-3)
     
     try:
         model_rnn, optimizer_rnn, final_train_loss_rnn = fit_model(
@@ -250,14 +248,13 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             dataset_train=train_dataset,
             dataset_test=val_dataset,
             epochs=epochs_rnn,
-            n_steps=n_steps,
+            n_steps=16,
             scheduler=scheduler,
             convergence_threshold=0,
         )
         
         agent_rnn = AgentNetwork(model_rnn=model_rnn, n_actions=n_actions)
         
-        list_rnn_modules, list_control_parameters, library_setup, filter_setup = define_sindy_configuration()
         agent_spice, final_train_loss_spice = fit_spice(
             agent=agent_rnn, 
             data=train_dataset, 
@@ -266,8 +263,8 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             control_signals=list_control_parameters,
             library_setup=library_setup,
             filter_setup=filter_setup,
-            optimizer_alpha=sindy_optimizer_alpha,
-            optimizer_threshold=sindy_optimizer_threshold,
+            optimizer_alpha=0.1,
+            optimizer_threshold=0.05,
             )
         n_parameters_spice = agent_spice.count_parameters(mapping_modules_values={module: 'x_value_choice' if 'choice' in module else 'x_value_reward' for module in agent_spice._model.submodules_sindy})
         
