@@ -57,7 +57,7 @@ def main(
   counterfactual = False,
   
   analysis: bool = False,
-  participant_id: int = 0
+  participant_id: int = 0,
   ):
   
   # print cuda devices available
@@ -254,25 +254,30 @@ def main(
 
 if __name__=='__main__':
   
-  parser = argparse.ArgumentParser(description='Trains the RNN on behavioral data to uncover the underlying Q-Values via different cognitive mechanisms.')
+  parser = argparse.ArgumentParser(description='Trains a SPICE-RNN on behavioral data to uncover the underlying Q-Values via different cognitive modules.')
   
-  # Training parameters
+  
   parser.add_argument('--checkpoint', action='store_true', help='Whether to load a checkpoint')
   parser.add_argument('--model', type=str, default=None, help='Model name to load from and/or save to parameters of RNN')
   parser.add_argument('--data', type=str, default=None, help='Path to dataset')
-  parser.add_argument('--n_actions', type=int, default=2, help='Number of possible actions')
-  parser.add_argument('--epochs', type=int, default=128, help='Number of epochs for training')
-  parser.add_argument('--n_steps', type=int, default=16, help='Number of steps per call')
-  parser.add_argument('--bagging', action='store_true', help='Whether to use bagging')
-  parser.add_argument('--batch_size', type=int, default=-1, help='Batch size')
-  parser.add_argument('--lr', type=float, default=5e-3, help='Learning rate of the RNN')
-  parser.add_argument('--sequence_length', type=int, default=-1, help='Length of training sequences')
-  parser.add_argument('--scheduler', action='store_true', help='Whether to use a learning rate scheduler during training')
-
+  
   # RNN parameters
   parser.add_argument('--hidden_size', type=int, default=8, help='Hidden size of the RNN')
+  parser.add_argument('--embedding_size', type=int, default=8, help='Participant embedding size of the RNN')
   parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate')
 
+  # data and training parameters
+  parser.add_argument('--n_actions', type=int, default=2, help='Number of possible actions')
+  parser.add_argument('--epochs', type=int, default=128, help='Number of epochs for training')
+  parser.add_argument('--n_steps', type=int, default=16, help='Number of recurrent steps per training call; -1: Use whole sequence at once;')
+  parser.add_argument('--bagging', action='store_true', help='Whether to use bagging')
+  parser.add_argument('--batch_size', type=int, default=-1, help='Batch size; -1: Use whole dataset at once;')
+  parser.add_argument('--lr', type=float, default=5e-3, help='Learning rate of the RNN')
+  parser.add_argument('--convergence_threshold', type=float, default=0, help='Convergence threshold to early-stop training')
+  parser.add_argument('--train_test_ratio', type=float, default=1.0, help='Ratio of training data')
+  parser.add_argument('--sequence_length', type=int, default=-1, help='Length of training sequences; -1: Use whole sequence at once;')
+  parser.add_argument('--scheduler', action='store_true', help='Whether to use a learning rate scheduler during training')
+  
   # Ground truth parameters
   parser.add_argument('--n_trials', type=int, default=200, help='Number of trials per session')
   parser.add_argument('--n_sessions', type=int, default=256, help='Number of sessions')
@@ -280,56 +285,59 @@ if __name__=='__main__':
   parser.add_argument('--alpha_reward', type=float, default=0.25, help='Alpha parameter for the Q-learning update rule')
   parser.add_argument('--alpha_penalty', type=float, default=-1., help='Learning rate for negative outcomes; if -1: same as alpha')
   parser.add_argument('--forget_rate', type=float, default=0., help='Forget rate')
-  parser.add_argument('--confirmation_bias', type=float, default=0., help='Whether to include confirmation bias')
   parser.add_argument('--beta_choice', type=float, default=0., help='Beta parameter for the Q-learning update rule')
   parser.add_argument('--alpha_choice', type=float, default=1., help='Alpha parameter for the Q-learning update rule')
   parser.add_argument('--alpha_counterfactual', type=float, default=0., help='Alpha parameter for the Q-learning update rule')
 
   # Environment parameters
+  parser.add_argument('--n_trials', type=int, default=2, help='Number of possible actions')
   parser.add_argument('--sigma', type=float, default=0.2, help='Drift rate of the reward probabilities')
   parser.add_argument('--counterfactual', action='store_true', help='Counterfactual experiment with full feedback (for chosen and not chosen options)')
 
   # Analysis parameters
-  parser.add_argument('--analysis', action='store_true', help='Whether to perform analysis')
-  parser.add_argument('--participant_id', type=int, default=None, help='Whether to perform analysis')
+  parser.add_argument('--analysis', action='store_true', help='Whether to perform visual analysis on one participant (keyword argument: participant_id)')
+  parser.add_argument('--participant_id', type=int, default=None, help='Participant ID for visual analysis (keyword argument: analysis)')
 
   args = parser.parse_args()  
   
   main(
-    # train = True, 
     checkpoint = args.checkpoint,
     model = args.model,
     data = args.data,
-    n_actions=args.n_actions,
-
-    # training parameters
-    epochs=args.epochs,
-    n_trials = args.n_trials,
-    n_sessions = args.n_sessions,
-    n_steps = args.n_steps,
-    bagging = args.bagging,
-    batch_size=args.batch_size,
-    learning_rate=args.lr,
 
     # rnn parameters
     hidden_size = args.hidden_size,
+    embedding_size = args.embedding_size,
     dropout = args.dropout,
+
+    # data and training parameters
+    epochs = args.epochs,
+    train_test_ratio = args.train_test_ratio,
+    n_trials = args.n_trials,
+    n_sessions = args.n_sessions,
+    bagging = args.bagging,
+    sequence_length = args.sequence_length,
+    n_steps = args.n_steps,
+    batch_size = args.batch_size,
+    learning_rate = args.learning_rate,
+    convergence_threshold = args.convergence_threshold,
+    scheduler = args.scheduler,
     
     # ground truth parameters
     beta_reward = args.beta_reward,
     alpha_reward = args.alpha_reward,
     alpha_penalty = args.alpha_penalty,
-    forget_rate = args.forget_rate,
-    confirmation_bias = args.confirmation_bias,
+    alpha_counterfactual = args.alpha_counterfactual,
     beta_choice = args.beta_choice,
     alpha_choice = args.alpha_choice,
-    alpha_counterfactual=args.alpha_counterfactual,
+    forget_rate = args.forget_rate,
     
-
     # environment parameters
+    n_actions = args.n_actions,
     sigma = args.sigma,
+    counterfactual = args.counterfactual,
     
     analysis = args.analysis,
     participant_id = args.participant_id,
-  )
+    )
   
