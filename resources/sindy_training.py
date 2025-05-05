@@ -22,7 +22,7 @@ def fit_sindy(
     polynomial_degree: int = 1, 
     library_setup: Dict[str, List[str]] = {},
     filter_setup: Dict[str, Tuple[str, float]] = {},
-    optimizer: int = 0,
+    optimizer_type: str = "SR3_L1",
     optimizer_threshold: float = 0.05,
     optimizer_alpha: float = 1,
     verbose: bool = False,
@@ -47,17 +47,8 @@ def fit_sindy(
         
         # sort signals into corresponding arrays    
         x_i = [x[:, index_feature].reshape(-1, 1) for x in variables] # get current x-feature as target variable
-        # get all other x-features as control variables
-        # control_i = []
-        # for index_group in range(len(x_i)):
-        #     control_i.append(
-        #         np.concatenate(
-        #             (variables[index_group][:, np.arange(len(x_features))!=index_feature], control[index_group]), axis=-1
-        #             )
-        #         )
         control_i = control
         
-        # feature_names_i = [x_feature] + [x_f for index_x_f, x_f in enumerate(x_features) if index_x_f != index_feature] + c_features
         feature_names_i = [x_feature] + c_features
         
         # filter target variable and control features according to filter conditions
@@ -66,38 +57,58 @@ def fit_sindy(
                 # check that filter_setup[x_feature] is a list of filter-conditions 
                 filter_setup[x_feature] = [filter_setup[x_feature]]
             for filter_condition in filter_setup[x_feature]:
-                x_i, control_i, feature_names_i = conditional_filtering(x_train=x_i, control=control_i, feature_names=feature_names_i, feature_filter=filter_condition[0], condition=filter_condition[1], remove_feature_filter=False)#remove_feature_filter=filter_condition[2]
+                x_i, control_i, feature_names_i = conditional_filtering(
+                    x_train=x_i, 
+                    control=control_i, 
+                    feature_names=feature_names_i, 
+                    feature_filter=filter_condition[0], 
+                    condition=filter_condition[1], 
+                    remove_feature_filter=False
+                )
         
         # remove unnecessary control features according to library setup
         control_i = remove_control_features(control_i, feature_names_i[1:], library_setup[x_feature])
         feature_names_i = [x_feature] + library_setup[x_feature]
         
-        # add a dummy control feature if no control features are remaining - otherwise sindy breaks --> TODO: find out why
+        # add a dummy control feature if no control features are remaining - otherwise sindy breaks
         if control_i is None or len(control_i) == 0:
             raise NotImplementedError('Having no control signal in a module is currently not implemented')
             control_i = None
             feature_names_i = feature_names_i + ['dummy']
         
-        # set up increasing thresholds with polynomial degree
-        n_polynomial_combinations = np.array([comb(len(feature_names_i) + d, d) for d in range(polynomial_degree+1)])
-        thresholds = np.zeros((1, n_polynomial_combinations[-1]))
-        index = 0
-        for d in range(len(n_polynomial_combinations)):
-            thresholds[0, index:n_polynomial_combinations[d]] = d * optimizer_threshold
-            index = n_polynomial_combinations[d]
-        
-        # if optimizer == 0:
-        #     optimizer = ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True)
-        # elif optimizer == 1:
-        #     optimizer = ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100)
+        # Set up increasing thresholds with polynomial degree for SR3_weighted_l1
+        if optimizer_type == "SR3_weighted_l1":
+            n_polynomial_combinations = np.array([comb(len(feature_names_i) + d, d) for d in range(polynomial_degree+1)])
+            thresholds = np.zeros((1, n_polynomial_combinations[-1]))
+            index = 0
+            for d in range(len(n_polynomial_combinations)):
+                thresholds[0, index:n_polynomial_combinations[d]] = d * optimizer_threshold
+                index = n_polynomial_combinations[d]
+
+        # Create optimizer based on type
+        if optimizer_type == "STLSQ":
+            optimizer = ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold)
+        elif optimizer_type == "SR3_L1":
+            optimizer = ps.SR3(
+                thresholder="L1",
+                nu=optimizer_alpha,
+                threshold=optimizer_threshold,
+                verbose=verbose,
+                max_iter=100
+            )
+        else:  # "SR3_weighted_l1" (default)
+            optimizer = ps.SR3(
+                thresholder="weighted_l1",
+                nu=optimizer_alpha,
+                threshold=optimizer_threshold,
+                thresholds=thresholds,
+                verbose=verbose,
+                max_iter=100
+            )
             
-        # setup sindy model for current x-feature
+        # Setup sindy model for current x-feature
         sindy_models[x_feature] = ps.SINDy(
-            # optimizer=optimizer,
-            # optimizer=ps.STLSQ(),
-            # optimizer=ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold, fit_intercept=True),
-            # optimizer=ps.SR3(thresholder="weighted_l1", nu=optimizer_alpha, threshold=optimizer_threshold, thresholds=thresholds, verbose=verbose, max_iter=100),
-            optimizer=ps.SR3(thresholder="L1", nu=optimizer_alpha, threshold=optimizer_threshold, verbose=verbose, max_iter=100, fit_intercept=False),
+            optimizer=optimizer,
             feature_library=ps.PolynomialLibrary(polynomial_degree),
             discrete_time=True,
             feature_names=feature_names_i,
@@ -105,18 +116,6 @@ def fit_sindy(
 
         # fit sindy model
         sindy_models[x_feature].fit(x_i, u=control_i, t=1, multiple_trajectories=True, ensemble=False)
-        
-        # post-process sindy weights
-        # sindy_model_x_feature = deepcopy(sindy_models[x_feature])
-        # coefs = sindy_model_x_feature.coefficients()
-        # optimizer_threshold = 0.01
-        # for index_feature, feature in enumerate(sindy_model_x_feature.get_feature_names()):
-        #     if np.abs(coefs[0, index_feature]) < optimizer_threshold:
-        #         sindy_model_x_feature.model.steps[-1][1].coef_[0, index_feature] = 0.
-        #     if feature == x_feature and np.abs(1-coefs[0, index_feature]) < optimizer_threshold:
-        #         sindy_model_x_feature.model.steps[-1][1].coef_[0, index_feature] = 1.
-        
-        # sindy_models[x_feature] = sindy_model_x_feature
         
         if verbose:
             sindy_models[x_feature].print()
@@ -132,6 +131,7 @@ def fit_spice(
     polynomial_degree: int = 2, 
     library_setup: Dict[str, List[str]] = {},
     filter_setup: Dict[str, Tuple[str, float]] = {},
+    optimizer_type: str = "SR3_L1",
     optimizer_threshold: float = 0.05,
     optimizer_alpha: float = 1,
     participant_id: int = None,
@@ -142,30 +142,33 @@ def fit_spice(
     deterministic: bool = True,
     get_loss: bool = False,
     verbose: bool = False,
+    use_optuna: bool = False,
     ) -> Tuple[AgentSpice, float]:
-    """_summary_
+    """Fit a SPICE agent by replacing RNN modules with SINDy equations.
 
     Args:
-        rnn_modules (List[np.ndarray]): _description_
-        control_parameters (List[np.ndarray]): _description_
-        agent (AgentNetwork): _description_
-        data (DatasetRNN, optional): _description_. Defaults to None.
-        off_policy (bool, optional): _description_. Defaults to True.
-        polynomial_degree (int, optional): _description_. Defaults to 2.
-        library_setup (Dict[str, List[str]], optional): _description_. Defaults to {}.
-        filter_setup (Dict[str, Tuple[str, float]], optional): _description_. Defaults to {}.
-        optimizer_threshold (float, optional): _description_. Defaults to 0.05.
-        optimizer_alpha (float, optional): _description_. Defaults to 1.
-        participant_id (int, optional): _description_. Defaults to None.
-        shuffle (bool, optional): _description_. Defaults to False.
-        dataprocessing (Dict[str, List], optional): _description_. Defaults to None.
-        n_trials_off_policy (int, optional): _description_. Defaults to 1024.
-        deterministic (bool, optional): _description_. Defaults to True.
-        get_loss (bool, optional): _description_. Defaults to False.
-        verbose (bool, optional): _description_. Defaults to False.
+        rnn_modules (List[np.ndarray]): List of RNN module names to be replaced with SINDy
+        control_signals (List[np.ndarray]): List of control signal names
+        agent (AgentNetwork): The trained RNN agent
+        data (DatasetRNN, optional): Dataset for training/evaluation. Defaults to None.
+        polynomial_degree (int, optional): Polynomial degree for SINDy. Defaults to 2.
+        library_setup (Dict[str, List[str]], optional): Dictionary mapping features to library components. Defaults to {}.
+        filter_setup (Dict[str, Tuple[str, float]], optional): Dictionary mapping features to filter conditions. Defaults to {}.
+        optimizer_type (str, optional): Type of optimizer to use. Defaults to "SR3_L1".
+        optimizer_threshold (float, optional): Threshold for optimizer. Defaults to 0.05.
+        optimizer_alpha (float, optional): Alpha parameter for optimizer. Defaults to 1.
+        participant_id (int, optional): Specific participant ID to process. Defaults to None.
+        shuffle (bool, optional): Whether to shuffle the data. Defaults to False.
+        dataprocessing (Dict[str, List], optional): Data processing options. Defaults to None.
+        n_trials_off_policy (int, optional): Number of off-policy trials. Defaults to 2048.
+        n_sessions_off_policy (int, optional): Number of off-policy sessions. Defaults to 1.
+        deterministic (bool, optional): Whether to use deterministic mode. Defaults to True.
+        get_loss (bool, optional): Whether to compute loss. Defaults to False.
+        verbose (bool, optional): Whether to print verbose output. Defaults to False.
+        use_optuna (bool, optional): Whether to use Optuna for optimizer selection. Defaults to False.
 
     Returns:
-        Tuple[AgentSpice, float]: _description_
+        Tuple[AgentSpice, float]: The SPICE agent and its loss
     """
     
     if participant_id is not None:
@@ -179,8 +182,6 @@ def fit_spice(
         # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
         # The trained RNN will then perform value updates to get off-policy data
         environment = BanditsDrift(sigma=0.2, n_actions=agent._n_actions)
-        # agent_dummy = AgentQ(n_actions=agent._n_actions, alpha_reward=0.1, beta_reward=10.0)
-        # dataset_fit = create_dataset_bandits(agent=agent_dummy, environment=environment, n_trials=n_trials_off_policy, n_sessions=n_sessions_off_policy)[0]
         
         # create a dummy dataset where each choice is chosen for n times and then an action switch occures
         xs_fit = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*agent._n_actions+1)) - 1
@@ -216,7 +217,6 @@ def fit_spice(
         if participant_id is not None:
             mask_participant_id = dataset_fit.xs[:, 0, -1] == participant_id
             dataset_fit = DatasetRNN(*dataset_fit[mask_participant_id])
-            # dataset_fit = DatasetRNN(*dataset_fit[participant_id])
     elif n_sessions_off_policy <= 0 and data is None:
         raise ValueError("One of the arguments data or n_sessions_off_policy (> 0) must be given. If n_sessions_off_policy > 0 the SINDy modules will be fitted on the off-policy data regardless of data. If n_sessions_off_policy = 0 then data will be used to fit the SINDy modules.")
     
@@ -233,6 +233,39 @@ def fit_spice(
             dataprocessing=dataprocessing,
         )
 
+        # If using Optuna, find the best optimizer configuration for this participant
+        if use_optuna:
+            from optimizer_selection import optimize_for_participant
+            
+            # Find optimal optimizer and parameters for this participant
+            optimizer_config = optimize_for_participant(
+                variables=rnn_variables,
+                control=control_parameters,
+                rnn_modules=rnn_modules,
+                control_signals=control_signals,
+                library_setup=library_setup,
+                filter_setup=filter_setup,
+                polynomial_degree=polynomial_degree,
+                n_trials=50,  # Adjust as needed
+                verbose=verbose
+            )
+            
+            # Use the optimized parameters for this participant
+            pid_optimizer_type = optimizer_config["optimizer_type"]
+            pid_optimizer_alpha = optimizer_config["optimizer_alpha"]
+            pid_optimizer_threshold = optimizer_config["optimizer_threshold"]
+            
+            if verbose:
+                print(f"\nUsing optimized parameters for participant {pid}:")
+                print(f"  Optimizer type: {pid_optimizer_type}")
+                print(f"  Alpha: {pid_optimizer_alpha}")
+                print(f"  Threshold: {pid_optimizer_threshold}")
+        else:
+            # Use the global parameters
+            pid_optimizer_type = optimizer_type
+            pid_optimizer_alpha = optimizer_alpha
+            pid_optimizer_threshold = optimizer_threshold
+
         # fit one SINDy-model per RNN-module
         sindy_models_id = fit_sindy(
             variables=rnn_variables,
@@ -242,8 +275,9 @@ def fit_spice(
             polynomial_degree=polynomial_degree,
             library_setup=library_setup,
             filter_setup=filter_setup,
-            optimizer_alpha=optimizer_alpha,
-            optimizer_threshold=optimizer_threshold,
+            optimizer_type=pid_optimizer_type,
+            optimizer_alpha=pid_optimizer_alpha,
+            optimizer_threshold=pid_optimizer_threshold,
             verbose=verbose,
         )
         
