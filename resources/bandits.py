@@ -463,7 +463,8 @@ class AgentSpice(AgentNetwork):
         # n_parameters_module = n_parameters_module * (n_parameters_module > 0.05)
         if betas is not None:
           beta_value_module = betas[mapping_modules_values[submodule]]
-          n_parameters[participant_id] += (parameters_module * beta_value_module != 0).sum()
+          # n_parameters[participant_id] += (parameters_module * beta_value_module != 0).sum()
+          n_parameters[participant_id] += (parameters_module != 0).sum()
         else:
           n_parameters[participant_id] += (parameters_module != 0).sum()
       if betas is not None:

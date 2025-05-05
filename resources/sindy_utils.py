@@ -284,3 +284,99 @@ def bandit_loss(agent: Union[AgentSpice, AgentNetwork], data: List[BanditSession
         loss_session = mean_squared_error(y_target, y_pred)
     loss_total += loss_session/(t+1)
   return loss_total/len(data)
+
+
+def filter_bad_fit_participants(agent_spice: AgentSpice, agent_rnn: AgentNetwork, dataset: DatasetRNN, participant_ids: Iterable[int], lower_threshold_spice: float=0.6, upper_threshold_rnn: float=0.63, verbose: bool = False):
+  """Check for badly fitted participants in the SPICE models w.r.t. the SPICE-RNN and return only the IDs of the well-fitted participants.
+
+  Args:
+      agent_spice (AgentSpice): _description_
+      agent_rnn (AgentNetwork): _description_
+      dataset_test (DatasetRNN): _description_
+      participant_ids (Iterable[int]): _description_
+      verbose (bool, optional): _description_. Defaults to False.
+
+  Returns:
+      Iterable[int]: List of well-fitted participants
+  """
+  if verbose:
+      print("\nFiltering badly fitted SPICE models...")
+  
+  if lower_threshold_spice>1 or upper_threshold_rnn>1 or lower_threshold_spice<0 or upper_threshold_rnn<0:
+    raise ValueError("Either the lower or upper threshold are outside the valid value range (0, 1).")
+  
+  filtered_participant_ids = []
+  
+  # Create a copy of the valid participant IDs
+  valid_participant_ids = list(participant_ids)
+  
+  for index_session, pid in enumerate(participant_ids):
+      # Skip if participant is not in the SPICE model
+      if pid not in agent_spice._model.submodules_sindy[list(agent_spice._model.submodules_sindy.keys())[0]]:
+          continue
+          
+      # Calculate normalized log likelihood for SPICE and RNN
+      mask_participant_id = dataset.xs[:, 0, -1] == pid
+      if not mask_participant_id.any():
+          continue
+          
+      participant_data = DatasetRNN(*dataset[mask_participant_id])
+      
+      # Get predictions from both models
+      n_trials_test = len(participant_data.xs[0])
+      
+      # Get probabilities from SPICE and RNN models
+      agent_spice.new_sess(participant_id=pid)
+      agent_rnn.new_sess(participant_id=pid)
+      
+      # Get experiment data
+      experiment = participant_data.xs.cpu().numpy()[0]
+      
+      try:
+          # Calculate NLL for both models
+          result_spice = get_update_dynamics(experiment=experiment, agent=agent_spice)
+          result_rnn = get_update_dynamics(experiment=experiment, agent=agent_rnn)
+          probs_spice = result_spice[1]  # Get the second returned value (choice_probs)
+          probs_rnn = result_rnn[1]  # Get the second returned value (choice_probs)   
+            
+          # Get the probabilities for the chosen actions      
+          # Calculate scores (negative log likelihood)
+          scores_spice = -np.sum(np.log(np.clip(probs_spice, 1e-10, 1.0)))
+          scores_rnn = -np.sum(np.log(np.clip(probs_rnn, 1e-10, 1.0)))
+          
+          # Check if SPICE model is badly fitted
+          spice_per_action_likelihood = np.exp(-scores_spice/(n_trials_test*agent_rnn._n_actions))
+          rnn_per_action_likelihood = np.exp(-scores_rnn/(n_trials_test*agent_rnn._n_actions))
+          
+          # Idea for filter criteria:
+          # If accuracy is very low for SPICE (near chance) but not so low for RNN then bad SPICE fitting (at least a bit higher than chance)
+          # TODO: Check for better filter criteria
+          if spice_per_action_likelihood < lower_threshold_spice and rnn_per_action_likelihood > upper_threshold_rnn:
+              if verbose:
+                  print(f'SPICE NLL ({scores_spice:.2f}) is unplausibly high compared to RNN NLL ({scores_rnn:.2f}).')
+                  print(f'SPICE optimizer seems badly parameterized. Skipping participant {pid}.')
+              
+              # Remove this participant from the SPICE model
+              for module in agent_spice._model.submodules_sindy:
+                  if pid in agent_spice._model.submodules_sindy[module]:
+                      del agent_spice._model.submodules_sindy[module][pid]
+              
+              # Remove from valid participant IDs
+              if pid in valid_participant_ids:
+                  valid_participant_ids.remove(pid)
+          else:
+              # Keep track of filtered (good) participants
+              filtered_participant_ids.append(pid)
+      except Exception as e:
+          if verbose:
+              print(f"Error evaluating participant {pid}: {str(e)}")
+          if pid in valid_participant_ids:
+              valid_participant_ids.remove(pid)
+  
+  if verbose:
+      print(f"\nAfter filtering: {len(valid_participant_ids)} of {len(participant_ids)} participants have well-fitted SPICE models.")
+  
+  # Update participant_ids to only include valid ones
+  participant_ids = np.array(valid_participant_ids)
+  
+  return participant_ids
