@@ -267,12 +267,11 @@ if __name__=='__main__':
   parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate')
 
   # data and training parameters
-  parser.add_argument('--n_actions', type=int, default=2, help='Number of possible actions')
   parser.add_argument('--epochs', type=int, default=128, help='Number of epochs for training')
   parser.add_argument('--n_steps', type=int, default=16, help='Number of recurrent steps per training call; -1: Use whole sequence at once;')
   parser.add_argument('--bagging', action='store_true', help='Whether to use bagging')
   parser.add_argument('--batch_size', type=int, default=-1, help='Batch size; -1: Use whole dataset at once;')
-  parser.add_argument('--lr', type=float, default=5e-3, help='Learning rate of the RNN')
+  parser.add_argument('--learning_rate', type=float, default=5e-3, help='Learning rate of the RNN')
   parser.add_argument('--convergence_threshold', type=float, default=0, help='Convergence threshold to early-stop training')
   parser.add_argument('--train_test_ratio', type=float, default=1.0, help='Ratio of training data')
   parser.add_argument('--sequence_length', type=int, default=-1, help='Length of training sequences; -1: Use whole sequence at once;')
@@ -290,7 +289,7 @@ if __name__=='__main__':
   parser.add_argument('--alpha_counterfactual', type=float, default=0., help='Alpha parameter for the Q-learning update rule')
 
   # Environment parameters
-  parser.add_argument('--n_trials', type=int, default=2, help='Number of possible actions')
+  parser.add_argument('--n_actions', type=int, default=2, help='Number of possible actions')
   parser.add_argument('--sigma', type=float, default=0.2, help='Drift rate of the reward probabilities')
   parser.add_argument('--counterfactual', action='store_true', help='Counterfactual experiment with full feedback (for chosen and not chosen options)')
 
