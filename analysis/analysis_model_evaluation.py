@@ -175,10 +175,10 @@ for index_data in tqdm(range(len(dataset))):
         scores_spice_list.append(scores_spice[0])
         
         # filtering for bad participants
-        avg_trial_likelihood_spice = np.exp(-scores_spice[:1] / (n_trials_test * agent_rnn._n_actions))
-        avg_trial_likelihood_rnn = np.exp(-scores_rnn[:1] / (n_trials_test * agent_rnn._n_actions))
-        if avg_trial_likelihood_spice < 0.6 and avg_trial_likelihood_rnn - avg_trial_likelihood_spice > 0.1:
-            raise AttributeError(f"Trial likelihood difference between RNN ({avg_trial_likelihood_rnn}) and SPICE ({avg_trial_likelihood_spice}) is too big (> 0.1). Skipping participant {pid}.")
+        # avg_trial_likelihood_spice = np.exp(-scores_spice[:1] / (n_trials_test * agent_rnn._n_actions))
+        # avg_trial_likelihood_rnn = np.exp(-scores_rnn[:1] / (n_trials_test * agent_rnn._n_actions))
+        # if avg_trial_likelihood_spice < 0.6 and avg_trial_likelihood_rnn - avg_trial_likelihood_spice > 0.1:
+        #     raise AttributeError(f"Trial likelihood difference between RNN ({avg_trial_likelihood_rnn}) and SPICE ({avg_trial_likelihood_spice}) is too big (> 0.1). Skipping participant {pid}.")
         
         # Benchmark models
         # get scores of all benchmark models but keep only the best one for each session
@@ -217,17 +217,16 @@ for index_data in tqdm(range(len(dataset))):
 # Post processing
 # ------------------------------------------------------------
 
-# print()
-# scores_all = np.concatenate((
-#     np.array(index_participants_list).reshape(-1, 1), 
-#     np.array(n_trials_list).reshape(-1, 1), 
-#     np.array(scores_baseline_list).reshape(-1, 1), 
-#     np.array(scores_rnn_list).reshape(-1, 1), 
-#     np.array(scores_spice_list).reshape(-1, 1),
-#     ), axis=-1)
+scores_all = np.concatenate((
+    np.array(index_participants_list).reshape(-1, 1), 
+    np.array(n_trials_list).reshape(-1, 1), 
+    np.array(scores_baseline_list).reshape(-1, 1), 
+    np.array(scores_rnn_list).reshape(-1, 1), 
+    np.array(scores_spice_list).reshape(-1, 1),
+    ), axis=-1)
 
-# import pandas as pd
-# pd.DataFrame(np.round(scores_all, 2), columns=['Participant', 'Trials', 'Baseline', 'RNN', 'SPICE']).to_csv('all_scores.csv')
+import pandas as pd
+pd.DataFrame(np.round(scores_all, 2), columns=['Participant', 'Trials', 'Baseline', 'RNN', 'SPICE']).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
 avg_log_likelihood = -scores[:, :1] / (considered_trials * agent_rnn._n_actions)
