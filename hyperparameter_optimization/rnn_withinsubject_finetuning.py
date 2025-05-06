@@ -21,6 +21,7 @@ from resources.rnn import RLRNN
 from resources.rnn_utils import DatasetRNN
 from resources.rnn_training import fit_model
 from resources.sindy_training import fit_spice
+from resources.sindy_utils import remove_bad_participants
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -259,6 +260,7 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             agent=agent_rnn, 
             data=train_dataset, 
             get_loss=True,
+            filter_bad_participants=True,
             rnn_modules=list_rnn_modules,
             control_signals=list_control_parameters,
             library_setup=library_setup,
@@ -266,17 +268,16 @@ def objective(trial, train_dataset, val_dataset, n_participants):
             optimizer_alpha=0.1,
             optimizer_threshold=0.05,
             )
+        
         n_parameters_spice = agent_spice.count_parameters(mapping_modules_values={module: 'x_value_choice' if 'choice' in module else 'x_value_reward' for module in agent_spice._model.submodules_sindy})
+        participant_ids = agent_spice.get_participant_ids()
         
         logger.info(f"Trial {trial.number}: RNN Train Loss: {final_train_loss_rnn:.7f}; SPICE Train Loss: {final_train_loss_spice}")
         
         val_loss = 0.0
         n_trials_eval = 0
         
-        val_participant_ids = torch.unique(val_dataset.xs[:, 0, -1]).tolist()
-        logger.info(f"Trial {trial.number}: Validation set has {len(val_participant_ids)} participants")
-        
-        for pid in val_participant_ids:
+        for pid in participant_ids:
             mask = (val_dataset.xs[:, 0, -1] == pid)
             
             xs_val = val_dataset.xs[mask]

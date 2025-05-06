@@ -18,8 +18,6 @@ from sklearn.exceptions import ConvergenceWarning  # Import the specific warning
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-drop_bad_participants = True
-
 path_data = 'data/eckstein2022/eckstein2022.csv'
 path_model_rnn = 'params/eckstein2022/params_eckstein2022.pkl'
 path_model_benchmark = 'params/eckstein2022/params_eckstein2022_MODEL.nc'
@@ -34,7 +32,9 @@ train_test_ratio = 0.8
 
 models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnBr']
-dataset, experiment_list, _, _ = convert_dataset(path_data)
+dataset = convert_dataset(path_data)[0]
+# use these participant_ids if not defined later
+participant_ids = dataset.xs[:, 0, -1].unique().cpu().numpy()
 
 # ------------------------------------------------------------
 # Setup of agents
@@ -102,6 +102,7 @@ sindy_dataprocessing = None#{
 #     'c_value_choice': [1, 1, 0],
 # }
 
+# get SPICE agent
 agent_spice = setup_agent_spice(
     path_model=path_model_rnn,
     path_data=path_data,
@@ -113,10 +114,22 @@ agent_spice = setup_agent_spice(
     sindy_library_polynomial_degree=1,
     regularization=0.1,
     threshold=0.05,
+    filter_bad_participants=True,
 )
+
+# get remaining participant_ids after removing badly fitted participants
+participant_ids = agent_spice.get_participant_ids()
+participant_ids_data = dataset.xs[:, 0, -1].unique().cpu().numpy()
+if len(participant_ids) < len(participant_ids_data):
+    removed_pids = []
+    for pid_data in participant_ids_data:
+        if not pid_data in participant_ids:
+            removed_pids.append(pid_data)
+    print(f'Removed participants due to bad SINDy fit: ' + removed_pids)
+
+# get number of parameters for each SPICE model
 n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
 n_parameters_spice = 0
-
 
 # ------------------------------------------------------------
 # Computation of metrics
@@ -127,34 +140,44 @@ scores = np.zeros((4+len(models_benchmark), 3))
 failed_attempts = 0
 considered_trials = 0
 index_participants_list, scores_spice_list, scores_baseline_list, scores_rnn_list, scores_benchmark_list, n_trials_list = [], [], [], [], [], []
-for index_session in tqdm(range(len(dataset))):
+for index_data in tqdm(range(len(dataset))):
     try:
-        n_trials = len(experiment_list[index_session].choices)
-        n_trials_test = int(n_trials * (1-train_test_ratio))
         # use whole session to include warm-up phase; make sure to exclude warm-up phase when computing metrics
-        session = dataset.xs[index_session, :n_trials]
-        choices = session[..., :agent_rnn._n_actions].cpu().numpy()
-        choices_test = choices[-n_trials_test:]
+        pid = int(dataset.xs[index_data, 0, -1])
+        if not pid in participant_ids:
+            continue
+        data_xs = dataset.xs[index_data].cpu().numpy()
+        # Using here dataset.xs instead of dataset.ys because of probs = get_update_dynamics(...): q_values[0] (0.5, 0.5) -> action[0] (1, 0) or (0, 1) 
+        data_ys = dataset.xs[index_data, :, :agent_rnn._n_actions].cpu().numpy()
         
-        probs_test = get_update_dynamics(experiment=session, agent=agent_baseline[index_session])[1][-n_trials_test:]
-        scores_baseline = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=n_parameters_baseline))
+        # Baseline model
+        probs_baseline = get_update_dynamics(experiment=data_xs, agent=agent_baseline[index_data])[1]
+        
+        # get number of actual trials
+        n_trials = len(probs_baseline)
+        n_trials_test = int(n_trials*train_test_ratio)
+        data_ys = data_ys[:n_trials]
+        
+        scores_baseline = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_baseline[-n_trials_test:], n_parameters=n_parameters_baseline))
         scores_baseline_list.append(scores_baseline[0])
         
-        probs_test = get_update_dynamics(experiment=session, agent=agent_spice)[1][-n_trials_test:]
-        scores_spice = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=n_parameters_spice_all[index_session]))
-        scores_spice_list.append(scores_spice[0])
-        index_participants_list.append(index_session)
-        
-        probs_test = get_update_dynamics(experiment=session, agent=agent_rnn)[1][-n_trials_test:]
-        scores_rnn = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=n_parameters_rnn))
+        # SPICE-RNN
+        probs_rnn = get_update_dynamics(experiment=data_xs, agent=agent_rnn)[1][-n_trials_test:]
+        scores_rnn = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_rnn[-n_trials_test:], n_parameters=n_parameters_rnn))
         scores_rnn_list.append(scores_rnn[0])
         
+        # SPICE
+        probs_spice = get_update_dynamics(experiment=data_xs, agent=agent_spice)[1][-n_trials_test:]
+        scores_spice = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_spice, n_parameters=n_parameters_spice_all[pid]))
+        scores_spice_list.append(scores_spice[0])
+        
+        # Benchmark models
         # get scores of all benchmark models but keep only the best one for each session
         if path_model_benchmark:
             scores_benchmark = []
             for index_model, model in enumerate(models_benchmark):
-                probs_test = get_update_dynamics(experiment=session, agent=agent_benchmark[model][index_session])[1][-n_trials_test:]
-                scores_benchmark_model = np.array(get_scores(data=choices_test, probs=probs_test, n_parameters=mapping_n_parameters_benchmark[model]))
+                probs_benchmark = get_update_dynamics(experiment=data_xs, agent=agent_benchmark[model][pid])[1][-n_trials_test:]
+                scores_benchmark_model = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_benchmark[-n_trials_test:], n_parameters=mapping_n_parameters_benchmark[model]))
                 scores_benchmark.append(scores_benchmark_model)
                 scores[4+index_model] += scores_benchmark_model
             scores_benchmark = np.stack(scores_benchmark)
@@ -163,11 +186,10 @@ for index_session in tqdm(range(len(dataset))):
             index_best_benchmark = index_best_benchmark[0]
             n_parameters_benchmark += mapping_n_parameters_benchmark[models_benchmark[index_best_benchmark]]
         
+        index_participants_list.append(pid)
         n_trials_list.append(copy(n_trials_test))
-        if np.exp(-scores_spice[0]/(n_trials_test*agent_rnn._n_actions)) < 0.6 and np.exp(-scores_rnn[0]/(n_trials_test*agent_rnn._n_actions)) > 0.63:
-            raise ValueError(f'SPICE NLL ({scores_spice[0]}) is unplausibly high compared to RNN NLL ({scores_rnn[0]}). SPICE fitting seems bad parameterized. Skipping participant {index_session}.')
         
-        n_parameters_spice += n_parameters_spice_all[index_session]
+        n_parameters_spice += n_parameters_spice_all[pid]
         
         # track scores
         scores[0] += scores_baseline
@@ -187,16 +209,16 @@ for index_session in tqdm(range(len(dataset))):
 # ------------------------------------------------------------
 
 # print()
-scores_all = np.concatenate((
-    np.array(index_participants_list).reshape(-1, 1), 
-    np.array(n_trials_list).reshape(-1, 1), 
-    np.array(scores_baseline_list).reshape(-1, 1), 
-    np.array(scores_rnn_list).reshape(-1, 1), 
-    np.array(scores_spice_list).reshape(-1, 1),
-    ), axis=-1)
+# scores_all = np.concatenate((
+#     np.array(index_participants_list).reshape(-1, 1), 
+#     np.array(n_trials_list).reshape(-1, 1), 
+#     np.array(scores_baseline_list).reshape(-1, 1), 
+#     np.array(scores_rnn_list).reshape(-1, 1), 
+#     np.array(scores_spice_list).reshape(-1, 1),
+#     ), axis=-1)
 
-import pandas as pd
-pd.DataFrame(np.round(scores_all, 2), columns=['Participant', 'Trials', 'Baseline', 'RNN', 'SPICE']).to_csv('all_scores.csv')
+# import pandas as pd
+# pd.DataFrame(np.round(scores_all, 2), columns=['Participant', 'Trials', 'Baseline', 'RNN', 'SPICE']).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
 avg_log_likelihood = -scores[:, :1] / (considered_trials * agent_rnn._n_actions)
