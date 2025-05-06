@@ -6,10 +6,13 @@ from copy import deepcopy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_sindy
+from resources.sindy_utils import load_spice
+from resources.bandits import AgentSpice
 from utils.convert_dataset import convert_dataset
 from utils.plotting import plot_session
 
-model = 'params/eckstein2022/rnn_eckstein2022.pkl'
+model_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
+model_spice = 'params/eckstein2022/spice_eckstein2022.pkl'
 data = 'data/eckstein2022/eckstein2022.csv'
 
 agent_spice, features, loss = pipeline_sindy.main(
@@ -17,7 +20,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     # data='data/parameter_recovery/data_32p_0.csv',
     # model='params/parameter_recovery/params_32p_0.pkl',
     
-    model = model,
+    model = model_rnn,
     data = data,
     
     # general recovery parameters
@@ -52,7 +55,8 @@ print(loss)
 
 # here starts the testing of the loading functionality
 agent_spice_preload = deepcopy(agent_spice)
-agent_spice.load('params/eckstein2022/spice_eckstein2022.pkl')
+spice_modules = load_spice(file=model_spice)
+AgentSpice(model_rnn=agent_spice_preload._model, sindy_modules=spice_modules, n_actions=agent_spice_preload._n_actions)
 
 dataset = convert_dataset(file=data)[0]
 fig, axs = plot_session(experiment=dataset.xs[0], agents={'groundtruth': agent_spice_preload, 'sindy': agent_spice})

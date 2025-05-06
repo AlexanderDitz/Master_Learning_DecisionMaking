@@ -19,9 +19,10 @@ from sklearn.exceptions import ConvergenceWarning  # Import the specific warning
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model_rnn = 'params/eckstein2022/params_eckstein2022.pkl'
-path_model_benchmark = 'params/eckstein2022/params_eckstein2022_MODEL.nc'
-path_model_baseline = 'params/eckstein2022/params_eckstein2022_ApBr.nc'
+path_model_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
+path_model_spice = 'params/eckstein2022/spice_eckstein2022.pkl'
+path_model_benchmark = 'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
+path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
 
 # path_data = 'data/parameter_recovery/data_16p_0.csv'
 # path_model_rnn = 'params/parameter_recovery/params_16p_0.pkl'
@@ -104,7 +105,8 @@ sindy_dataprocessing = None#{
 
 # get SPICE agent
 agent_spice = setup_agent_spice(
-    path_model=path_model_rnn,
+    path_rnn=path_model_rnn,
+    path_spice=path_model_spice,
     path_data=path_data,
     rnn_modules=rnn_modules,
     control_parameters=control_parameters,
@@ -125,7 +127,7 @@ if len(participant_ids) < len(participant_ids_data):
     for pid_data in participant_ids_data:
         if not pid_data in participant_ids:
             removed_pids.append(pid_data)
-    print(f'Removed participants due to bad SINDy fit: ' + removed_pids)
+    print(f"Removed participants due to bad SINDy fit: {removed_pids}")
 
 # get number of parameters for each SPICE model
 n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
@@ -145,6 +147,7 @@ for index_data in tqdm(range(len(dataset))):
         # use whole session to include warm-up phase; make sure to exclude warm-up phase when computing metrics
         pid = int(dataset.xs[index_data, 0, -1])
         if not pid in participant_ids:
+            print(f"Skipping participant {pid} because they could not be found in the SPICE participants. Probably due to prior filtering of badly fitted participants.")
             continue
         data_xs = dataset.xs[index_data].cpu().numpy()
         # Using here dataset.xs instead of dataset.ys because of probs = get_update_dynamics(...): q_values[0] (0.5, 0.5) -> action[0] (1, 0) or (0, 1) 
@@ -170,6 +173,12 @@ for index_data in tqdm(range(len(dataset))):
         probs_spice = get_update_dynamics(experiment=data_xs, agent=agent_spice)[1][-n_trials_test:]
         scores_spice = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_spice, n_parameters=n_parameters_spice_all[pid]))
         scores_spice_list.append(scores_spice[0])
+        
+        # filtering for bad participants
+        avg_trial_likelihood_spice = np.exp(-scores_spice[:1] / (n_trials_test * agent_rnn._n_actions))
+        avg_trial_likelihood_rnn = np.exp(-scores_rnn[:1] / (n_trials_test * agent_rnn._n_actions))
+        if avg_trial_likelihood_spice < 0.6 and avg_trial_likelihood_rnn - avg_trial_likelihood_spice > 0.1:
+            raise AttributeError(f"Trial likelihood difference between RNN ({avg_trial_likelihood_rnn}) and SPICE ({avg_trial_likelihood_spice}) is too big (> 0.1). Skipping participant {pid}.")
         
         # Benchmark models
         # get scores of all benchmark models but keep only the best one for each session

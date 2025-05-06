@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn import RLRNN
 from resources.bandits import AgentSpice, AgentNetwork, AgentQ
 from resources.sindy_training import fit_spice
+from resources.sindy_utils import load_spice
 from utils.convert_dataset import convert_dataset
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 
@@ -69,7 +70,7 @@ def setup_agent_rnn(
 
 
 def setup_agent_spice(
-    path_model: str,
+    path_rnn: str,
     path_data: str,
     rnn_modules: List[str],
     control_parameters: List[str],
@@ -77,36 +78,43 @@ def setup_agent_spice(
     sindy_library_setup: Dict[str, List],
     sindy_filter_setup: Dict[str, List],
     sindy_dataprocessing: Dict[str, List],
-    threshold = 0.05,
-    regularization = 1,
+    path_spice: str = None,
+    threshold: float = 0.05,
+    regularization: float = 0.1,
     participant_id: int = None,
     deterministic: bool = True,
     filter_bad_participants: bool = False,
     verbose: bool = False,
 ) -> AgentSpice:
     
-    agent_rnn = setup_agent_rnn(path_model=path_model, list_sindy_signals=rnn_modules+control_parameters)
+    agent_rnn = setup_agent_rnn(path_model=path_rnn, list_sindy_signals=rnn_modules+control_parameters)
     dataset = convert_dataset(file=path_data)[0]
     
-    agent_spice, _ = fit_spice(
-        agent=agent_rnn,
-        data=dataset,
-        rnn_modules=rnn_modules,
-        control_signals=control_parameters,
-        polynomial_degree=sindy_library_polynomial_degree,
-        library_setup=sindy_library_setup,
-        filter_setup=sindy_filter_setup,
-        dataprocessing=sindy_dataprocessing,
-        participant_id=participant_id,
-        n_sessions_off_policy=1,
-        n_trials_off_policy=1000,
-        optimizer_alpha=regularization,
-        optimizer_threshold=threshold,
-        deterministic=deterministic,
-        filter_bad_participants=filter_bad_participants,
-        verbose=verbose,
-    )
-
+    if path_spice is None or path_spice == '':
+        # fit SPICE model to RNN
+        agent_spice, _ = fit_spice(
+            agent=agent_rnn,
+            data=dataset,
+            rnn_modules=rnn_modules,
+            control_signals=control_parameters,
+            polynomial_degree=sindy_library_polynomial_degree,
+            library_setup=sindy_library_setup,
+            filter_setup=sindy_filter_setup,
+            dataprocessing=sindy_dataprocessing,
+            participant_id=participant_id,
+            n_sessions_off_policy=1,
+            n_trials_off_policy=1000,
+            optimizer_alpha=regularization,
+            optimizer_threshold=threshold,
+            deterministic=deterministic,
+            filter_bad_participants=filter_bad_participants,
+            verbose=verbose,
+        )
+    else:
+        # load SPICE model from a file
+        spice_modules = load_spice(path_spice)
+        agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions)
+        
     return agent_spice
 
 
@@ -158,6 +166,6 @@ def setup_agent_mcmc(
 if __name__ == '__main__':
     
     setup_agent_spice(
-        path_model = 'params/benchmarking/sugawara2021_143_4.pkl',
+        path_rnn = 'params/benchmarking/sugawara2021_143_4.pkl',
         path_data = 'data/sugawara2021_143_processed.csv',
     )
