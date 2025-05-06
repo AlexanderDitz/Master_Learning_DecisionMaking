@@ -27,7 +27,7 @@ def main(path_model, path_data, path_save, n_trials_per_session):
 
     agent = setup_agent_spice(
         path_data=path_data, 
-        path_model=path_model,
+        path_rnn=path_model,
         rnn_modules=rnn_modules,
         control_parameters=control_parameters,
         sindy_library_setup=sindy_library_setup,

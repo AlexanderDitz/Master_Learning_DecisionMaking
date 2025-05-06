@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('resources')
 from resources.bandits import AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits
-from resources.sindy_utils import check_library_setup
+from resources.sindy_utils import check_library_setup, save_spice
 from resources.rnn_utils import parameter_file_naming
 from resources.sindy_training import fit_spice
 from utils.convert_dataset import convert_dataset
@@ -191,13 +191,14 @@ def main(
         print("ERROR: Failed to fit SPICE model. Returning None.")
         return None, None, None
     
+    # save spice modules
     file_spice = file_rnn.split(os.path.sep)
     if 'rnn' in file_spice[-1]:
         file_spice[-1] = file_spice[-1].replace('rnn', 'spice')
     else:
         file_spice[-1] = 'spice_' + file_spice[-1]
     file_spice = os.path.join(*file_spice)
-    agent_spice.save(file=file_spice)
+    save_spice(agent_spice=agent_spice, file=file_spice)
     
     # ---------------------------------------------------------------------------------------------------
     # Analysis

@@ -98,7 +98,7 @@ for index_simulated_model, simulated_model in enumerate(models):
             n_parameters = 2 if fitted_model == "Baseline" else 5
         else:
             agent = setup_agent_spice(
-                path_model=path_model[fitted_model][simulated_model],
+                path_rnn=path_model[fitted_model][simulated_model],
                 path_data=path_data[simulated_model],
                 rnn_modules=rnn_modules, 
                 control_parameters=control_parameters, 

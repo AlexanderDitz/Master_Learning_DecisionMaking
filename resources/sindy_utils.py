@@ -1,15 +1,12 @@
 import numpy as np
-import torch
 from sklearn.metrics import log_loss, mean_squared_error
 from typing import Iterable, List, Dict, Tuple, Callable, Union
-import matplotlib.pyplot as plt
 import itertools
 import random
 from tqdm import tqdm
+import dill
 
-import pysindy as ps
-
-from resources.bandits import Bandits, AgentNetwork, AgentSpice, get_update_dynamics, BanditSession
+from resources.bandits import AgentNetwork, AgentSpice, get_update_dynamics, BanditSession
 from resources.rnn_utils import DatasetRNN
 from resources.model_evaluation import log_likelihood
 
@@ -366,3 +363,20 @@ def remove_bad_participants(agent_spice: AgentSpice, agent_rnn: AgentNetwork, da
       print(f"Removed participants: {removed_pids}")
   
   return agent_spice, np.array(valid_participant_ids)
+
+
+def save_spice(agent_spice: AgentSpice, file: str):
+  """Saves the SINDy models (coefficients) in a pickle file
+  
+  Args:
+      file (str): file where to store the SINDy coefficients
+  """  
+    
+  with open(file, 'wb') as f:
+    dill.dump(agent_spice.get_modules(), f)
+    
+    
+def load_spice(file) -> Dict:
+  with open(file, 'rb') as f:
+    spice_modules = dill.load(f)
+  return spice_modules

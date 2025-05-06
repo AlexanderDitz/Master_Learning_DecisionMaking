@@ -272,7 +272,7 @@ for index_sess, sess in enumerate(n_sessions):
         
         # setup of sindy agent for current dataset
         sindy_agent = setup_agent_spice(
-            path_model=path_rnn, 
+            path_rnn=path_rnn, 
             path_data=path_data, 
             rnn_modules=rnn_modules, 
             control_parameters=control_parameters, 

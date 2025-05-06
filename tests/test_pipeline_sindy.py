@@ -16,6 +16,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     # general recovery parameters
     participant_id=None,
     filter_bad_participants=True,
+    use_optuna=False,
     
     # sindy parameters
     polynomial_degree=1,

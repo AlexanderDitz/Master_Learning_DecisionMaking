@@ -477,24 +477,8 @@ class AgentSpice(AgentNetwork):
   
   def get_participant_ids(self):
     modules = self.get_modules()
-    return list(modules[list(modules.keys())[0]].keys())
-  
-  def save(self, file):
-    """Saves the SINDy models (coefficients) in a pickle file
-    
-    Args:
-        file (str): file where to store the SINDy coefficients
-    """
-    
-    with open(file, 'wb') as f:
-      dill.dump(self.get_modules(), f)
-    
-  def load(self, file):
-    with open(file, 'rb') as f:
-      self._model.submodules_sindy = dill.load(f)
-    
-    
-    
+    return list(modules[list(modules.keys())[0]].keys())  
+ 
 
 ################
 # ENVIRONMENTS #
