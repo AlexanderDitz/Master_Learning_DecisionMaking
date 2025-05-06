@@ -7,10 +7,10 @@ from tqdm import tqdm
 
 import pysindy as ps
 
-from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset
+from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset, remove_bad_participants
 from resources.rnn_utils import DatasetRNN
 from resources.bandits import AgentNetwork, AgentSpice, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits, get_update_dynamics
-from resources.model_evaluation import akaike_information_criterion as loss_metric
+from resources.model_evaluation import bayesian_information_criterion as loss_metric
 # from resources.model_evaluation import log_likelihood as loss_metric
 
 
@@ -133,16 +133,17 @@ def fit_spice(
     filter_setup: Dict[str, Tuple[str, float]] = {},
     optimizer_type: str = "SR3_L1",
     optimizer_threshold: float = 0.05,
-    optimizer_alpha: float = 1,
+    optimizer_alpha: float = 0.1,
     participant_id: int = None,
     shuffle: bool = False,
     dataprocessing: Dict[str, List] = None,
-    n_trials_off_policy: int = 2048,
+    n_trials_off_policy: int = 1000,
     n_sessions_off_policy: int = 1,
     deterministic: bool = True,
     get_loss: bool = False,
     verbose: bool = False,
     use_optuna: bool = False,
+    filter_bad_participants: bool = False,
     ) -> Tuple[AgentSpice, float]:
     """Fit a SPICE agent by replacing RNN modules with SINDy equations.
 
@@ -280,12 +281,22 @@ def fit_spice(
             optimizer_threshold=pid_optimizer_threshold,
             verbose=verbose,
         )
-        
+            
         for rnn_module in rnn_modules:
             sindy_models[rnn_module][pid] = sindy_models_id[rnn_module]
 
     # set up a SINDy-based agent by replacing the RNN-modules with the respective SINDy-model
     agent_spice = AgentSpice(model_rnn=deepcopy(agent._model), sindy_modules=sindy_models, n_actions=agent._n_actions, deterministic=deterministic)
+    
+    # remove badly fitted participants
+    if filter_bad_participants:
+        agent_spice, participant_ids = remove_bad_participants(
+            agent_spice=agent_spice,
+            agent_rnn=agent,
+            dataset=data,
+            participant_ids=participant_ids,
+            verbose=verbose,
+        )
     
     # compute loss
     loss = None

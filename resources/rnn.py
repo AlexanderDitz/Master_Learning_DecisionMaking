@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as f
 from typing import Optional, Tuple, Dict, Iterable, Callable, Union, List
 import pysindy as ps
 import numpy as np
-from copy import deepcopy
 
 
 class GRUModule(nn.Module):
@@ -22,6 +20,14 @@ class GRUModule(nn.Module):
         # next_state = self.dropout(next_state)
         next_state = self.linear_out(next_state)
         return next_state
+
+
+class DummyModule(nn.Module):
+    def __init__(self):
+        super().__init__()
+        
+    def forward(self, inputs: torch.Tensor):
+        return torch.ones_like(inputs, device=inputs.device, dtype=torch.float).view(-1, 1)
     
     
 class BaseRNN(nn.Module):
@@ -317,7 +323,7 @@ class RLRNN(BaseRNN):
             self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1
-            self.participant_embedding = lambda participant_id: torch.ones_like(participant_id, device=participant_id.device, dtype=torch.float).view(-1, 1)
+            self.participant_embedding = DummyModule()
         
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
@@ -331,8 +337,11 @@ class RLRNN(BaseRNN):
         self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         
         # set up hard-coded equations
-        self.submodules_eq['x_value_reward_chosen'] = lambda value, inputs: value + inputs[..., 1] * (inputs[..., 0] - value)
-        
+        self.submodules_eq['x_value_reward_chosen'] = self.x_value_reward_chosen
+    
+    def x_value_reward_chosen(self, value, inputs):
+        return value + inputs[..., 1] * (inputs[..., 0] - value)
+    
     def forward(self, inputs, prev_state=None, batch_first=False):
         """Forward pass of the RNN
 

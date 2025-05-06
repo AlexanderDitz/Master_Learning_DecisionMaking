@@ -80,7 +80,8 @@ def setup_agent_spice(
     threshold = 0.05,
     regularization = 1,
     participant_id: int = None,
-    deterministic = True,
+    deterministic: bool = True,
+    filter_bad_participants: bool = False,
     verbose: bool = False,
 ) -> AgentSpice:
     
@@ -102,6 +103,7 @@ def setup_agent_spice(
         optimizer_alpha=regularization,
         optimizer_threshold=threshold,
         deterministic=deterministic,
+        filter_bad_participants=filter_bad_participants,
         verbose=verbose,
     )
 

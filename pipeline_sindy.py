@@ -1,16 +1,14 @@
 import sys
+import os
 import warnings
 
-import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Callable, Optional
 
 sys.path.append('resources')
-from resources.rnn import RLRNN
-from resources.bandits import AgentQ, AgentNetwork, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits, get_update_dynamics
-from resources.sindy_utils import check_library_setup, filter_bad_fit_participants
-from resources.rnn_utils import parameter_file_naming, DatasetRNN
+from resources.bandits import AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits
+from resources.sindy_utils import check_library_setup
+from resources.rnn_utils import parameter_file_naming
 from resources.sindy_training import fit_spice
 from utils.convert_dataset import convert_dataset
 from utils.plotting import plot_session as plot_session
@@ -120,12 +118,12 @@ def main(
     
     # set up rnn agent and expose q-values to train sindy
     if model is None:
-        params_path = parameter_file_naming('params/params', beta_reward=beta_reward, alpha_reward=alpha, alpha_penalty=alpha_penalty, beta_choice=beta_choice, alpha_choice=alpha_choice, forget_rate=forget_rate, confirmation_bias=confirmation_bias, alpha_counterfactual=alpha_counterfactual, variance=parameter_variance, verbose=True)
+        file_rnn = parameter_file_naming('params/params', beta_reward=beta_reward, alpha_reward=alpha, alpha_penalty=alpha_penalty, beta_choice=beta_choice, alpha_choice=alpha_choice, forget_rate=forget_rate, confirmation_bias=confirmation_bias, alpha_counterfactual=alpha_counterfactual, variance=parameter_variance, verbose=True)
     else:
-        params_path = model
+        file_rnn = model
     
     agent_rnn = setup_agent_rnn(
-        path_model=params_path,
+        path_model=file_rnn,
         list_sindy_signals=list_rnn_modules+list_control_parameters,
     )
     
@@ -185,24 +183,22 @@ def main(
         shuffle=True,
         verbose=verbose,
         use_optuna=use_optuna,
-    )
-
-    # Filter out badly fitted SPICE models
-    if filter_bad_participants and agent_spice is not None and dataset_test is not None:
-        participant_ids = filter_bad_fit_participants(
-            agent_rnn=agent_rnn,
-            agent_spice=agent_spice,
-            dataset=dataset_test,
-            participant_ids=participant_ids,
-            verbose=verbose,
+        filter_bad_participants=filter_bad_participants,
         )
-        
-        # If agent_spice is None, we couldn't fit the model, so return early
-        if len(participant_ids) == 0:
-            print("ERROR: Failed to fit SPICE model. Returning None.")
-            return None, None, None
-        
-        
+    
+    # If agent_spice is None, we couldn't fit the model, so return early
+    if len(participant_ids) == 0:
+        print("ERROR: Failed to fit SPICE model. Returning None.")
+        return None, None, None
+    
+    file_spice = file_rnn.split(os.path.sep)
+    if 'rnn' in file_spice[-1]:
+        file_spice[-1] = file_spice[-1].replace('rnn', 'spice')
+    else:
+        file_spice[-1] = 'spice_' + file_spice[-1]
+    file_spice = os.path.join(*file_spice)
+    agent_spice.save(file=file_spice)
+    
     # ---------------------------------------------------------------------------------------------------
     # Analysis
     # ---------------------------------------------------------------------------------------------------
@@ -215,11 +211,11 @@ def main(
         
         # print sindy equations from tested sindy agent
         print('\nDiscovered SPICE models:')
-        for model in list_rnn_modules:
-            if participant_id_test in agent_spice._model.submodules_sindy[model]:
-                agent_spice._model.submodules_sindy[model][participant_id_test].print()
+        for module in list_rnn_modules:
+            if participant_id_test in agent_spice._model.submodules_sindy[module]:
+                agent_spice._model.submodules_sindy[module][participant_id_test].print()
             else:
-                print(f"No model available for {model}, participant {participant_id_test}")
+                print(f"No module available for {module}, participant {participant_id_test}")
         print('\n')
         
         # set up ground truth agent by getting parameters from dataset if specified
@@ -250,16 +246,16 @@ def main(
         plt.show()
     
     features = {}
-    for model in agent_spice._model.submodules_sindy:
-        features[model] = {}
-        for pid in agent_spice._model.submodules_sindy[model]:
-            features_i = np.array(agent_spice._model.submodules_sindy[model][pid].get_feature_names())
-            coeffs_i = agent_spice._model.submodules_sindy[model][pid].coefficients()[0]
+    for module in agent_spice._model.submodules_sindy:
+        features[module] = {}
+        for pid in agent_spice._model.submodules_sindy[module]:
+            features_i = np.array(agent_spice._model.submodules_sindy[module][pid].get_feature_names())
+            coeffs_i = agent_spice._model.submodules_sindy[module][pid].coefficients()[0]
             index_u = [not 'dummy' in f for f in features_i]
             features_i = features_i[index_u]
             coeffs_i = coeffs_i[index_u]
             # features[model][pid] = tuple(features_i)
-            features[model][pid] = tuple(coeffs_i)
+            features[module][pid] = tuple(coeffs_i)
     
     features['beta_reward'] = {}
     features['beta_choice'] = {}
@@ -278,15 +274,15 @@ if __name__=='__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description="Run SINDy pipeline with optimizer selection")
-    parser.add_argument("--model", type=str, default='params/benchmarking/rnn_sugawara.pkl', help="Path to model file")
-    parser.add_argument("--data", type=str, default='data/2arm/sugawara2021_143_processed.csv', help="Path to data file")
+    parser.add_argument("--model", type=str, help="Path to model file")
+    parser.add_argument("--data", type=str, default=None, help="Path to data file")
     parser.add_argument("--participant_id", type=int, default=None, help="Participant ID")
     parser.add_argument("--polynomial_degree", type=int, default=2, help="Polynomial degree")
     parser.add_argument("--optimizer_type", type=str, default="SR3_L1", choices=["STLSQ", "SR3_L1", "SR3_weighted_l1"], help="Optimizer type")
     parser.add_argument("--optimizer_alpha", type=float, default=0.1, help="Optimizer alpha")
     parser.add_argument("--optimizer_threshold", type=float, default=0.05, help="Optimizer threshold")
     parser.add_argument("--use_optuna", action="store_true", help="Use Optuna to find the best optimizer for each participant")
-    parser.add_argument("--filter_bad_participants", action="store_true", help="Filter out badly fitted participants")
+    parser.add_argument("--filter_bad_participants", action="store_true", help="Remove badly fitted participants")
     parser.add_argument("--n_trials_off_policy", type=int, default=1024, help="Number of trials for off-policy data")
     parser.add_argument("--n_sessions_off_policy", type=int, default=1, help="Number of sessions for off-policy data")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")

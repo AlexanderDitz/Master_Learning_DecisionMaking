@@ -1,20 +1,27 @@
 import sys
 import os
 
+import matplotlib.pyplot as plt
+from copy import deepcopy
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_sindy
+from utils.convert_dataset import convert_dataset
+from utils.plotting import plot_session
 
+model = 'params/eckstein2022/rnn_eckstein2022.pkl'
+data = 'data/eckstein2022/eckstein2022.csv'
 
 agent_spice, features, loss = pipeline_sindy.main(
     
     # data='data/parameter_recovery/data_32p_0.csv',
     # model='params/parameter_recovery/params_32p_0.pkl',
     
-    model = 'params/eckstein2022/rnn_eckstein2022.pkl',
-    data = 'data/eckstein2022/eckstein2022.csv',
+    model = model,
+    data = data,
     
     # general recovery parameters
-    participant_id=None,
+    participant_id=0,
     filter_bad_participants=True,
     
     # sindy parameters
@@ -41,5 +48,12 @@ agent_spice, features, loss = pipeline_sindy.main(
     analysis=True,
     get_loss=True,
 )
-
 print(loss)
+
+# here starts the testing of the loading functionality
+agent_spice_preload = deepcopy(agent_spice)
+agent_spice.load('params/eckstein2022/spice_eckstein2022.pkl')
+
+dataset = convert_dataset(file=data)[0]
+fig, axs = plot_session(experiment=dataset.xs[0], agents={'groundtruth': agent_spice_preload, 'sindy': agent_spice})
+plt.show()
