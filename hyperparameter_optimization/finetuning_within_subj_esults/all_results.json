@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "dataset": "eckstein2022.csv",
+      "best_params": {
+        "l1_weight_decay": 1.2928624653076173e-05,
+        "l2_weight_decay": 1.6053304302475684e-05
+      },
+      "best_val_loss": 3.1214122614288193
+    }
+  ]
+}

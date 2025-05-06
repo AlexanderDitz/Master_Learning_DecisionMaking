@@ -1,0 +1,13 @@
+{
+  "dataset": "data_128p_0.csv",
+  "best_params": {
+    "l1_weight_decay": 9.023772557409192e-05,
+    "l2_weight_decay": 0.0059604516648050785
+  },
+  "best_val_loss": 3.41814262670972,
+  "final_train_loss": 0.6296792030334473,
+  "sindy_bic": NaN,
+  "sindy_ll": NaN,
+  "participant_equations": {},
+  "participant_metrics": {}
+}
