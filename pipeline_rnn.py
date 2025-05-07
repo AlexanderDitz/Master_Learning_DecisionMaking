@@ -31,6 +31,8 @@ def main(
   train_test_ratio = 1.,
   n_trials = 200,
   n_sessions = 256,
+  l1_weight_decay=1e-4,
+  l2_weight_decay=1e-4,
   bagging = False,
   sequence_length = -1,
   n_steps = 16,  # -1 for full sequence
@@ -200,6 +202,8 @@ def main(
         bagging=bagging,
         n_steps=n_steps,
         scheduler=scheduler,
+        l1_weight_decay=l1_weight_decay,
+        l2_weight_decay=l2_weight_decay,
     )
     
     # save trained parameters
@@ -272,6 +276,8 @@ if __name__=='__main__':
   parser.add_argument('--bagging', action='store_true', help='Whether to use bagging')
   parser.add_argument('--batch_size', type=int, default=-1, help='Batch size; -1: Use whole dataset at once;')
   parser.add_argument('--learning_rate', type=float, default=5e-3, help='Learning rate of the RNN')
+  parser.add_argument('--l1_weight_decay', type=float, default=1e-4, help='Learning rate of the RNN')
+  parser.add_argument('--l2_weight_decay', type=float, default=1e-4, help='Learning rate of the RNN')
   parser.add_argument('--convergence_threshold', type=float, default=0, help='Convergence threshold to early-stop training')
   parser.add_argument('--train_test_ratio', type=float, default=1.0, help='Ratio of training data')
   parser.add_argument('--sequence_length', type=int, default=-1, help='Length of training sequences; -1: Use whole sequence at once;')
@@ -321,6 +327,8 @@ if __name__=='__main__':
     learning_rate = args.learning_rate,
     convergence_threshold = args.convergence_threshold,
     scheduler = args.scheduler,
+    l1_weight_decay=args.l1_weight_decay,
+    l2_weight_decay=args.l2_weight_decay,
     
     # ground truth parameters
     beta_reward = args.beta_reward,

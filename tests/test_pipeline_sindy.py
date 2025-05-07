@@ -10,8 +10,9 @@ agent_spice, features, loss = pipeline_sindy.main(
     # data='data/parameter_recovery/data_32p_0.csv',
     # model='params/parameter_recovery/params_32p_0.pkl',
     
-    model = 'params/eckstein2022/rnn_eckstein2022.pkl',
+    model = 'params/eckstein2022/rnn_eckstein2022_l1_0_0001_l2_0_0001.pkl',
     data = 'data/eckstein2022/eckstein2022.csv',
+    save = True,
     
     # general recovery parameters
     participant_id=None,
