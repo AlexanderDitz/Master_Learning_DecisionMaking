@@ -19,6 +19,7 @@ warnings.filterwarnings("ignore")
 def main(
     model: str = None,
     data: str = None,
+    save: bool = False,
     
     # generated dataset parameters
     participant_id: int = None,
@@ -101,12 +102,12 @@ def main(
     dataprocessing_setup = {
         'x_learning_rate_reward': [0, 0, 0],
         'x_value_reward_not_chosen': [0, 0, 0],
-        'x_value_choice_chosen': [1, 0, 1],
-        'x_value_choice_not_chosen': [1, 0, 1],
+        'x_value_choice_chosen': [1, 1, 0],
+        'x_value_choice_not_chosen': [1, 1, 0],
         # 'c_action': [0, 0, 0],
         # 'c_reward': [0, 0, 0],
         'c_value_reward': [0, 0, 0],
-        'c_value_choice': [1, 0, 1],
+        'c_value_choice': [1, 1, 0],
     }
     
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):
@@ -192,13 +193,15 @@ def main(
         return None, None, None
     
     # save spice modules
-    file_spice = file_rnn.split(os.path.sep)
-    if 'rnn' in file_spice[-1]:
-        file_spice[-1] = file_spice[-1].replace('rnn', 'spice')
-    else:
-        file_spice[-1] = 'spice_' + file_spice[-1]
-    file_spice = os.path.join(*file_spice)
-    save_spice(agent_spice=agent_spice, file=file_spice)
+    if save:
+        file_spice = file_rnn.split(os.path.sep)
+        if 'rnn' in file_spice[-1]:
+            file_spice[-1] = file_spice[-1].replace('rnn', 'spice')
+        else:
+            file_spice[-1] = 'spice_' + file_spice[-1]
+        file_spice = os.path.join(*file_spice)
+        save_spice(agent_spice=agent_spice, file=file_spice)
+        print("Saved SPICE parameters to file " + file_spice)
     
     # ---------------------------------------------------------------------------------------------------
     # Analysis
@@ -289,12 +292,14 @@ if __name__=='__main__':
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("--analysis", action="store_true", help="Perform analysis")
     parser.add_argument("--get_loss", action="store_true", help="Compute loss")
+    parser.add_argument("--save", action="store_true", help="Pickle SPICE parameters")
     
     args = parser.parse_args()
     
     agent_spice, features, loss = main(
         model=args.model,
         data=args.data,
+        save=args.save,
         participant_id=args.participant_id,
         polynomial_degree=args.polynomial_degree,
         optimizer_type=args.optimizer_type,

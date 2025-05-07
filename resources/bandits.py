@@ -316,112 +316,108 @@ class AgentQ_SampleZeros(AgentQ):
 
 
 class AgentNetwork:
-    """A class that allows running a pretrained RNN as an agent.
+  """A class that allows running a pretrained RNN as an agent.
 
-    Attributes:
-        model: A PyTorch module representing the RNN architecture
-    """
+  Attributes:
+      model: A PyTorch module representing the RNN architecture
+  """
 
-    def __init__(
-      self,
-      model_rnn,
-      n_actions: int = 2,
-      device = torch.device('cpu'),
-      deterministic: bool = True,
-      ):
-        """Initialize the agent network.
+  def __init__(
+    self,
+    model_rnn,
+    n_actions: int = 2,
+    device = torch.device('cpu'),
+    deterministic: bool = True,
+    ):
+      """Initialize the agent network.
 
-        Args:
-            model: A PyTorch module representing the RNN architecture
-            n_actions: number of permitted actions (default = 2)
-        """
-        
-        assert isinstance(model_rnn, BaseRNN), "The passed model is not an instance of BaseRNN."
-                
-        self._deterministic = deterministic
-        self._q_init = 0.5
-        self._n_actions = n_actions
-
-        self._model = model_rnn
-        self._model.set_device(device)
-        self._model = self._model.to(device)
-        self._model.eval()
-        
-        self.new_sess()
-
-    def new_sess(self, participant_id: int = 0, **kwargs):
-      """Reset the network for the beginning of a new session."""
-      if not isinstance(participant_id, torch.Tensor):
-        participant_id = torch.tensor(participant_id, dtype=int, device=self._model.device)[None]
+      Args:
+          model: A PyTorch module representing the RNN architecture
+          n_actions: number of permitted actions (default = 2)
+      """
       
-      self._model.set_initial_state(batch_size=1)
+      assert isinstance(model_rnn, BaseRNN), "The passed model is not an instance of BaseRNN."
+              
+      self._deterministic = deterministic
+      self._q_init = 0.5
+      self._n_actions = n_actions
+
+      self._model = model_rnn
+      self._model.set_device(device)
+      self._model = self._model.to(device)
+      self._model.eval()
       
-      self._xs = torch.zeros((1, self._n_actions*2+1))
-      self._xs[0, -1] = participant_id
-      
-      self.set_state()
+      self.new_sess()
 
-    def get_logit(self):
-      """Return the value of the agent's current state."""
-      betas = self.get_betas()
-      if betas is not None:
-        logits = np.sum(
-          np.concatenate([
-            self._state[key] * betas[key] for key in self._state if 'x_value' in key
-            ]), 
-          axis=0)
-      else:
-        logits = np.sum(
-          np.concatenate([
-            self._state[key] for key in self._state if 'x_value' in key
-            ]),
-          axis=0)
-      return logits
+  def new_sess(self, participant_id: int = 0, **kwargs):
+    """Reset the network for the beginning of a new session."""
+    if not isinstance(participant_id, torch.Tensor):
+      participant_id = torch.tensor(participant_id, dtype=int, device=self._model.device)[None]
     
-    def get_choice_probs(self) -> np.ndarray:
-      """Predict the choice probabilities as a softmax over output logits."""
-      decision_variable = self.get_logit()
-      choice_probs = np.exp(decision_variable) / np.sum(np.exp(decision_variable))
-      return choice_probs
-
-    def get_choice(self):
-      """Sample choice."""
-      choice_probs = self.get_choice_probs()
-      if self._deterministic:
-        return np.argmax(choice_probs)
-      else:
-        return np.random.choice(self._n_actions, p=choice_probs)
-
-    def update(self, choice: float, reward: float, participant_id: float, *args, **kwargs):
-      choice = torch.eye(self._n_actions)[int(choice)]
-      self._xs = torch.concat([choice, torch.tensor(reward), torch.tensor(participant_id).view(-1)]).view(1, 1, -1).to(device=self._model.device)
-      with torch.no_grad():
-        self._model(self._xs, self._model.get_state(detach=True))
-      self.set_state()
+    self._model.set_initial_state(batch_size=1)
     
-    def set_state(self):
-      self._state = self._model.get_state()
-
-    def get_betas(self):
-      if hasattr(self._model, 'betas'):
-        betas = {}
-        if hasattr(self._model, 'participant_embedding'):
-          participant_embedding = self._model.participant_embedding(torch.tensor(self._xs[..., -1], device=self._model.device, dtype=torch.int32).view(1, 1))
-          for key in self._model.betas:
-            betas[key] = self._model.betas[key](participant_embedding).item()
-        else:
-          for key in self._model.betas:
-            betas[key] = self._model.betas[key].item()
-        return betas
-      return None
-
-    @property
-    def q(self):
-      return self.get_logit()
+    self._xs = torch.zeros((1, self._n_actions*2+1))
+    self._xs[0, -1] = participant_id
     
-    def get_participant_ids(self):
-      if hasattr(self._model, 'participant_embedding'):
-        return tuple(np.arange(self._model.participant_embedding.num_embeddings).tolist())
+    self.set_state()
+
+  def get_logit(self):
+    """Return the value of the agent's current state."""
+    betas = self.get_betas()
+    if betas is not None:
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] * betas[key] for key in self._state if 'x_value' in key
+          ]), 
+        axis=0)
+    else:
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] for key in self._state if 'x_value' in key
+          ]),
+        axis=0)
+    return logits
+  
+  def get_choice_probs(self) -> np.ndarray:
+    """Predict the choice probabilities as a softmax over output logits."""
+    decision_variable = self.get_logit()
+    choice_probs = np.exp(decision_variable) / np.sum(np.exp(decision_variable))
+    return choice_probs
+
+  def get_choice(self):
+    """Sample choice."""
+    choice_probs = self.get_choice_probs()
+    if self._deterministic:
+      return np.argmax(choice_probs)
+    else:
+      return np.random.choice(self._n_actions, p=choice_probs)
+
+  def update(self, choice: float, reward: float, participant_id: float, *args, **kwargs):
+    choice = torch.eye(self._n_actions)[int(choice)]
+    self._xs = torch.concat([choice, torch.tensor(reward), torch.tensor(participant_id).view(-1)]).view(1, 1, -1).to(device=self._model.device)
+    with torch.no_grad():
+      self._model(self._xs, self._model.get_state(detach=True))
+    self.set_state()
+  
+  def set_state(self):
+    self._state = self._model.get_state()
+
+  def get_betas(self):
+    if hasattr(self._model, 'betas'):
+      betas = {}
+      participant_embedding = self._model.participant_embedding(torch.tensor(self._xs[..., -1], device=self._model.device, dtype=torch.int32).view(1, 1))
+      for key in self._model.betas:
+        betas[key] = self._model.betas[key](participant_embedding).item()
+      return betas
+    return None
+
+  @property
+  def q(self):
+    return self.get_logit()
+  
+  def get_participant_ids(self):
+    if hasattr(self._model, 'participant_embedding'):
+      return tuple(np.arange(self._model.participant_embedding.num_embeddings).tolist())
 
 
 class AgentSpice(AgentNetwork):
@@ -887,7 +883,7 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
     learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
     
     choice_probs[trial] = agent.get_choice_probs()
-    agent.update(np.argmax(choices[trial], axis=-1), rewards[trial], participant_id)
+    agent.update(choice=np.argmax(choices[trial], axis=-1), reward=rewards[trial], participant_id=participant_id)
   
   return (q, q_reward, q_choice, learning_rate_reward), choice_probs, agent
 

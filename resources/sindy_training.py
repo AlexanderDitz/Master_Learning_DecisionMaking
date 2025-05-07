@@ -11,8 +11,7 @@ from resources.sindy_utils import remove_control_features, conditional_filtering
 from resources.rnn_utils import DatasetRNN
 from resources.bandits import AgentNetwork, AgentSpice, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits, get_update_dynamics
 from resources.model_evaluation import bayesian_information_criterion as loss_metric
-# from resources.model_evaluation import log_likelihood as loss_metric
-
+from resources.optimizer_selection import optimize_for_participant
 
 def fit_sindy(
     variables: List[np.ndarray], 
@@ -236,7 +235,6 @@ def fit_spice(
 
         # If using Optuna, find the best optimizer configuration for this participant
         if use_optuna:
-            from optimizer_selection import optimize_for_participant
             
             # Find optimal optimizer and parameters for this participant
             optimizer_config = optimize_for_participant(

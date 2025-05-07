@@ -343,7 +343,7 @@ def remove_bad_participants(agent_spice: AgentSpice, agent_rnn: AgentNetwork, da
       if rnn_per_action_likelihood - spice_per_action_likelihood > trial_likelihood_difference_threshold:
           if verbose:
               print(f'SPICE trial likelihood ({spice_per_action_likelihood:.2f}) is unplausibly low compared to RNN trial likelihood ({rnn_per_action_likelihood:.2f}).')
-              print(f'SPICE optimizer seems badly parameterized. Skipping participant {pid}.')
+              print(f'SPICE optimizer may be badly parameterized. Skipping participant {pid}.')
           
           # Remove this participant from the SPICE model
           for module in agent_spice._model.submodules_sindy:
