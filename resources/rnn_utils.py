@@ -56,8 +56,8 @@ class DatasetRNN(Dataset):
         if sequence_length is not None:
             xs, ys = self.set_sequences(xs, ys)
         self.device = device
-        self.xs = xs
-        self.ys = ys
+        self.xs = xs.to(device)
+        self.ys = ys.to(device)
         
     def normalize(self, data):
         x_min = torch.min(data)
@@ -140,7 +140,7 @@ def parameter_file_naming(params_path, alpha_reward, alpha_penalty, alpha_counte
     return params_path
 
 
-def split_data_along_timedim(dataset: DatasetRNN, split_ratio: float):
+def split_data_along_timedim(dataset: DatasetRNN, split_ratio: float, device: torch.device = torch.device('cpu')):
     """Split the data along the time dimension (dim=1). 
     Each session (dim=0) can be of individual length and is therefore post-padded with -1.
     To split the data into training and testing samples according to the split_ratio each session's individual length has to be considered.
@@ -174,10 +174,10 @@ def split_data_along_timedim(dataset: DatasetRNN, split_ratio: float):
     split_indices = (last_nonzero_indices * split_ratio).int()
     
     # initialize training data and testing data storages
-    train_xs = torch.zeros((xs.shape[0], max(split_indices), xs.shape[2])) - 1
-    test_xs = torch.zeros((xs.shape[0], max(last_nonzero_indices - split_indices), xs.shape[2])) - 1
-    train_ys = torch.zeros((xs.shape[0], max(split_indices), ys.shape[2])) - 1
-    test_ys = torch.zeros((xs.shape[0], max(last_nonzero_indices - split_indices), ys.shape[2])) - 1
+    train_xs = torch.zeros((xs.shape[0], max(split_indices), xs.shape[2]), device=dataset.device) - 1
+    test_xs = torch.zeros((xs.shape[0], max(last_nonzero_indices - split_indices), xs.shape[2]), device=dataset.device) - 1
+    train_ys = torch.zeros((xs.shape[0], max(split_indices), ys.shape[2]), device=dataset.device) - 1
+    test_ys = torch.zeros((xs.shape[0], max(last_nonzero_indices - split_indices), ys.shape[2]), device=dataset.device) - 1
     
     # get columns which had no -1 values in the first place to fill them up entirely in the training and testing data
     # necessary for e.g. participant-IDs because otherwise -1 will be passed to embedding layer -> Error
@@ -195,4 +195,4 @@ def split_data_along_timedim(dataset: DatasetRNN, split_ratio: float):
         train_xs[index_session, :, full_columns] = xs[index_session, :train_xs.shape[1], full_columns]
         test_xs[index_session, :, full_columns] = xs[index_session, :test_xs.shape[1], full_columns]
     
-    return DatasetRNN(train_xs, train_ys), DatasetRNN(test_xs, test_ys)
+    return DatasetRNN(train_xs, train_ys, device=device), DatasetRNN(test_xs, test_ys, device=device)

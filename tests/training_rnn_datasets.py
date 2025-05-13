@@ -12,7 +12,7 @@ datasets = os.listdir(path_datasets)
 losses = []
 for d in datasets:
     dataset = os.path.join(path_datasets, d)
-    model = os.path.join(path_params, d.replace('.csv', f'.pkl').replace('data', 'params'))
+    model = os.path.join(path_params, d.replace('.csv', f'.pkl').replace('data', 'rnn'))
     
     _, loss = pipeline_rnn.main(
         checkpoint=False,

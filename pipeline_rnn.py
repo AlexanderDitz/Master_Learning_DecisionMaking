@@ -29,8 +29,6 @@ def main(
   # data and training parameters
   epochs = 128,
   train_test_ratio = 1.,
-  n_trials = 200,
-  n_sessions = 256,
   l1_weight_decay=1e-4,
   l2_weight_decay=1e-4,
   bagging = False,
@@ -38,10 +36,12 @@ def main(
   n_steps = 16,  # -1 for full sequence
   batch_size = -1,  # -1 for one batch per epoch
   learning_rate = 5e-3,
-  convergence_threshold = 1e-6,
+  convergence_threshold = 0,
   scheduler = False,
   
   # ground truth parameters
+  n_trials = 200,
+  n_sessions = 256,
   beta_reward = 3.,
   alpha_reward = 0.25,
   alpha_penalty = -1.,
@@ -105,7 +105,8 @@ def main(
         n_sessions=n_sessions,
         sample_parameters=parameter_variance!=0,
         sequence_length=sequence_length,
-        device=device)
+        device=device,
+        )
     
     # set participant ids to 0
     dataset.xs[..., -1] = 0.
@@ -123,7 +124,7 @@ def main(
 
     print('Generation of dataset complete.')
   else:
-    dataset, _, df, _ = convert_dataset.convert_dataset(data, sequence_length=sequence_length)
+    dataset, _, df, _ = convert_dataset.convert_dataset(data, sequence_length=sequence_length, device=device)
     # dataset_test = rnn_utils.DatasetRNN(dataset.xs, dataset.ys)
     
     # check if groundtruth parameters in data - only applicable to generated data with e.g. utils/create_dataset.py
@@ -143,11 +144,11 @@ def main(
   
   if train_test_ratio < 1:
     dataset_train, dataset_test = rnn_utils.split_data_along_timedim(dataset, train_test_ratio)
-    dataset_train = bandits.DatasetRNN(dataset_train.xs, dataset_train.ys, sequence_length=sequence_length)
+    dataset_train = bandits.DatasetRNN(dataset_train.xs, dataset_train.ys, sequence_length=sequence_length, device=device)
   else:
-    dataset_train = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length)
-    if dataset_test is None:
-      dataset_test = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length)
+    dataset_train = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length, device=device)
+    # if dataset_test is None:
+    #   dataset_test = bandits.DatasetRNN(dataset.xs, dataset.ys, device=device)
     
   if data is None and model is None:
     params_path = rnn_utils.parameter_file_naming(
@@ -173,7 +174,6 @@ def main(
       n_actions=n_actions, 
       hidden_size=hidden_size, 
       embedding_size=embedding_size,
-      device=device,
       dropout=dropout,
       n_participants=n_participants,
       ).to(device)
@@ -195,6 +195,8 @@ def main(
     model, optimizer_rnn, _ = rnn_training.fit_model(
         model=model,
         dataset_train=dataset_train,
+        dataset_test=dataset_test,
+        # dataset_test=dataset_train,
         optimizer=optimizer_rnn,
         convergence_threshold=convergence_threshold,
         epochs=epochs,
@@ -213,20 +215,16 @@ def main(
     torch.save(state_dict, params_path)
     print(f'Saved RNN parameters to file {params_path}.')
     print(f'Training took {time.time() - start_time:.2f} seconds.')
-  else:
-    if isinstance(model, list):
-      model = model[0]
-      optimizer_rnn = optimizer_rnn[0]
   
   # validate model
-  if dataset_test is not None:
-    print('\nTesting the trained RNN on the test dataset...')
-    model.eval()
-    with torch.no_grad():
-      _, _, loss_test = rnn_training.fit_model(
-          model=model,
-          dataset_train=dataset_test,
-      )
+  str_data = 'test' if dataset_test is not None else 'train'
+  print(f'\nTesting the trained RNN on the', str_data, 'dataset...')
+  model.eval()
+  with torch.no_grad():
+    _, _, loss_test = rnn_training.fit_model(
+        model=model,
+        dataset_train=dataset_test if dataset_test is not None else dataset_train,
+    )
   
   # -----------------------------------------------------------
   # Analysis
@@ -243,7 +241,7 @@ def main(
     else:
       agents = {'rnn': agent_rnn}
 
-    fig, axs = plotting.plot_session(agents, dataset_test.xs[participant_id])
+    fig, axs = plotting.plot_session(agents, dataset_test.xs[participant_id] if dataset_test is not None else dataset_train.xs[participant_id])
     
     title_ground_truth = ''
     if agent is not None:

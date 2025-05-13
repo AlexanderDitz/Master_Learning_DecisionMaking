@@ -10,7 +10,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     # data='data/parameter_recovery/data_32p_0.csv',
     # model='params/parameter_recovery/params_32p_0.pkl',
     
-    model = 'params/eckstein2022/rnn_eckstein2022_l1_0_0001_l2_0_0001.pkl',
+    model = 'params/eckstein2022/rnn_eckstein2022_l1_0_0001_l2_0_multistep.pkl',
     data = 'data/eckstein2022/eckstein2022.csv',
     save = True,
     
@@ -20,6 +20,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     use_optuna=False,
     
     # sindy parameters
+    optimizer_type="SR3_weighted_l1",
     polynomial_degree=1,
     optimizer_alpha=0.1,
     optimizer_threshold=0.05,

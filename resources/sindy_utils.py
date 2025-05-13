@@ -199,15 +199,19 @@ def check_library_setup(library_setup: Dict[str, List[str]], feature_names: List
   
 
 def remove_control_features(control_variables: List[np.ndarray], feature_names: List[str], target_feature_names: List[str]) -> List[np.ndarray]:
-  index_target_features = []
-  for index_f, f_name in enumerate(feature_names):
-    if f_name in target_feature_names:
-      index_target_features.append(index_f)
-  index_target_features = np.array(index_target_features)
-  
-  for index_group in range(len(control_variables)):
-    control_variables[index_group] = control_variables[index_group][:, index_target_features]
+  if len(target_feature_names) > 0:
+    index_target_features = []
+    for index_f, f_name in enumerate(feature_names):
+      if f_name in target_feature_names:
+        index_target_features.append(index_f)
+    index_target_features = np.array(index_target_features)
     
+    for index_group in range(len(control_variables)):
+      control_variables[index_group] = control_variables[index_group][:, index_target_features]
+  else:
+    # for index_group in range(len(control_variables)):
+    #   control_variables[index_group] = np.zeros_like(control_variables[index_group][:, :1])
+    return None
   return control_variables
 
 def conditional_filtering(x_train: List[np.ndarray], control: List[np.ndarray], feature_names: List[str], feature_filter: str, condition: float, remove_feature_filter=True) -> Tuple[List[np.ndarray], List[np.ndarray]]:
