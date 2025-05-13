@@ -70,10 +70,10 @@ def fit_sindy(
         feature_names_i = [x_feature] + library_setup[x_feature]
         
         # add a dummy control feature if no control features are remaining - otherwise sindy breaks
-        if control_i is None or len(control_i) == 0:
-            raise NotImplementedError('Having no control signal in a module is currently not implemented')
-            control_i = None
-            feature_names_i = feature_names_i + ['dummy']
+        # if control_i is None or len(control_i) == 0:
+        #     raise NotImplementedError('Having no control signal in a module is currently not implemented')
+        #     control_i = None
+        #     feature_names_i = feature_names_i + ['dummy']
         
         # Set up increasing thresholds with polynomial degree for SR3_weighted_l1
         if optimizer_type == "SR3_weighted_l1":

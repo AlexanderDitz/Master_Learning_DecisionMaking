@@ -8,6 +8,83 @@ from resources.rnn import BaseRNN
 from resources.rnn_utils import DatasetRNN
 
 
+class ReduceOnPlateauWithRestarts:
+    def __init__(self, optimizer, min_lr, factor, patience):
+        """
+        Plateau-based LR scheduler with restarts to the base learning rate when min_lr is hit.
+
+        Parameters:
+        - optimizer: Optimizer instance.
+        - min_lr: The minimum learning rate after reductions.
+        - factor: Multiplicative factor to reduce the LR on plateau.
+        - patience: Number of epochs with no improvement before reducing the LR.
+        """
+        self.optimizer = optimizer
+        self.min_lr = min_lr
+        self.base_lrs = [group['initial_lr'] for group in optimizer.param_groups]  # Extract base LRs
+        self.factor = factor
+        self.patience = patience
+        self.base_patience = patience
+        
+        self.best = float('inf')  # Initialize the best validation loss as infinity
+        self.num_bad_epochs = 0  # Initialize the count of bad epochs
+        self.num_cycles_completed = 0
+        
+        # Store the current learning rate for each parameter group
+        self.current_lrs = [group['lr'] for group in optimizer.param_groups]
+
+    def step(self, metrics):
+        """
+        Update the learning rate based on the validation loss.
+        """
+        if metrics < self.best:
+            self.best = metrics
+            self.num_bad_epochs = 0  # Reset bad epochs counter
+        else:
+            self.num_bad_epochs += 1
+        
+        # Check if patience is exceeded
+        if self.num_bad_epochs > self.patience:
+            self._reduce_lr()  # Reduce learning rates
+            self._adjust_patience()  # Adjust the patience according to the learning rate
+            self.num_bad_epochs = 0  # Reset bad epochs counter
+
+    def _reduce_lr(self):
+        """
+        Reduce the learning rate for all parameter groups by the given factor.
+        """
+        for i, param_group in enumerate(self.optimizer.param_groups):            
+            
+            old_lr = param_group['lr']
+            new_lr = max(old_lr * self.factor, self.min_lr)
+            
+            # Check if the new learning rate has hit min_lr and reset if so
+            if new_lr <= self.min_lr:
+                param_group['lr'] = self.base_lrs[i]
+                self.num_cycles_completed += 1
+            else:
+                param_group['lr'] = new_lr
+    
+    def _adjust_patience(self):
+        """
+        Adjust the patience according to the learning rate.
+        """
+        # self.patience = max([self.patience * (1+self.num_cycles_completed) if self.get_lr()[-1] < self.base_lrs[-1] else self.base_patience, 200])
+        self.patience = self.patience * 2 if self.get_lr()[-1] < self.base_lrs[-1] else self.base_patience
+
+    def get_lr(self):
+        """
+        Retrieve the current learning rates for all parameter groups.
+        """
+        return [group['lr'] for group in self.optimizer.param_groups]
+    
+    def get_last_lr(self):
+        """
+        Retrieve the last computed learning rates for all parameter groups.
+        """
+        return [group['lr'] for group in self.optimizer.param_groups]
+    
+
 def batch_train(
     model: BaseRNN,
     xs: torch.Tensor,
@@ -59,7 +136,8 @@ def batch_train(
                 param.abs().sum()
                 for name, param in model.named_parameters()
                 if "embedding" not in name
-                ]).sum()
+                # if "embedding" in name
+                ]).mean()
             
             # L2 weight decay on participant embedding to enforce smoother gradients between participants and prevent overfitting
             if model.embedding_size > 1:
@@ -67,7 +145,8 @@ def batch_train(
                     param.pow(2).sum()
                     for name, param in model.named_parameters()
                     if "embedding" in name
-                    ]).sum()
+                    # if "embedding" not in name
+                    ]).mean()
             else:
                 l2_reg = 0
             
@@ -132,16 +211,23 @@ def fit_model(
     
     # set up learning rate scheduler
     if scheduler and optimizer is not None:
-        warmup_steps = int(epochs * 0.125/4)
+        warmup_steps = 64 if epochs > 64 else 0 #int(epochs * 0.125/16)
         # Define the LambdaLR scheduler for warm-up
         def warmup_lr_lambda(current_step):
             if current_step < warmup_steps:
-                return float(current_step) / float(max(1, warmup_steps))
+                return float(current_step) / float(max(1, warmup_steps)) * 10
             return 1.0  # No change after warm-up phase
 
         # Create the scheduler with the Lambda function
         scheduler_warmup = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2)
+        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.1, patience=10, threshold=0, cooldown=64, min_lr=1e-6)
+        scheduler = ReduceOnPlateauWithRestarts(optimizer=optimizer, min_lr=1e-6, factor=0.1, patience=8)
+        
+        # compute lr decreasing until minimum lr with increasing step sizes
+        # milestone_pow_init = 9
+        # milestones = np.cumsum([np.power(2, milestone_pow_init+i) for i in range(0, 6)])
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer=optimizer, milestones=milestones)
     else:
         scheduler_warmup, scheduler = None, None
         
@@ -172,8 +258,9 @@ def fit_model(
             for _ in range(iterations_per_epoch):
                 # get next batch
                 xs, ys = next(iter(dataloader_train))
-                xs = xs.to(model.device)
-                ys = ys.to(model.device)
+                if xs.device != model.device:
+                    xs = xs.to(model.device)
+                    ys = ys.to(model.device)
                 # train model
                 model, optimizer, loss_i = batch_train(
                     model=model,
@@ -191,8 +278,9 @@ def fit_model(
                 model.eval()
                 with torch.no_grad():
                     xs, ys = next(iter(dataloader_test))
-                    xs = xs.to(model.device)
-                    ys = ys.to(model.device)
+                    if xs.device != model.device:
+                        xs = xs.to(model.device)
+                        ys = ys.to(model.device)
                     # evaluate model
                     _, _, loss_test = batch_train(
                         model=model,
@@ -212,12 +300,14 @@ def fit_model(
             
             msg = None
             if verbose:
-                msg = f'Epoch {n_calls_to_train_model}/{epochs} --- L(Training): {loss_train:.7f}'                
+                msg = f'Epoch {n_calls_to_train_model}/{epochs} --- L(Train): {loss_train:.7f}'                
                 if dataset_test is not None:
-                    msg += f'; L(Validation): {loss_test:.7f}'
-                msg += f'; Time: {time.time()-t_start:.2f}s; Convergence value: {convergence_value:.2e}'
+                    msg += f'; L(Val): {loss_test:.7f}'
+                msg += f'; Time: {time.time()-t_start:.2f}s; Convergence: {convergence_value:.2e}'
                 if scheduler is not None:
                     msg += f'; LR: {scheduler_warmup.get_last_lr()[-1] if n_calls_to_train_model < warmup_steps else scheduler.get_last_lr()[-1]:.2e}'
+                    if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau) or isinstance(scheduler, ReduceOnPlateauWithRestarts):
+                        msg += f"; Metric: {scheduler.best:.7f}; Bad epochs: {scheduler.num_bad_epochs}/{scheduler.patience}"
                 if converged:
                     msg += '\nModel converged!'
                 elif n_calls_to_train_model >= epochs:
@@ -229,7 +319,12 @@ def fit_model(
                 if n_calls_to_train_model <= warmup_steps: 
                     scheduler_warmup.step()
                 else:
-                    scheduler.step()
+                    if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau) or isinstance(scheduler, ReduceOnPlateauWithRestarts):
+                        scheduler.step(metrics=loss_test if dataset_test is not None else loss_train)
+                    # elif isinstance(scheduler, torch.optim.lr_scheduler.CosineAnnealingWarmRestarts):
+                    #     scheduler.step(epoch=n_calls_to_train_model)
+                    else:
+                        scheduler.step()
                     
         except KeyboardInterrupt:
             continue_training = False

@@ -343,7 +343,6 @@ class AgentNetwork:
       self._n_actions = n_actions
 
       self._model = model_rnn
-      self._model.set_device(device)
       self._model = self._model.to(device)
       self._model.eval()
       
@@ -405,9 +404,10 @@ class AgentNetwork:
   def get_betas(self):
     if hasattr(self._model, 'betas'):
       betas = {}
-      participant_embedding = self._model.participant_embedding(torch.tensor(self._xs[..., -1], device=self._model.device, dtype=torch.int32).view(1, 1))
+      if hasattr(self._model, 'participant_embedding'):
+        participant_embedding = self._model.participant_embedding(torch.tensor(self._xs[..., -1], device=self._model.device, dtype=torch.int32).view(1, 1))
       for key in self._model.betas:
-        betas[key] = self._model.betas[key](participant_embedding).item()
+        betas[key] = self._model.betas[key].item() if isinstance(self._model.betas[key], torch.nn.Parameter) else self._model.betas[key](participant_embedding).item()
       return betas
     return None
 

@@ -1,20 +1,19 @@
-import pandas as pd
+# import pandas as pd
+# import numpy as np
+
+# df = pd.read_csv('all_scores.csv', index_col=0)
+
+# n_trials = df['Trials'].values
+# spice_nll = df['RNN'].values
+
+# # compute trial likelihood
+# lik = np.exp(-spice_nll / (n_trials*2))
+
+# print(lik)
+# print(min(lik))
+
 import numpy as np
 
-df = pd.read_csv('all_scores.csv', index_col=0)
-
-n_trials = df['Trials'].values
-spice_nll = df['SPICE'].values
-
-print((spice_nll/n_trials).mean())
-
-n_samples = 100
-nlls = []
-for _ in range(10):
-    # get n_samples random samples
-    index_samples = np.random.randint(0, len(df), n_samples)
-    nlls.append((spice_nll[index_samples]/n_trials[index_samples]).mean())
-
-print(nlls)
-print(np.mean(nlls))
-print(np.std(nlls))
+milestone_pow_init = 9
+milestones = np.cumsum([np.power(2, milestone_pow_init+i) for i in range(0, 6)])
+print(milestones)

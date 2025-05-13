@@ -38,6 +38,7 @@ class BaseRNN(nn.Module):
         n_participants: int = 0,
         device=torch.device('cpu'),
         list_signals=['x_V', 'c_a', 'c_r'],
+        embedding_size: int = 1,
         ):
         super(BaseRNN, self).__init__()
         
@@ -131,9 +132,11 @@ class BaseRNN(nn.Module):
 
         return state
     
-    def set_device(self, device: torch.device): 
+    def to(self, device: torch.device): 
         self.device = device
-        
+        super().to(device=device)
+        return self
+    
     def record_signal(self, key, value: torch.Tensor):
         """appends a new timestep sample to the recording. A timestep sample consists of the value at timestep t-1 and the value at timestep t
 
@@ -320,7 +323,12 @@ class RLRNN(BaseRNN):
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
         if embedding_size > 1:
-            self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
+            self.participant_embedding = torch.nn.Sequential(
+                torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
+                torch.nn.ReLU(),
+                torch.nn.Dropout(p=dropout),
+                )
+            # self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1
             self.participant_embedding = DummyModule()

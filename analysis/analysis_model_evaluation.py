@@ -18,9 +18,12 @@ from sklearn.exceptions import ConvergenceWarning  # Import the specific warning
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
+use_spice = False
+train_test_ratio = 0.8
+
 path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_0001_l2_0_0001.pkl'
-path_model_spice = 'params/eckstein2022/spice_eckstein2022_l1_0_0001_l2_0_0001.pkl'
+path_model_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_0001_l2_0_plateau.pkl'
+path_model_spice = 'params/eckstein2022/spice_eckstein2022_l1_0_0001_l2_0_multistep.pkl'
 path_model_benchmark = 'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
 path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
 
@@ -28,8 +31,6 @@ path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
 # path_model_rnn = 'params/parameter_recovery/params_16p_0.pkl'
 # path_model_benchmark = None
 # path_model_baseline = None
-
-train_test_ratio = 0.8
 
 models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnBr']
@@ -44,7 +45,7 @@ participant_ids = dataset.xs[:, 0, -1].unique().cpu().numpy()
 # setup baseline model
 # old: win-stay-lose-shift -> very bad fit; does not bring the point that SPICE models are by far better than original ones
 # new: Fitted ApBr model -> Tells the "true" story of how much better SPICE models can actually be by setting a good relative baseline
-print("Setting up baseline agent...")
+print("Setting up baseline agent from file", path_model_baseline)
 if path_model_baseline:
     agent_baseline = setup_agent_mcmc(path_model_baseline)
 else:
@@ -71,7 +72,7 @@ else:
 n_parameters_benchmark = 0
 
 # setup rnn agent
-print("Setting up RNN agent...")
+print("Setting up RNN agent from file", path_model_rnn)
 agent_rnn = setup_agent_rnn(
     path_model=path_model_rnn, 
     list_sindy_signals=['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen'] + ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice'],
@@ -79,58 +80,59 @@ agent_rnn = setup_agent_rnn(
 n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
 
 # setup spice agent
-print("Setting up SPICE agent...")
-rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
-sindy_library_setup = {
-    'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
-    'x_value_reward_not_chosen': ['c_value_choice'],
-    'x_value_choice_chosen': ['c_value_reward'],
-    'x_value_choice_not_chosen': ['c_value_reward'],
-}
-sindy_filter_setup = {
-    'x_learning_rate_reward': ['c_action', 1, True],
-    'x_value_reward_not_chosen': ['c_action', 0, True],
-    'x_value_choice_chosen': ['c_action', 1, True],
-    'x_value_choice_not_chosen': ['c_action', 0, True],
-}
-sindy_dataprocessing = None#{
-#     'x_learning_rate_reward': [0, 0, 0],
-#     'x_value_reward_not_chosen': [0, 0, 0],
-#     'x_value_choice_chosen': [1, 1, 0],
-#     'x_value_choice_not_chosen': [1, 1, 0],
-#     'c_value_reward': [0, 0, 0],
-#     'c_value_choice': [1, 1, 0],
-# }
+if use_spice:
+    print("Setting up SPICE agent from file", path_model_spice)
+    rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
+    control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
+    sindy_library_setup = {
+        'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
+        'x_value_reward_not_chosen': ['c_value_choice'],
+        'x_value_choice_chosen': ['c_value_reward'],
+        'x_value_choice_not_chosen': ['c_value_reward'],
+    }
+    sindy_filter_setup = {
+        'x_learning_rate_reward': ['c_action', 1, True],
+        'x_value_reward_not_chosen': ['c_action', 0, True],
+        'x_value_choice_chosen': ['c_action', 1, True],
+        'x_value_choice_not_chosen': ['c_action', 0, True],
+    }
+    sindy_dataprocessing = None#{
+    #     'x_learning_rate_reward': [0, 0, 0],
+    #     'x_value_reward_not_chosen': [0, 0, 0],
+    #     'x_value_choice_chosen': [1, 1, 0],
+    #     'x_value_choice_not_chosen': [1, 1, 0],
+    #     'c_value_reward': [0, 0, 0],
+    #     'c_value_choice': [1, 1, 0],
+    # }
 
-# get SPICE agent
-agent_spice = setup_agent_spice(
-    path_rnn=path_model_rnn,
-    path_spice=path_model_spice,
-    path_data=path_data,
-    rnn_modules=rnn_modules,
-    control_parameters=control_parameters,
-    sindy_library_setup=sindy_library_setup,
-    sindy_filter_setup=sindy_filter_setup,
-    sindy_dataprocessing=sindy_dataprocessing,
-    sindy_library_polynomial_degree=1,
-    regularization=0.1,
-    threshold=0.05,
-    filter_bad_participants=True,
-)
+    # get SPICE agent
+    agent_spice = setup_agent_spice(
+        path_rnn=path_model_rnn,
+        path_spice=path_model_spice,
+        path_data=path_data,
+        rnn_modules=rnn_modules,
+        control_parameters=control_parameters,
+        sindy_library_setup=sindy_library_setup,
+        sindy_filter_setup=sindy_filter_setup,
+        sindy_dataprocessing=sindy_dataprocessing,
+        sindy_library_polynomial_degree=1,
+        regularization=0.1,
+        threshold=0.05,
+        filter_bad_participants=True,
+    )
 
-# get remaining participant_ids after removing badly fitted participants
-participant_ids = agent_spice.get_participant_ids()
-participant_ids_data = dataset.xs[:, 0, -1].unique().cpu().numpy()
-if len(participant_ids) < len(participant_ids_data):
-    removed_pids = []
-    for pid_data in participant_ids_data:
-        if not pid_data in participant_ids:
-            removed_pids.append(pid_data)
-    print(f"Removed participants due to bad SINDy fit: {removed_pids}")
+    # get remaining participant_ids after removing badly fitted participants
+    participant_ids = agent_spice.get_participant_ids()
+    participant_ids_data = dataset.xs[:, 0, -1].unique().cpu().numpy()
+    if len(participant_ids) < len(participant_ids_data):
+        removed_pids = []
+        for pid_data in participant_ids_data:
+            if not pid_data in participant_ids:
+                removed_pids.append(pid_data)
+        print(f"Removed participants due to bad SINDy fit: {removed_pids}")
 
-# get number of parameters for each SPICE model
-n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
+    # get number of parameters for each SPICE model
+    n_parameters_spice_all = agent_spice.count_parameters(mapping_modules_values={'x_learning_rate_reward': 'x_value_reward', 'x_value_reward_not_chosen': 'x_value_reward', 'x_value_choice_chosen': 'x_value_choice', 'x_value_choice_not_chosen': 'x_value_choice'})
 n_parameters_spice = 0
 
 # ------------------------------------------------------------
@@ -170,10 +172,12 @@ for index_data in tqdm(range(len(dataset))):
         scores_rnn_list.append(scores_rnn[0])
         
         # SPICE
-        probs_spice = get_update_dynamics(experiment=data_xs, agent=agent_spice)[1][-n_trials_test:]
-        scores_spice = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_spice, n_parameters=n_parameters_spice_all[pid]))
-        scores_spice_list.append(scores_spice[0])
-        
+        if use_spice:
+            probs_spice = get_update_dynamics(experiment=data_xs, agent=agent_spice)[1][-n_trials_test:]
+            scores_spice = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_spice, n_parameters=n_parameters_spice_all[pid]))
+            scores_spice_list.append(scores_spice[0])
+            n_parameters_spice += n_parameters_spice_all[pid]
+
         # filtering for bad participants
         # avg_trial_likelihood_spice = np.exp(-scores_spice[:1] / (n_trials_test * agent_rnn._n_actions))
         # avg_trial_likelihood_rnn = np.exp(-scores_rnn[:1] / (n_trials_test * agent_rnn._n_actions))
@@ -197,15 +201,14 @@ for index_data in tqdm(range(len(dataset))):
         
         index_participants_list.append(pid)
         n_trials_list.append(copy(n_trials_test))
-        
-        n_parameters_spice += n_parameters_spice_all[pid]
-        
+                
         # track scores
         scores[0] += scores_baseline
         if path_model_benchmark:
             scores[1] += scores_benchmark[index_best_benchmark]
         scores[2] += scores_rnn
-        scores[3] += scores_spice
+        if use_spice:
+            scores[3] += scores_spice
         
         # track number of trials
         considered_trials += n_trials_test
@@ -219,18 +222,25 @@ for index_data in tqdm(range(len(dataset))):
 
 scores_all = np.concatenate((
     np.array(index_participants_list).reshape(-1, 1), 
-    np.array(n_trials_list).reshape(-1, 1), 
+    np.array(n_trials_list).reshape(-1, 1),
     np.array(scores_baseline_list).reshape(-1, 1), 
     np.array(scores_rnn_list).reshape(-1, 1), 
-    np.array(scores_spice_list).reshape(-1, 1),
+    np.array(scores_spice_list).reshape(-1, 1) if use_spice else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
     ), axis=-1)
 
 import pandas as pd
-pd.DataFrame(np.round(scores_all, 2), columns=['Participant', 'Trials', 'Baseline', 'RNN', 'SPICE']).to_csv('all_scores.csv')
+pd.DataFrame(np.round(scores_all, 2), columns=[
+    'Participant', 
+    'Trials', 
+    'Baseline', 
+    'RNN', 
+    'SPICE',
+    ]).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
-avg_log_likelihood = -scores[:, :1] / (considered_trials * agent_rnn._n_actions)
-avg_trial_likelihood = np.exp(avg_log_likelihood)
+scores = scores / (considered_trials * agent_rnn._n_actions)
+# avg_log_likelihood = -scores[:, :1] / (considered_trials * agent_rnn._n_actions)
+avg_trial_likelihood = np.exp(-scores[:, :1])
 
 # compute average number of parameters
 n_parameters_benchmark_single_models = [mapping_n_parameters_benchmark[model] for model in models_benchmark] if path_model_benchmark else []
