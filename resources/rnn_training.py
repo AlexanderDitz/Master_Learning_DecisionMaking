@@ -181,8 +181,8 @@ def batch_train(
             # gradient penalty between two participants
             if hasattr(model, 'participant_embedding') and isinstance(model.participant_embedding, nn.Module):
                 # sample two random distributions of participant indices as one-hot-encoded tensors
-                e_i = torch.randint(low=0, high=model.n_participants, size=(model.n_participants,), dtype=torch.int64)
-                e_j = torch.randint(low=0, high=model.n_participants, size=(model.n_participants,), dtype=torch.int64)
+                e_i = torch.randint(low=0, high=model.n_participants, size=(model.n_participants,), dtype=torch.int64, device=xs_step.device)
+                e_j = torch.randint(low=0, high=model.n_participants, size=(model.n_participants,), dtype=torch.int64, device=xs_step.device)
                 gp_term = gradient_penalty(model.participant_embedding, e_i, e_j, factor=l2_weight_decay)
             else:
                 gp_term = 0

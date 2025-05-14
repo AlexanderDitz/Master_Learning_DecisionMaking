@@ -38,22 +38,17 @@ class CustomEmbedding(nn.Module):
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
         
-        self.eye = torch.eye(num_embeddings, dtype=torch.float32, requires_grad=True)
         self.linear = torch.nn.Linear(num_embeddings, embedding_dim, bias=False)
     
     def forward(self, index: torch.Tensor):
         return self.get_embedding(self.one_hot_encode(index))
     
     def one_hot_encode(self, index: torch.Tensor):
-        return self.eye[index]
+        return torch.eye(self.num_embeddings, dtype=torch.float32, requires_grad=True, device=index.device)[index]
     
     def get_embedding(self, one_hot_encoded: torch.Tensor):
         return self.linear(one_hot_encoded)
     
-    def to(self, device):
-        super().to(device)
-        self.eye = self.eye.to(device)
-        return self
     
 class BaseRNN(nn.Module):
     def __init__(
