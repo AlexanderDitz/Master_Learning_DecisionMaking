@@ -50,6 +50,10 @@ class CustomEmbedding(nn.Module):
     def get_embedding(self, one_hot_encoded: torch.Tensor):
         return self.linear(one_hot_encoded)
     
+    def to(self, device):
+        super().to(device)
+        self.eye = self.eye.to(device)
+        return self
     
 class BaseRNN(nn.Module):
     def __init__(

@@ -7,7 +7,7 @@ import pipeline_rnn
 
 _, loss = pipeline_rnn.main(
     checkpoint=False,
-    epochs=65536,
+    epochs=1,
     
     data='data/parameter_recovery/data_256p_0.csv',
     model='params/parameter_recovery_2/rnn_256p_0_l1_0_001_gp_10.pkl',
@@ -39,7 +39,7 @@ _, loss = pipeline_rnn.main(
     # embedding_size=0,
     
     # other training parameters
-    scheduler=True,
+    scheduler=False,
     train_test_ratio=0.5,
     batch_size=-1,
     sequence_length=-1,
