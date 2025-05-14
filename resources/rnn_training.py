@@ -8,6 +8,34 @@ from resources.rnn import BaseRNN
 from resources.rnn_utils import DatasetRNN
 
 
+def gradient_penalty(f: nn.Module, e_i: torch.Tensor, e_j: torch.Tensor, factor=1.0):
+    
+    # one-hot encode
+    e_i = f[0].one_hot_encode(e_i)
+    e_j = f[0].one_hot_encode(e_j)
+    
+    # e_i, e_j: one-hot tensors, shape [batch, P]
+    eps = torch.rand(e_i.size(0), 1).to(e_i.device)
+    eps = eps.expand_as(e_i)
+    
+    # Interpolation in participant‐ID space
+    e_hat = eps*e_i + (1-eps)*e_j
+    e_hat.requires_grad_(True)
+
+    # compute interpolated embedding
+    emb_hat = f[1:](f[0].get_embedding(e_hat))
+    
+    # Compute Jacobian norm
+    grads = torch.autograd.grad(
+        outputs=emb_hat,
+        inputs=e_hat,
+        grad_outputs=torch.ones_like(emb_hat),
+        create_graph=True
+    )[0]  # shape [batch, P]
+    gp = (grads.view(grads.size(0), -1).norm(2, dim=1) ** 2).mean()
+    return factor * gp
+
+
 class ReduceOnPlateauWithRestarts:
     def __init__(self, optimizer, min_lr, factor, patience):
         """
@@ -140,17 +168,26 @@ def batch_train(
                 ]).mean()
             
             # L2 weight decay on participant embedding to enforce smoother gradients between participants and prevent overfitting
-            if model.embedding_size > 1:
-                l2_reg = l2_weight_decay * torch.stack([
-                    param.pow(2).sum()
-                    for name, param in model.named_parameters()
-                    if "embedding" in name
-                    # if "embedding" not in name
-                    ]).mean()
-            else:
-                l2_reg = 0
+            # if model.embedding_size > 1:
+            #     l2_reg = l2_weight_decay * torch.stack([
+            #         param.pow(2).sum()
+            #         for name, param in model.named_parameters()
+            #         if "embedding" in name
+            #         # if "embedding" not in name
+            #         ]).mean()
+            # else:
+            #     l2_reg = 0
             
-            loss = loss_step + l1_reg + l2_reg
+            # gradient penalty between two participants
+            if hasattr(model, 'participant_embedding') and isinstance(model.participant_embedding, nn.Module):
+                # sample two random distributions of participant indices as one-hot-encoded tensors
+                e_i = torch.randint(low=0, high=model.n_participants, size=(model.n_participants,), dtype=torch.int64)
+                e_j = torch.randint(low=0, high=model.n_participants, size=(model.n_participants,), dtype=torch.int64)
+                gp_term = gradient_penalty(model.participant_embedding, e_i, e_j, factor=l2_weight_decay)
+            else:
+                gp_term = 0
+            
+            loss = loss_step + l1_reg + gp_term # + l2_reg
             
             # backpropagation
             optimizer.zero_grad()
@@ -220,6 +257,7 @@ def fit_model(
 
         # Create the scheduler with the Lambda function
         scheduler_warmup = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
+        
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps, T_mult=2)
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.1, patience=10, threshold=0, cooldown=64, min_lr=1e-6)
         scheduler = ReduceOnPlateauWithRestarts(optimizer=optimizer, min_lr=1e-6, factor=0.1, patience=8)

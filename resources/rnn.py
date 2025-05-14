@@ -30,6 +30,27 @@ class DummyModule(nn.Module):
         return torch.ones_like(inputs, device=inputs.device, dtype=torch.float).view(-1, 1)
     
     
+class CustomEmbedding(nn.Module):
+    
+    def __init__(self, num_embeddings, embedding_dim):
+        super().__init__()
+        
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+        
+        self.eye = torch.eye(num_embeddings, dtype=torch.float32, requires_grad=True)
+        self.linear = torch.nn.Linear(num_embeddings, embedding_dim, bias=False)
+    
+    def forward(self, index: torch.Tensor):
+        return self.get_embedding(self.one_hot_encode(index))
+    
+    def one_hot_encode(self, index: torch.Tensor):
+        return self.eye[index]
+    
+    def get_embedding(self, one_hot_encoded: torch.Tensor):
+        return self.linear(one_hot_encoded)
+    
+    
 class BaseRNN(nn.Module):
     def __init__(
         self, 
@@ -324,7 +345,9 @@ class RLRNN(BaseRNN):
         self.embedding_size = embedding_size
         if embedding_size > 1:
             self.participant_embedding = torch.nn.Sequential(
-                torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
+                # torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
+                # torch.nn.Linear(n_participants, embedding_size),
+                CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
                 torch.nn.ReLU(),
                 torch.nn.Dropout(p=dropout),
                 )
