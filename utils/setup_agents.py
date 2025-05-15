@@ -84,6 +84,7 @@ def setup_agent_spice(
     participant_id: int = None,
     deterministic: bool = True,
     filter_bad_participants: bool = False,
+    use_optuna: bool = False,
     verbose: bool = False,
 ) -> AgentSpice:
     
@@ -104,10 +105,12 @@ def setup_agent_spice(
             participant_id=participant_id,
             n_sessions_off_policy=1,
             n_trials_off_policy=1000,
+            optimizer_type='SR3_weighted_l1',
             optimizer_alpha=regularization,
             optimizer_threshold=threshold,
             deterministic=deterministic,
             filter_bad_participants=filter_bad_participants,
+            use_optuna=use_optuna,
             verbose=verbose,
         )
     else:

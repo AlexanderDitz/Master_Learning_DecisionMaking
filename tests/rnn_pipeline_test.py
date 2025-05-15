@@ -6,11 +6,11 @@ import pipeline_rnn
 
 
 _, loss = pipeline_rnn.main(
-    checkpoint=False,
-    epochs=1,
+    checkpoint=True,
+    epochs=0,
     
     data='data/parameter_recovery/data_256p_0.csv',
-    model='params/parameter_recovery_2/rnn_256p_0_l1_0_001_gp_10.pkl',
+    model='params/parameter_recovery_2/rnn_256p_0.pkl',
     
     # data = 'data/optuna/data_128p_0.csv',
     # model = 'params/params_128p_0.pkl',
@@ -30,7 +30,7 @@ _, loss = pipeline_rnn.main(
     n_steps=32,
     learning_rate=1e-4,
     l1_weight_decay=0.001,
-    l2_weight_decay=10.0,#.001,
+    l2_weight_decay=0,#0.001,
     dropout=0.25,
     
     # toy params for quick run
@@ -39,7 +39,7 @@ _, loss = pipeline_rnn.main(
     # embedding_size=0,
     
     # other training parameters
-    scheduler=False,
+    scheduler=True,
     train_test_ratio=0.5,
     batch_size=-1,
     sequence_length=-1,
@@ -59,5 +59,5 @@ _, loss = pipeline_rnn.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=2,
+    participant_id=64,
 )
