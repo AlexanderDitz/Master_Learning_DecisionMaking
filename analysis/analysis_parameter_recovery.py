@@ -193,11 +193,11 @@ def n_true_params(true_coefs):
 # -----------------------------------------------------------------------------------------------
 
 random_sampling = [0.25, 0.5, 0.75]
-n_sessions = [16, 32, 64, 128, 256]#, 512]
-iterations = 4
+n_sessions = [256]#[16, 32, 64, 128, 256]#, 512]
+iterations = 1
 
 base_name_data = 'data/parameter_recovery/data_SESSp_IT.csv'
-base_name_params = 'params/parameter_recovery/params_SESSp_IT.pkl'
+base_name_params = 'params/parameter_recovery_2/rnn_SESSp_IT.pkl'
 kw_participant_id = 'session'
 
 # setup spice agent
@@ -216,14 +216,14 @@ sindy_filter_setup = {
     'x_value_choice_chosen': ['c_action', 1, True],
     'x_value_choice_not_chosen': ['c_action', 0, True],
 }
-sindy_dataprocessing = None#{
-#     'x_learning_rate_reward': [0, 0, 0],
-#     'x_value_reward_not_chosen': [0, 0, 0],
-#     'x_value_choice_chosen': [1, 1, 0],
-#     'x_value_choice_not_chosen': [1, 1, 0],
-#     'c_value_reward': [0, 0, 0],
-#     'c_value_choice': [1, 1, 0],
-# }
+sindy_dataprocessing = {
+    'x_learning_rate_reward': [0, 0, 0],
+    'x_value_reward_not_chosen': [0, 0, 0],
+    'x_value_choice_chosen': [1, 1, 0],
+    'x_value_choice_not_chosen': [1, 1, 0],
+    'c_value_reward': [0, 0, 0],
+    'c_value_choice': [1, 1, 0],
+}
 
 # meta parameters
 mapping_lens = {'x_V_LR': 10, 'x_V_nc': 3, 'x_C': 3, 'x_C_nc': 3}
@@ -280,6 +280,7 @@ for index_sess, sess in enumerate(n_sessions):
             sindy_library_setup=sindy_library_setup,
             sindy_filter_setup=sindy_filter_setup,
             sindy_dataprocessing=sindy_dataprocessing,
+            use_optuna=True,
             )
         sindy_models = sindy_agent.get_modules()
         
@@ -461,10 +462,10 @@ false_neg_sessions_std = np.nanstd(false_neg_rates, axis=1)
 # ------------------------------------------------
 
 accuracy = (true_pos_count + true_neg_count) / (true_pos_count + true_neg_count + false_pos_count + false_neg_count)
-true_pos_rate = true_pos_count / (true_pos_count + false_neg_count)
-false_pos_rate = false_pos_count / (false_pos_count + true_neg_count)
 precision = true_pos_count / (true_pos_count + false_pos_count)
-
+recall = true_pos_count / (true_pos_count + false_neg_count)
+false_pos_rate = false_pos_count / (false_pos_count + true_neg_count)
+f1_score = 2 * (precision * recall) / (precision + recall)
 
 # ------------------------------------------------
 # configuration identification plots
@@ -485,7 +486,7 @@ identification_matrix_std = [
 
 identification_metrics_matrix = [
     [accuracy, precision],
-    [true_pos_rate, false_pos_rate],
+    [recall, f1_score],
 ]
 
 identification_headers = [
@@ -494,8 +495,8 @@ identification_headers = [
 ]
 
 identification_metrics_headers = [
-    ['accuracy', 'precision'],
-    ['true positive rate (recall)', 'false positive rate'],
+    ['Accuracy', 'Precision'],
+    ['Recall', 'F1 Score'],
 ]
 
 identification_x_axis_labels = [

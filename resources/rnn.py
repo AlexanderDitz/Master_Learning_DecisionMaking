@@ -344,9 +344,8 @@ class RLRNN(BaseRNN):
         self.embedding_size = embedding_size
         if embedding_size > 1:
             self.participant_embedding = torch.nn.Sequential(
-                # torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
-                # torch.nn.Linear(n_participants, embedding_size),
-                CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
+                torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
+                # CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
                 torch.nn.ReLU(),
                 torch.nn.Dropout(p=dropout),
                 )
