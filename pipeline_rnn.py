@@ -13,7 +13,7 @@ import argparse
 
 # RL libraries
 sys.path.append('resources')  # add source directoy to path
-from .resources import rnn, rnn_training, bandits, rnn_utils
+from resources import rnn, rnn_training, bandits, rnn_utils
 from utils import convert_dataset, plotting
 
 def main(
