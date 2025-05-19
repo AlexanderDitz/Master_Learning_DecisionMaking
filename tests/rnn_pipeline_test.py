@@ -10,7 +10,7 @@ _, loss = pipeline_rnn.main(
     epochs=0,
     
     data='data/parameter_recovery/data_256p_0.csv',
-    model='params/parameter_recovery_2/rnn_256p_0.pkl',
+    model='params/parameter_recovery/rnn_256p_0_gp_10.pkl',
     
     # data = 'data/optuna/data_128p_0.csv',
     # model = 'params/params_128p_0.pkl',

@@ -193,11 +193,11 @@ def n_true_params(true_coefs):
 # -----------------------------------------------------------------------------------------------
 
 random_sampling = [0.25, 0.5, 0.75]
-n_sessions = [256]#[16, 32, 64, 128, 256]#, 512]
-iterations = 1
+n_sessions = [16, 32, 64, 128, 256]
+iterations = 4
 
 base_name_data = 'data/parameter_recovery/data_SESSp_IT.csv'
-base_name_params = 'params/parameter_recovery_2/rnn_SESSp_IT.pkl'
+base_name_params = 'params/parameter_recovery'#/rnn_SESSp_IT.pkl'
 kw_participant_id = 'session'
 
 # setup spice agent
@@ -263,9 +263,14 @@ false_neg_rates_count = np.zeros((len(n_sessions)+len(random_sampling), iteratio
 random_sampling, n_sessions = tuple(random_sampling), tuple(n_sessions)
 for index_sess, sess in enumerate(n_sessions):
     for it in range(iterations):
-        path_rnn = base_name_params.replace('SESS', str(sess)).replace('IT', str(it))
         path_data = base_name_data.replace('SESS', str(sess)).replace('IT', str(it))
+        # path_rnn = base_name_params.replace('SESS', str(sess)).replace('IT', str(it))
+        path_rnn = os.path.join(base_name_params, path_data.split(os.path.sep)[-1].replace('.csv', '.pkl').replace('data', 'rnn'))
+        path_spice = path_rnn.replace('rnn', 'spice')
         
+        if not os.path.isfile(path_rnn):
+            continue
+            
         # setup of ground truth model from current dataset
         data = pd.read_csv(path_data)
         participant_ids = np.unique(data[kw_participant_id].values)
@@ -273,7 +278,8 @@ for index_sess, sess in enumerate(n_sessions):
         # setup of sindy agent for current dataset
         sindy_agent = setup_agent_spice(
             path_rnn=path_rnn, 
-            path_data=path_data, 
+            path_data=path_data,
+            path_spice=path_spice,
             rnn_modules=rnn_modules, 
             control_parameters=control_parameters, 
             sindy_library_polynomial_degree=sindy_library_polynomial_degree,
