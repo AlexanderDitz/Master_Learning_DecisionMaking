@@ -18,14 +18,14 @@ from sklearn.exceptions import ConvergenceWarning  # Import the specific warning
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-use_spice = False
+use_spice = True
 train_test_ratio = 0.8
 
 path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_0001_l2_0_0001_cluster.pkl'
-path_model_spice = 'params/eckstein2022/spice_eckstein2022_l1_0_0001_l2_0_multistep.pkl'
-path_model_benchmark = None#'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
-path_model_baseline = None#'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
+path_model_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
+path_model_spice = 'params/eckstein2022/spice_eckstein2022.pkl'
+path_model_benchmark = 'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
+path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
 
 # path_data = 'data/parameter_recovery/data_16p_0.csv'
 # path_model_rnn = 'params/parameter_recovery/params_16p_0.pkl'

@@ -6,17 +6,17 @@ import pipeline_rnn
 
 
 _, loss = pipeline_rnn.main(
-    checkpoint=True,
-    epochs=0,
+    checkpoint=False,
+    epochs=65536, # <- 2^16
     
-    data='data/parameter_recovery/data_256p_0.csv',
-    model='params/parameter_recovery/rnn_256p_0_gp_10.pkl',
+    # data='data/parameter_recovery/data_128p_0.csv',
+    # model='params/parameter_recovery/rnn_128p_0.pkl',
     
     # data = 'data/optuna/data_128p_0.csv',
     # model = 'params/params_128p_0.pkl',
     
-    # model='params/eckstein2022/rnn_eckstein2022_l1_0_001_gp_10.pkl',
-    # data='data/eckstein2022/eckstein2022.csv',
+    model='params/eckstein2022/rnn_eckstein2022.pkl',
+    data='data/eckstein2022/eckstein2022.csv',
     
     n_actions=2,
     
