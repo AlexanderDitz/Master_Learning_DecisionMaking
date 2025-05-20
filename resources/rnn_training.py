@@ -163,7 +163,7 @@ def batch_train(
             l1_reg = l1_weight_decay * torch.stack([
                 param.abs().sum()
                 for name, param in model.named_parameters()
-                if "embedding" not in name
+                # if "embedding" not in name
                 # if "embedding" in name
                 ]).mean()
             

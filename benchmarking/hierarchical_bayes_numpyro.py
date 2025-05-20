@@ -10,7 +10,33 @@ import pickle
     
 # @jax.0(static_argnames=['model','hierarchical'])
 def rl_model(model, choice, reward, hierarchical):
+    """
+    A reinforcement learning model with optional hierarchical structure for parameter inference.
 
+    Args:
+        model (list of int): A binary vector indicating which parameters to include in the model. 
+            - `model[0]`: Include individual positive learning rate (`alpha_pos`).
+            - `model[1]`: Include individual negative learning rate (`alpha_neg`).
+            - `model[2]`: Include counterfactual positive learning rate (`alpha_cf_pos`).
+            - `model[3]`: Include counterfactual negative learning rate (`alpha_cf_neg`).
+            - `model[4]`: Include choice perseverance (`alpha_ch`).
+            - `model[5]`: Include reward sensitivity scaling (`beta_ch`).
+            - `model[6]`: Include inverse temperature for reward sensitivity (`beta_r`).
+            - `model[7]`: Include counterfactual sensitivity scaling (`beta_cf`).
+        choice (jnp.ndarray): A tensor of shape `(T, N, 2)` where `T` is the number of time steps, `N` 
+            is the number of participants, and the last dimension represents binary choices (1 for selected, 0 for not selected).
+        reward (jnp.ndarray): A tensor of shape `(T, N)` where `T` is the number of time steps and `N` 
+            is the number of participants, containing binary reward outcomes (1 for reward, 0 for no reward).
+        hierarchical (int): A flag indicating whether to use hierarchical Bayesian inference. 
+            - `1`: Use hierarchical priors (group-level and individual-level parameters).
+            - `0`: Use non-hierarchical priors (individual-level parameters only).
+
+    Returns:
+        None: The function is designed to be used with NumPyro for sampling model parameters and 
+        posterior predictive distributions. Observations are modeled using a Bernoulli likelihood.
+
+    """
+    
     def scaled_beta(a, b, low, high):
         return dist.TransformedDistribution(
             dist.Beta(a, b),  # Beta distribution in [0, 1]
@@ -22,25 +48,25 @@ def rl_model(model, choice, reward, hierarchical):
         # # Priors for group-level parameters
         # # alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Uniform(low=0.01, high=0.99)) if model[0]==1 else 1
         # # alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Uniform(low=0.01, high=0.99)) if model[1]==1 else -1
-        # # alpha_c_mean = numpyro.sample("alpha_c_mean", dist.Uniform(low=0.01, high=0.99)) if model[2]==1 else 1
-        # # beta_c_mean = numpyro.sample("beta_c_mean", dist.Uniform(low=0.01, high=0.99)) if model[3]==1 else 0
+        # # alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Uniform(low=0.01, high=0.99)) if model[2]==1 else 1
+        # # beta_ch_mean = numpyro.sample("beta_ch_mean", dist.Uniform(low=0.01, high=0.99)) if model[3]==1 else 0
         # # beta_r_mean = numpyro.sample("beta_r_mean", dist.Uniform(low=0.01, high=9.99)) if model[4]==1 else 1
         # alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Beta(2, 2)) if model[0]==1 else 1
         # alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Beta(2, 2)) if model[1]==1 else -1
-        # alpha_c_mean = numpyro.sample("alpha_c_mean", dist.Beta(2, 2)) if model[2]==1 else 1
-        # beta_c_mean = numpyro.sample("beta_c_mean", scaled_beta(2, 2, 0, 10)) if model[3]==1 else 0
+        # alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Beta(2, 2)) if model[2]==1 else 1
+        # beta_ch_mean = numpyro.sample("beta_ch_mean", scaled_beta(2, 2, 0, 10)) if model[3]==1 else 0
         # beta_r_mean = numpyro.sample("beta_r_mean", scaled_beta(2, 2, 0, 10)) if model[4]==1 else 1
         
         # # Priors for individual-level variation (hierarchical)
         # alpha_pos_std = numpyro.sample("alpha_pos_std", dist.HalfNormal(0.3)) if model[0]==1 else 0
         # alpha_neg_std = numpyro.sample("alpha_neg_std", dist.HalfNormal(0.3)) if model[1]==1 else 0
-        # alpha_c_std = numpyro.sample("alpha_c_std", dist.HalfNormal(0.3))  if model[2]==1 else 0
-        # beta_c_std = numpyro.sample("beta_c_std", dist.HalfNormal(1)) if model[3]==1 else 0
+        # alpha_ch_std = numpyro.sample("alpha_ch_std", dist.HalfNormal(0.3))  if model[2]==1 else 0
+        # beta_ch_std = numpyro.sample("beta_ch_std", dist.HalfNormal(1)) if model[3]==1 else 0
         # beta_r_std = numpyro.sample("beta_r_std", dist.HalfNormal(1)) if model[4]==1 else 0
         # # alpha_pos_std = numpyro.sample("alpha_pos_std", dist.Beta(2, 2)) if model[0]==1 else 0
         # # alpha_neg_std = numpyro.sample("alpha_neg_std", dist.Beta(2, 2)) if model[1]==1 else 0
-        # # alpha_c_std = numpyro.sample("alpha_c_std", dist.Beta(2, 2))  if model[2]==1 else 0
-        # # beta_c_std = numpyro.sample("beta_c_std", scaled_beta(2, 2, 0, 10)) if model[3]==1 else 0
+        # # alpha_ch_std = numpyro.sample("alpha_ch_std", dist.Beta(2, 2))  if model[2]==1 else 0
+        # # beta_ch_std = numpyro.sample("beta_ch_std", scaled_beta(2, 2, 0, 10)) if model[3]==1 else 0
         # # beta_r_std = numpyro.sample("beta_r_std", scaled_beta(2, 2, 0, 10)) if model[4]==1 else 0
 
         # # Individual-level parameters
@@ -49,8 +75,8 @@ def rl_model(model, choice, reward, hierarchical):
         #     alpha_pos = numpyro.sample("alpha_pos", dist.TruncatedNormal(alpha_pos_mean, alpha_pos_std, low=0.01, high=0.99))[:, None] if model[0]==1 else 1
         #     if model[1]==1:
         #         alpha_neg = numpyro.sample("alpha_neg", dist.TruncatedNormal(alpha_neg_mean, alpha_neg_std, low=0.01, high=0.99))[:, None]
-        #     alpha_c = numpyro.sample("alpha_c", dist.TruncatedNormal(alpha_c_mean, alpha_c_std, low=0.01, high=0.99))[:, None] if model[2]==1 else 1
-        #     beta_c = numpyro.sample("beta_c", dist.TruncatedNormal(beta_c_mean, beta_c_std, low=0.01, high=0.99)) if model[3]==1 else 0
+        #     alpha_ch = numpyro.sample("alpha_ch", dist.TruncatedNormal(alpha_ch_mean, alpha_ch_std, low=0.01, high=0.99))[:, None] if model[2]==1 else 1
+        #     beta_ch = numpyro.sample("beta_ch", dist.TruncatedNormal(beta_ch_mean, beta_ch_std, low=0.01, high=0.99)) if model[3]==1 else 0
         #     beta_r = numpyro.sample("beta_r", dist.TruncatedNormal(beta_r_mean, beta_r_std, low=0.01, high=9.99)) if model[4]==1 else 1
             
         # if model[1]==0:
@@ -59,22 +85,26 @@ def rl_model(model, choice, reward, hierarchical):
         # Priors for group-level parameters
         alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Beta(1, 1)) if model[0]==1 else 1
         alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Beta(1, 1)) if model[1]==1 else -1
-        alpha_c_mean = numpyro.sample("alpha_c_mean", dist.Beta(1, 1)) if model[2]==1 else 1
-        beta_c_mean = numpyro.sample("beta_c_mean", dist.Beta(1, 1)) if model[3]==1 else 0
-        beta_r_mean = numpyro.sample("beta_r_mean", dist.Beta(1, 1)) if model[4]==1 else 1
+        alpha_cf_pos_mean = numpyro.sample("alpha_cf_pos_mean", dist.Beta(1, 1)) if model[2]==1 else 0
+        alpha_cf_neg_mean = numpyro.sample("alpha_cf_neg_mean", dist.Beta(1, 1)) if model[3]==1 else 0
+        alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Beta(1, 1)) if model[4]==1 else 1
+        beta_ch_mean = numpyro.sample("beta_ch_mean", dist.Beta(1, 1)) if model[5]==1 else 0
+        beta_r_mean = numpyro.sample("beta_r_mean", dist.Beta(1, 1)) if model[6]==1 else 1
         
         # Priors for individual-level variation (hierarchical)
         alpha_pos_kappa = numpyro.sample("alpha_pos_kappa", dist.HalfNormal(1.0)) if model[0]==1 else 0
         alpha_neg_kappa = numpyro.sample("alpha_neg_kappa", dist.HalfNormal(1.0)) if model[1]==1 else 0
-        alpha_c_kappa = numpyro.sample("alpha_c_kappa", dist.HalfNormal(1.0))  if model[2]==1 else 0
-        beta_c_kappa = numpyro.sample("beta_c_kappa", dist.HalfNormal(1.0)) if model[3]==1 else 0
-        beta_r_kappa = numpyro.sample("beta_r_kappa", dist.HalfNormal(1.0)) if model[4]==1 else 0
+        alpha_cf_pos_kappa = numpyro.sample("alpha_cf_pos_kappa", dist.HalfNormal(1.0)) if model[2]==1 else 0
+        alpha_cf_neg_kappa = numpyro.sample("alpha_cf_neg_kappa", dist.HalfNormal(1.0)) if model[3]==1 else 0
+        alpha_ch_kappa = numpyro.sample("alpha_ch_kappa", dist.HalfNormal(1.0))  if model[4]==1 else 0
+        beta_ch_kappa = numpyro.sample("beta_ch_kappa", dist.HalfNormal(1.0)) if model[5]==1 else 0
+        beta_r_kappa = numpyro.sample("beta_r_kappa", dist.HalfNormal(1.0)) if model[6]==1 else 0
         
         # Individual-level parameters
-        alpha_neg = None
         n_participants = choice.shape[1]
         with numpyro.plate("participants", n_participants):
             # Sample individual-level parameters or assign fixed values
+            
             if model[0]:
                 alpha_pos = numpyro.sample("alpha_pos", dist.Beta(alpha_pos_mean * alpha_pos_kappa, (1 - alpha_pos_mean) * alpha_pos_kappa))[:, None]
             else:
@@ -84,51 +114,69 @@ def rl_model(model, choice, reward, hierarchical):
                 alpha_neg = numpyro.sample("alpha_neg", dist.Beta(alpha_neg_mean * alpha_neg_kappa, (1 - alpha_neg_mean) * alpha_neg_kappa))[:, None]
             else:
                 alpha_neg = alpha_pos  # share value with alpha_pos
-
+                
             if model[2]:
-                alpha_c = numpyro.sample("alpha_c", dist.Beta(alpha_c_mean * alpha_c_kappa, (1 - alpha_c_mean) * alpha_c_kappa))[:, None]
+                alpha_cf_pos = numpyro.sample("alpha_cf_pos", dist.Beta(alpha_cf_pos_mean * alpha_cf_pos_kappa, (1 - alpha_cf_pos_mean) * alpha_cf_pos_kappa))[:, None]
             else:
-                alpha_c = jnp.full((n_participants, 1), 1.0)
+                alpha_cf_pos = alpha_pos
 
             if model[3]:
-                # beta_c = numpyro.sample("beta_c", scaled_beta(beta_c_mean * beta_c_kappa, (1 - beta_c_mean) * beta_c_kappa, 0, 15))[:, None]
-                beta_c = numpyro.sample("beta_c", dist.Beta(beta_c_mean * beta_c_kappa, (1 - beta_c_mean) * beta_c_kappa))[:, None] * beta_scaling
+                alpha_cf_neg = numpyro.sample("alpha_cf_neg", dist.Beta(alpha_cf_neg_mean * alpha_cf_neg_kappa, (1 - alpha_cf_neg_mean) * alpha_cf_neg_kappa))[:, None]
+            elif not model[3] and model[2]:
+                alpha_cf_neg = alpha_cf_pos
             else:
-                beta_c = jnp.full((n_participants, 1), 0.0)
+                alpha_cf_neg = alpha_neg
 
             if model[4]:
+                alpha_ch = numpyro.sample("alpha_ch", dist.Beta(alpha_ch_mean * alpha_ch_kappa, (1 - alpha_ch_mean) * alpha_ch_kappa))[:, None]
+            else:
+                alpha_ch = jnp.full((n_participants, 1), 1.0)
+
+            if model[5]:
+                # beta_ch = numpyro.sample("beta_ch", scaled_beta(beta_ch_mean * beta_ch_kappa, (1 - beta_ch_mean) * beta_ch_kappa, 0, 15))[:, None]
+                beta_ch = numpyro.sample("beta_ch", dist.Beta(beta_ch_mean * beta_ch_kappa, (1 - beta_ch_mean) * beta_ch_kappa))[:, None] * beta_scaling
+            else:
+                beta_ch = jnp.full((n_participants, 1), 0.0)
+
+            if model[6]:
                 # beta_r = numpyro.sample("beta_r", scaled_beta(beta_r_mean * beta_r_kappa, (1 - beta_r_mean) * beta_r_kappa, 0, 15))[:, None]
                 beta_r = numpyro.sample("beta_r", dist.Beta(beta_r_mean * beta_r_kappa, (1 - beta_r_mean) * beta_r_kappa))[:, None] * beta_scaling
             else:
                 beta_r = jnp.full((n_participants, 1), 1.0)
                 
+            beta_cf = 1.0 if model[7] else 0.0
+            
     else:
         # Basic bayesian inference (not hierarchical)
         alpha_pos = numpyro.sample("alpha_pos", dist.Beta(1, 1)) if model[0]==1 else 1
         alpha_neg = numpyro.sample("alpha_neg", dist.Beta(1, 1)) if model[1]==1 else alpha_pos
-        alpha_c = numpyro.sample("alpha_c", dist.Beta(1, 1)) if model[2]==1 else 1
-        beta_c = numpyro.sample("beta_c", scaled_beta(1, 1, 0, 15)) if model[3]==1 else 0
+        alpha_cf_pos = numpyro.sample("alpha_cf_pos", dist.Beta(1, 1)) if model[0]==1 else alpha_pos
+        alpha_cf_neg = numpyro.sample("alpha_cf_neg", dist.Beta(1, 1)) if model[1]==1 else alpha_neg
+        alpha_ch = numpyro.sample("alpha_ch", dist.Beta(1, 1)) if model[2]==1 else 1
+        beta_ch = numpyro.sample("beta_ch", scaled_beta(1, 1, 0, 15)) if model[3]==1 else 0
         beta_r = numpyro.sample("beta_r", scaled_beta(1, 1, 0, 15)) if model[4]==1 else 1
+        beta_cf = 1.0 if model[7] else 0.0
     
-    def update(carry, x):#, alpha_pos, alpha_neg, alpha_c, beta_r, beta_c):
+    def update(carry, x):#, alpha_pos, alpha_neg, alpha_c, beta_r, beta_ch):
         r_values = carry[0]
         c_values = carry[1]
         ch, rw = x[:, :2], x[:, 2][:, None]
         
         # Compute prediction errors for each outcome
         rpe = (rw - r_values) * ch
+        rpe_cf = (rw - r_values) * (1-ch) * beta_cf
         cpe = ch - c_values
         
         # Update Q-values
         lr = jnp.where(rw > 0.5, alpha_pos, alpha_neg)
-        r_values = r_values + lr * rpe
-        # r_values = r_values + alpha_pos * rpe
-        c_values = c_values + alpha_c * cpe
+        lr_cf = jnp.where(rw > 0.5, alpha_cf_pos, alpha_cf_neg)
+        r_values = r_values + lr * rpe + lr_cf * rpe_cf
+        c_values = c_values + alpha_ch * cpe
         
         # compute the action probability of option 0
         r_diff = (r_values[:, 0] - r_values[:, 1]).reshape(-1, 1)
         c_diff = (c_values[:, 0] - c_values[:, 1]).reshape(-1, 1)
-        action_prob_option_0 = jax.nn.sigmoid(beta_r * r_diff + beta_c * c_diff).reshape(-1)
+        action_prob_option_0 = jax.nn.sigmoid(beta_r * r_diff + beta_ch * c_diff).reshape(-1)
         
         return (r_values, c_values), action_prob_option_0
     
@@ -173,7 +221,7 @@ def main(file: str, model: str, num_samples: int, num_warmup: int, num_chains: i
     output_file = output_file.split('.')[0] + '_' + model + '.nc'
     
     # Check model str
-    valid_config = ['Ap', 'An', 'Ac', 'Bc', 'Br']
+    valid_config = ['Ap', 'An', 'Acfp', 'Acfn', 'Ach', 'Bch', 'Br', 'Bcf']
     model_checked = '' + model
     for c in valid_config:
         model_checked = model_checked.replace(c, '')

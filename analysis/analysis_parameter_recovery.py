@@ -756,8 +756,9 @@ for index_sess in range(len(n_sessions)):
         ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
         
         # Calculate linear regression for trend line
+        index_not_nan = (1-(np.isnan(true_params[index_sess][:, index_feature]) + np.isnan(recovered_params[index_sess][:, index_feature]))).astype(bool)
         model = LinearRegression()
-        model.fit(true_params[index_sess][:, index_feature].reshape(-1, 1), recovered_params[index_sess][:, index_feature])
+        model.fit(true_params[index_sess][:, index_feature].reshape(-1, 1)[index_not_nan], recovered_params[index_sess][:, index_feature][index_not_nan])
         trend_line = model.predict(np.linspace(0, 1, 100).reshape(-1, 1))
         
         # Plot dashed trend line
@@ -832,7 +833,11 @@ for index_sess in range(len(n_sessions)):
         ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
         
         # Plot dashed trend line
-        # ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
+        index_not_nan = (1-(np.isnan(true_params[index_sess][:, index_feature]) + np.isnan(recovered_params[index_sess][:, index_feature]))).astype(bool)
+        model = LinearRegression()
+        model.fit(true_params[index_sess][:, index_feature].reshape(-1, 1)[index_not_nan], recovered_params[index_sess][:, index_feature][index_not_nan])
+        trend_line = model.predict(np.linspace(0, 1, 100).reshape(-1, 1))
+        ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
         
         # Axes settings
         ax.set_ylim(-.1, 1.1)
