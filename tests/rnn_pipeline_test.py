@@ -8,39 +8,19 @@ import pipeline_rnn
 _, loss = pipeline_rnn.main(
     checkpoint=False,
     epochs=65536, # <- 2^16
+    scheduler=True,
+    learning_rate=1e-4,
+    l1_weight_decay=0.001,
+    train_test_ratio=0.8,
     
-    # data='data/parameter_recovery/data_128p_0.csv',
-    # model='params/parameter_recovery/rnn_128p_0.pkl',
-    
-    # data = 'data/optuna/data_128p_0.csv',
-    # model = 'params/params_128p_0.pkl',
-    
-    model='params/eckstein2022/rnn_eckstein2022.pkl',
+    model='params/eckstein2022/rnn_eckstein2022_reward.pkl',
     data='data/eckstein2022/eckstein2022.csv',
-    
-    n_actions=2,
-    
-    # optuna params
-    # embedding_size=22,
-    # n_steps=32,
-    # learning_rate=0.00023,
     
     # hand-picked params
     embedding_size=32,
     n_steps=32,
-    learning_rate=1e-4,
-    l1_weight_decay=0.001,
-    l2_weight_decay=0,#0.001,
+    l2_weight_decay=0,
     dropout=0.25,
-    
-    # toy params for quick run
-    # learning_rate=1e-3,
-    # n_steps=16,
-    # embedding_size=0,
-    
-    # other training parameters
-    scheduler=True,
-    train_test_ratio=0.5,
     batch_size=-1,
     sequence_length=-1,
     bagging=True,
@@ -59,5 +39,5 @@ _, loss = pipeline_rnn.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=64,
+    participant_id=2,
 )

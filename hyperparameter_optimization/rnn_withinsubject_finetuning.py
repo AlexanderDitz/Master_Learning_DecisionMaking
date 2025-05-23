@@ -197,7 +197,7 @@ def objective(trial, train_dataset, n_participants):
         agent_rnn = AgentNetwork(model_rnn=model_rnn, n_actions=n_actions)
         
         _, final_train_loss_spice = fit_spice(
-            agent=agent_rnn, 
+            agent_rnn=agent_rnn, 
             data=train_dataset, 
             get_loss=True,
             filter_bad_participants=True,
@@ -280,7 +280,7 @@ def evaluate_with_sindy(model_rnn, val_dataset, participant_ids, n_participants,
             
             # Create SINDy agent just for this participant
             participant_sindy, _ = fit_spice(
-                agent=agent_rnn, 
+                agent_rnn=agent_rnn, 
                 data=val_dataset, 
                 get_loss=True,
                 filter_bad_participants=True,

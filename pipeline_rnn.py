@@ -209,6 +209,8 @@ def main(
         l2_weight_decay=l2_weight_decay,
     )
     
+    # TODO: Add module pruning for RNN
+    
     # save trained parameters
     state_dict = {'model': model.state_dict(), 'optimizer': optimizer_rnn.state_dict()}
     

@@ -56,7 +56,9 @@ class AgentQ:
       beta_reward: float = 3.,
       alpha_reward: float = 0.2,
       alpha_penalty: float = -1,
-      alpha_counterfactual: float = 0.,
+      beta_counterfactual: float = 0.,
+      alpha_counterfactual_reward: float = 0.,
+      alpha_counterfactual_penalty: float = 0.,
       beta_choice: float = 0.,
       alpha_choice: float = 1.,
       forget_rate: float = 0.,
@@ -85,7 +87,8 @@ class AgentQ:
     self._mean_forget_rate = forget_rate
     self._mean_beta_choice = beta_choice
     self._mean_alpha_choice = alpha_choice
-    self._mean_alpha_counterfactual = alpha_counterfactual
+    self._mean_alpha_counterfactual_reward = alpha_counterfactual_reward
+    self._mean_alpha_counterfactual_penalty = alpha_counterfactual_penalty
     
     self._beta_reward = beta_reward
     self._alpha_reward = alpha_reward
@@ -94,7 +97,8 @@ class AgentQ:
     self._forget_rate = forget_rate
     self._beta_choice = beta_choice
     self._alpha_choice = alpha_choice
-    self._alpha_counterfactual = alpha_counterfactual
+    self._alpha_counterfactual_reward = alpha_counterfactual_reward
+    self._alpha_counterfactual_penalty = alpha_counterfactual_penalty
     
     self._n_actions = n_actions
     self._parameter_variance = self.check_parameter_variance(parameter_variance)
@@ -105,7 +109,8 @@ class AgentQ:
     _check_in_0_1_range(alpha_reward, 'alpha')
     if alpha_penalty >= 0:
       _check_in_0_1_range(alpha_penalty, 'alpha_penalty')
-    _check_in_0_1_range(alpha_counterfactual, 'alpha_countefactual')
+    _check_in_0_1_range(alpha_counterfactual_reward, 'alpha_countefactual_reward')
+    _check_in_0_1_range(alpha_counterfactual_penalty, 'alpha_countefactual_penalty')
     _check_in_0_1_range(alpha_choice, 'alpha_choice')
     _check_in_0_1_range(forget_rate, 'forget_rate')
     
@@ -189,6 +194,7 @@ class AgentQ:
     
     # adjust learning rates for every received reward
     alpha = np.zeros_like(reward)
+    rpe = np.zeros_like(reward)
     for action in range(self._n_actions):
       if action == choice:
         # factual case
@@ -198,11 +204,12 @@ class AgentQ:
         # counterfactual case
         # counterfactual learning rate applies in case of foregone reward
         # no counterfactual learning in case of foregone penalty
-        alpha_r = self._alpha_counterfactual
-        alpha_p = 0
+        alpha_r = self._alpha_counterfactual_reward
+        alpha_p = self._alpha_counterfactual_penalty
         
       # asymmetric learning rates
-      alpha[action] = alpha_r if reward[action] > 0.5 else alpha_p
+      current_reward = reward[action] if np.min(reward) > -1 else reward[choice]
+      alpha[action] = alpha_r if current_reward > 0.5 else alpha_p
       
       # if action == choice:
       # add confirmation bias to learning rate
@@ -219,22 +226,23 @@ class AgentQ:
       # Just for testing: diminish learning rate with increasing choice value
       # alpha[action] = np.clip(alpha[action] - self._state['x_value_choice'][action] * 0.25, 0.1, 1.0)
       
-    self._state['x_learning_rate_reward'] = alpha
-    
-    # Reward-prediction-error
-    rpe = self._reward_prediction_error(self._state['x_value_reward'], reward)
+      # Reward-prediction-error
+      rpe[action] = self._reward_prediction_error(self._state['x_value_reward'][action], current_reward if action==choice else 1-current_reward)
+          
+    # (Counterfactual) Reward update
     reward_update = alpha * rpe
     
     # Forgetting - restore q-values of non-chosen actions towards the initial value
     forget_update = self._forget_rate * (self._q_init - self._state['x_value_reward'][non_chosen_action])
 
-    # update reward values
-    self._state['x_value_reward'][non_chosen_action] += reward_update[non_chosen_action] + forget_update
-    self._state['x_value_reward'][choice] += reward_update[choice]
-    
     # Choice-Perseverance: Action-based updates
     cpe = np.eye(self._n_actions)[choice] - self._state['x_value_choice']
+    
+    # Update memory state
+    self._state['x_value_reward'][non_chosen_action] += reward_update[non_chosen_action] + forget_update
+    self._state['x_value_reward'][choice] += reward_update[choice]
     self._state['x_value_choice'] += self._alpha_choice * cpe
+    self._state['x_learning_rate_reward'] = alpha
 
   @property
   def q(self):
@@ -324,7 +332,7 @@ class AgentNetwork:
 
   def __init__(
     self,
-    model_rnn,
+    model_rnn: BaseRNN,
     n_actions: int = 2,
     device = torch.device('cpu'),
     deterministic: bool = True,
@@ -379,6 +387,8 @@ class AgentNetwork:
   
   def get_choice_probs(self) -> np.ndarray:
     """Predict the choice probabilities as a softmax over output logits."""
+    # import warnings
+    # warnings.filterwarnings("error", category=RuntimeWarning)
     decision_variable = self.get_logit()
     choice_probs = np.exp(decision_variable) / np.sum(np.exp(decision_variable))
     return choice_probs
@@ -424,7 +434,7 @@ class AgentSpice(AgentNetwork):
   
   def __init__(
     self,
-    model_rnn,
+    model_rnn: BaseRNN,
     sindy_modules: Dict,
     n_actions: int,
     deterministic: bool = True,

@@ -1,131 +1,90 @@
-from typing import List, Union, Dict, Tuple
+from typing import List, Dict, Tuple, Iterable
 import numpy as np
-from math import comb
-import torch
 from copy import deepcopy
 from tqdm import tqdm
+import pandas as pd
 
-import pysindy as ps
-
-from resources.sindy_utils import remove_control_features, conditional_filtering, create_dataset, remove_bad_participants
-from resources.rnn_utils import DatasetRNN
-from resources.bandits import AgentNetwork, AgentSpice, Bandits, BanditsDrift, AgentQ, create_dataset as create_dataset_bandits, get_update_dynamics
-from resources.model_evaluation import bayesian_information_criterion as loss_metric
+from resources.sindy_utils import remove_bad_participants
+from resources.fit_sindy import fit_sindy_pipeline
+from resources.rnn_utils import DatasetRNN,split_data_along_timedim
+from resources.bandits import AgentNetwork, AgentSpice, get_update_dynamics
+from resources.model_evaluation import bayesian_information_criterion as loss_metric, log_likelihood
 from resources.optimizer_selection import optimize_for_participant
 
-def fit_sindy(
-    variables: List[np.ndarray], 
-    control: List[np.ndarray] = None, 
-    rnn_modules: List[str] = None,
-    control_signals: List[str] = None, 
-    polynomial_degree: int = 1, 
-    library_setup: Dict[str, List[str]] = {},
-    filter_setup: Dict[str, Tuple[str, float]] = {},
-    optimizer_type: str = "SR3_L1",
-    optimizer_threshold: float = 0.05,
-    optimizer_alpha: float = 1,
-    verbose: bool = False,
-    ):
-    
-    # get all x-features
-    x_features = rnn_modules
-    # get all control features
-    c_features = control_signals
-    
-    # make sure that all x_features are in the library_setup
-    for feature in x_features:
-        if feature not in library_setup:
-            library_setup[feature] = []
-    
-    # train one sindy model per variable
-    sindy_models = {feature: None for feature in x_features}
-    loss = 0
-    for index_feature, x_feature in enumerate(x_features):
-        if verbose:
-            print(f'\nSINDy model for {x_feature}:')
-        
-        # sort signals into corresponding arrays    
-        x_i = [x[:, index_feature].reshape(-1, 1) for x in variables] # get current x-feature as target variable
-        control_i = control
-        
-        feature_names_i = [x_feature] + c_features
-        
-        # filter target variable and control features according to filter conditions
-        if x_feature in filter_setup:
-            if not isinstance(filter_setup[x_feature][0], list):
-                # check that filter_setup[x_feature] is a list of filter-conditions 
-                filter_setup[x_feature] = [filter_setup[x_feature]]
-            for filter_condition in filter_setup[x_feature]:
-                x_i, control_i, feature_names_i = conditional_filtering(
-                    x_train=x_i, 
-                    control=control_i, 
-                    feature_names=feature_names_i, 
-                    feature_filter=filter_condition[0], 
-                    condition=filter_condition[1], 
-                    remove_feature_filter=False
-                )
-        
-        # remove unnecessary control features according to library setup
-        control_i = remove_control_features(control_i, feature_names_i[1:], library_setup[x_feature])
-        feature_names_i = [x_feature] + library_setup[x_feature]
-        
-        # add a dummy control feature if no control features are remaining - otherwise sindy breaks
-        # if control_i is None or len(control_i) == 0:
-        #     raise NotImplementedError('Having no control signal in a module is currently not implemented')
-        #     control_i = None
-        #     feature_names_i = feature_names_i + ['dummy']
-        
-        # Set up increasing thresholds with polynomial degree for SR3_weighted_l1
-        if optimizer_type == "SR3_weighted_l1":
-            n_polynomial_combinations = np.array([comb(len(feature_names_i) + d, d) for d in range(polynomial_degree+1)])
-            thresholds = np.zeros((1, n_polynomial_combinations[-1]))
-            index = 0
-            for d in range(len(n_polynomial_combinations)):
-                thresholds[0, index:n_polynomial_combinations[d]] = d * optimizer_threshold
-                index = n_polynomial_combinations[d]
 
-        # Create optimizer based on type
-        if optimizer_type == "STLSQ":
-            optimizer = ps.STLSQ(alpha=optimizer_alpha, threshold=optimizer_threshold)
-        elif optimizer_type == "SR3_L1":
-            optimizer = ps.SR3(
-                thresholder="L1",
-                nu=optimizer_alpha,
-                threshold=optimizer_threshold,
-                verbose=verbose,
-                max_iter=100
-            )
-        else:  # "SR3_weighted_l1" (default)
-            optimizer = ps.SR3(
-                thresholder="weighted_l1",
-                nu=optimizer_alpha,
-                threshold=optimizer_threshold,
-                thresholds=thresholds,
-                verbose=verbose,
-                max_iter=100
-            )
+def module_pruning(agent_spice: AgentSpice, dataset: DatasetRNN, participant_ids: Iterable[int], verbose: bool = False):
+    """Check for badly fitted participants in the SPICE models w.r.t. the SPICE-RNN and return only the IDs of the well-fitted participants.
+
+    Args:
+        agent_spice (AgentSpice): _description_
+        dataset_test (DatasetRNN): _description_
+        participant_ids (Iterable[int]): _description_
+        verbose (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        AgentSpice: pruned SPICE agent
+    """
+    if verbose:
+        print("\nPruning unnecessary SPICE modules...")
+    
+    n_removed_modules = 0
+    for pid in tqdm(participant_ids):
+        # Skip if participant is not in the SPICE model
+        if pid not in agent_spice._model.submodules_sindy[list(agent_spice._model.submodules_sindy.keys())[0]]:
+            if verbose:
+                print("Participant ID", pid, "not found in SPICE model. Skipped that participant.")
+            continue
+        
+        agent_spice.new_sess(participant_id=pid)
+        keys_betas = agent_spice.get_betas().keys()
+        if not any([agent_spice.get_betas()[key] == 0 for key in keys_betas]):
+            continue
+        
+        # Calculate normalized log likelihood for SPICE and RNN
+        mask_participant_id = dataset.xs[:, 0, -1] == pid
+        if not mask_participant_id.any():
+            if verbose:
+                print("Participant ID", pid, "not found in dataset. Skipped that participant.")
+            continue
             
-        # Setup sindy model for current x-feature
-        sindy_models[x_feature] = ps.SINDy(
-            optimizer=optimizer,
-            feature_library=ps.PolynomialLibrary(polynomial_degree),
-            discrete_time=True,
-            feature_names=feature_names_i,
-        )
-
-        # fit sindy model
-        sindy_models[x_feature].fit(x_i, u=control_i, t=1, multiple_trajectories=True, ensemble=False)
+        participant_data = DatasetRNN(*dataset[mask_participant_id])
         
-        if verbose:
-            sindy_models[x_feature].print()
-    
-    return sindy_models
-    
-    
+        # Get probabilities from SPICE and RNN models
+        agent_spice.new_sess(participant_id=pid)
+        
+        # Calculate action probabilities for original model
+        probs_spice = get_update_dynamics(experiment=participant_data.xs, agent=agent_spice)[1]
+        # n_trials_test = len(probs_spice)
+        
+        # Calculate action probabilities for pruned models
+        for module in agent_spice.get_modules():
+            agent_spice_modified = deepcopy(agent_spice)
+            module_modified = agent_spice_modified.get_modules()[module][pid]
+            
+            # set all coefficients of the currently investigated module to 0
+            module_modified.optimizer.coef_ = np.zeros_like(module_modified.optimizer.coef_)
+
+            # put modified module back into agent
+            # agent_spice_modified._model.submodules_sindy[module][pid] = module_modified
+            
+            # get new action probabilities and compare to original ones
+            probs_spice_modified = get_update_dynamics(experiment=participant_data.xs, agent=agent_spice_modified)[1]
+            if np.sum(np.abs(probs_spice - probs_spice_modified)) == 0 and np.sum(agent_spice.get_modules()[module][pid].coefficients()) != 0:
+                if verbose:
+                    print("Found unnecessary module", module, "for participant", pid)
+                agent_spice._model.submodules_sindy[module][pid].optimizer.coef_ = np.zeros_like(module_modified.optimizer.coef_)
+                n_removed_modules += 1
+                
+    if verbose:
+        print("Removed modules:", n_removed_modules)
+        
+    return agent_spice
+        
+
 def fit_spice(
     rnn_modules: List[np.ndarray],
     control_signals: List[np.ndarray], 
-    agent: AgentNetwork,
+    agent_rnn: AgentNetwork,
     data: DatasetRNN = None,
     polynomial_degree: int = 2, 
     library_setup: Dict[str, List[str]] = {},
@@ -138,11 +97,14 @@ def fit_spice(
     dataprocessing: Dict[str, List] = None,
     n_trials_off_policy: int = 1000,
     n_sessions_off_policy: int = 1,
+    n_trials_same_action_off_policy: int = 5,
+    train_test_ratio: float = 1.0,
     deterministic: bool = True,
     get_loss: bool = False,
     verbose: bool = False,
     use_optuna: bool = False,
     filter_bad_participants: bool = False,
+    pruning: bool = False,
     ) -> Tuple[AgentSpice, float]:
     """Fit a SPICE agent by replacing RNN modules with SINDy equations.
 
@@ -171,6 +133,8 @@ def fit_spice(
         Tuple[AgentSpice, float]: The SPICE agent and its loss
     """
     
+    data = split_data_along_timedim(data, split_ratio=train_test_ratio)[0]
+    
     if participant_id is not None:
         participant_ids = [participant_id]
     elif data is not None and participant_id is None:
@@ -178,121 +142,218 @@ def fit_spice(
     else:
         raise ValueError("Either data or participant_id are required.")
         
-    if n_sessions_off_policy > 0:
-        # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
-        # The trained RNN will then perform value updates to get off-policy data
-        environment = BanditsDrift(sigma=0.2, n_actions=agent._n_actions)
-        
-        # create a dummy dataset where each choice is chosen for n times and then an action switch occures
-        xs_fit = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*agent._n_actions+1)) - 1
-        n_trials_same_action = 5
-        for session in range(n_sessions_off_policy):
-            # initialize first action
-            current_action = torch.zeros(agent._n_actions)
-            current_action[0] = 1
-            for trial in range(n_trials_off_policy):
-                current_action_index = torch.argmax(current_action).int().item()
-                reward = torch.tensor(environment.step(current_action_index))
-                xs_fit[session, trial, :-1] = torch.concat((current_action, reward))
-                # action switch - go to next possible action item and if final go to first one
-                if trial >= n_trials_same_action and trial % n_trials_same_action == 0:
-                    current_action[current_action_index] = 0
-                    current_action[current_action_index+1 if current_action_index+1 < len(current_action) else 0] = 1
-                    
-        # setup of dataset
-        ys_fit = xs_fit[:, 1:, :agent._n_actions]
-        xs_fit = xs_fit[:, :-1]
-        dataset_fit = DatasetRNN(xs_fit, ys_fit)
-        
-        # repeat the off-policy data for every participant and add the corresponding participant ID
-        xs_fit = dataset_fit.xs.repeat(len(participant_ids), 1, 1)
-        ys_fit = dataset_fit.ys.repeat(len(participant_ids), 1, 1)
-        # set participant ids correctly
-        for index_pid in range(0, len(participant_ids)):
-            xs_fit[n_sessions_off_policy*index_pid:n_sessions_off_policy*(index_pid+1):, :, -1] = participant_ids[index_pid]
-        dataset_fit = DatasetRNN(xs=xs_fit, ys=ys_fit)
-        
-    elif n_sessions_off_policy <= 0 and data is not None:
-        dataset_fit = data
-        if participant_id is not None:
-            mask_participant_id = dataset_fit.xs[:, 0, -1] == participant_id
-            dataset_fit = DatasetRNN(*dataset_fit[mask_participant_id])
-    elif n_sessions_off_policy <= 0 and data is None:
-        raise ValueError("One of the arguments data or n_sessions_off_policy (> 0) must be given. If n_sessions_off_policy > 0 the SINDy modules will be fitted on the off-policy data regardless of data. If n_sessions_off_policy = 0 then data will be used to fit the SINDy modules.")
-    
-    sindy_models = {rnn_module: {} for rnn_module in rnn_modules}
+    sindy_modules = {rnn_module: {} for rnn_module in rnn_modules}
+    optuna_pids = []
+    likelihoods_rnn = []
+    likelihoods_spice_before_optuna = []
+    likelihoods_spice_after_optuna = []
     for pid in tqdm(participant_ids):
-        # extract all necessary data from the RNN (memory state) and align with the control inputs (action, reward)
-        mask_participant_id = dataset_fit.xs[:, 0, -1] == pid
-        rnn_variables, control_parameters, _, _ = create_dataset(
-            agent=agent,
-            data=DatasetRNN(*dataset_fit[mask_participant_id]),
-            rnn_modules=rnn_modules,
-            control_signals=control_signals,
-            shuffle=shuffle,
-            dataprocessing=dataprocessing,
-        )
-
-        # If using Optuna, find the best optimizer configuration for this participant
-        if use_optuna:
-            
-            # Find optimal optimizer and parameters for this participant
-            optimizer_config = optimize_for_participant(
-                variables=rnn_variables,
-                control=control_parameters,
+        
+        if data is not None:
+            mask_participant_id = data.xs[:, 0, -1] == pid
+            data_pid = DatasetRNN(*data[mask_participant_id])
+        
+        try:
+        # just fit the SINDy modules with the given parameters 
+            sindy_modules_id = fit_sindy_pipeline(
+                participant_id=pid,
+                agent=agent_rnn,
+                data=data_pid,
                 rnn_modules=rnn_modules,
                 control_signals=control_signals,
-                library_setup=library_setup,
-                filter_setup=filter_setup,
+                sindy_library_setup=library_setup,
+                sindy_filter_setup=filter_setup,
+                sindy_dataprocessing=dataprocessing,
+                optimizer_type=optimizer_type,
+                optimizer_alpha=optimizer_alpha,
+                optimizer_threshold=optimizer_threshold,
                 polynomial_degree=polynomial_degree,
-                n_trials=50,  # Adjust as needed
-                verbose=verbose
+                shuffle=shuffle,
+                n_sessions_off_policy=n_sessions_off_policy,
+                n_trials_off_policy=n_trials_off_policy,
+                n_trials_same_action_off_policy=n_trials_same_action_off_policy,
+                catch_convergence_warning=False,
+                verbose=verbose,
             )
             
-            # Use the optimized parameters for this participant
-            pid_optimizer_type = optimizer_config["optimizer_type"]
-            pid_optimizer_alpha = optimizer_config["optimizer_alpha"]
-            pid_optimizer_threshold = optimizer_config["optimizer_threshold"]
+            spice_modules_id = {rnn_module: {} for rnn_module in rnn_modules}
+            for rnn_module in rnn_modules:
+                spice_modules_id[rnn_module][pid] = sindy_modules_id[rnn_module]
+            agent_spice_id = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules_id, n_actions=agent_rnn._n_actions)
+            probs_rnn = get_update_dynamics(agent=agent_rnn, experiment=data_pid.xs[0])[1]
+            probs_spice = get_update_dynamics(agent=agent_spice_id, experiment=data_pid.xs[0])[1]
+            lik_rnn = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_rnn) / probs_rnn.size)
+            lik_spice_before_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
+            if lik_rnn - lik_spice_before_optuna > 0.03 or np.isnan(lik_spice_before_optuna):
+                likelihoods_rnn.append(np.round(lik_rnn, 5))
+                likelihoods_spice_before_optuna.append(np.round(lik_spice_before_optuna, 5))
+                raise RuntimeError(f"Bad fit of SPICE model.\nLikelihoods before optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE = {np.round(lik_spice_before_optuna, 5)}; Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)}\nStarting optuna...")
             
-            if verbose:
-                print(f"\nUsing optimized parameters for participant {pid}:")
-                print(f"  Optimizer type: {pid_optimizer_type}")
-                print(f"  Alpha: {pid_optimizer_alpha}")
-                print(f"  Threshold: {pid_optimizer_threshold}")
-        else:
-            # Use the global parameters
-            pid_optimizer_type = optimizer_type
-            pid_optimizer_alpha = optimizer_alpha
-            pid_optimizer_threshold = optimizer_threshold
-
-        # fit one SINDy-model per RNN-module
-        sindy_models_id = fit_sindy(
-            variables=rnn_variables,
-            control=control_parameters,
-            rnn_modules=rnn_modules,
-            control_signals=control_signals,
-            polynomial_degree=polynomial_degree,
-            library_setup=library_setup,
-            filter_setup=filter_setup,
-            optimizer_type=pid_optimizer_type,
-            optimizer_alpha=pid_optimizer_alpha,
-            optimizer_threshold=pid_optimizer_threshold,
-            verbose=verbose,
-        )
-            
+        except Exception as e:
+            # If using Optuna, find the best optimizer configuration for this participant
+            print(e)
+            optuna_pids.append(pid)
+            if use_optuna:
+                print(f"Using optuna to find a better set of pysindy parameters for participant {pid}...")
+                # Find optimal optimizer and parameters for this participant
+                sindy_config = optimize_for_participant(
+                    participant_id=pid,
+                    agent_rnn=agent_rnn,
+                    data=data_pid,
+                    metric_rnn=lik_rnn,
+                    rnn_modules=rnn_modules,
+                    control_signals=control_signals,
+                    library_setup=library_setup,
+                    filter_setup=filter_setup,
+                    polynomial_degree=polynomial_degree,
+                    n_sessions_off_policy=n_sessions_off_policy,
+                    n_trials_optuna=50,  # Adjust as needed
+                    verbose=verbose
+                )
+                
+                optuna_optimizer_type = sindy_config["optimizer_type"]
+                optuna_optimizer_alpha = sindy_config["optimizer_alpha"]
+                optuna_optimizer_threshold = sindy_config["optimizer_threshold"]
+                optuna_n_trials_off_policy = sindy_config["n_trials_off_policy"]
+                optuna_n_trials_same_action_off_policy = sindy_config["n_trials_same_action_off_policy"]
+                
+                if verbose:
+                    print(f"\nUsing optimized parameters for participant {pid}:")
+                    print(f"\tOptimizer type: {optuna_optimizer_type}")
+                    print(f"\tAlpha: {optuna_optimizer_alpha}")
+                    print(f"\tThreshold: {optuna_optimizer_threshold}")
+                    print(f"\tOff-polcy trials: {optuna_n_trials_off_policy}")
+                    print(f"\tSame action in off-polcy trials: {optuna_n_trials_same_action_off_policy}")
+                    
+                sindy_modules_optuna = fit_sindy_pipeline(
+                participant_id=pid,
+                agent=agent_rnn,
+                data=data_pid,
+                rnn_modules=rnn_modules,
+                control_signals=control_signals,
+                sindy_library_setup=library_setup,
+                sindy_filter_setup=filter_setup,
+                sindy_dataprocessing=dataprocessing,
+                optimizer_type=optuna_optimizer_type,
+                optimizer_alpha=optuna_optimizer_alpha,
+                optimizer_threshold=optuna_optimizer_threshold,
+                polynomial_degree=polynomial_degree,
+                shuffle=shuffle,
+                n_sessions_off_policy=n_sessions_off_policy,
+                n_trials_off_policy=optuna_n_trials_off_policy,
+                n_trials_same_action_off_policy=optuna_n_trials_same_action_off_policy,
+                catch_convergence_warning=False,
+                verbose=verbose,
+                )
+                
+                spice_modules_optuna = {rnn_module: {} for rnn_module in rnn_modules}
+                for rnn_module in rnn_modules:
+                    spice_modules_optuna[rnn_module][pid] = sindy_modules_optuna[rnn_module]
+                agent_spice_optuna = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules_optuna, n_actions=agent_rnn._n_actions)
+                probs_spice = get_update_dynamics(agent=agent_spice_optuna, experiment=data_pid.xs[0])[1]
+                lik_spice_after_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
+                
+                if lik_rnn - lik_spice_after_optuna > 0.1 or np.isnan(lik_spice_after_optuna):
+                    
+                    print(f"Did not find satisfying solution after 50 optuna trials.\nSPICE = {np.round(lik_spice_before_optuna, 5)} -> {np.round(lik_spice_after_optuna, 5)}\nStarting again with 100 trials...")
+                    
+                    # Find optimal optimizer and parameters for this participant
+                    sindy_config = optimize_for_participant(
+                        participant_id=pid,
+                        agent_rnn=agent_rnn,
+                        data=data_pid,
+                        metric_rnn=lik_rnn,
+                        rnn_modules=rnn_modules,
+                        control_signals=control_signals,
+                        library_setup=library_setup,
+                        filter_setup=filter_setup,
+                        polynomial_degree=polynomial_degree,
+                        n_sessions_off_policy=n_sessions_off_policy,
+                        n_trials_optuna=100,  # Adjust as needed
+                        verbose=verbose
+                    )
+                    
+                    optuna_optimizer_type = sindy_config["optimizer_type"]
+                    optuna_optimizer_alpha = sindy_config["optimizer_alpha"]
+                    optuna_optimizer_threshold = sindy_config["optimizer_threshold"]
+                    optuna_n_trials_off_policy = sindy_config["n_trials_off_policy"]
+                    optuna_n_trials_same_action_off_policy = sindy_config["n_trials_same_action_off_policy"]
+                    
+                    if verbose:
+                        print(f"\nUsing optimized parameters for participant {pid}:")
+                        print(f"\tOptimizer type: {optuna_optimizer_type}")
+                        print(f"\tAlpha: {optuna_optimizer_alpha}")
+                        print(f"\tThreshold: {optuna_optimizer_threshold}")
+                        print(f"\tOff-polcy trials: {optuna_n_trials_off_policy}")
+                        print(f"\tSame action in off-polcy trials: {optuna_n_trials_same_action_off_policy}")
+                        
+                    sindy_modules_optuna = fit_sindy_pipeline(
+                    participant_id=pid,
+                    agent=agent_rnn,
+                    data=data_pid,
+                    rnn_modules=rnn_modules,
+                    control_signals=control_signals,
+                    sindy_library_setup=library_setup,
+                    sindy_filter_setup=filter_setup,
+                    sindy_dataprocessing=dataprocessing,
+                    optimizer_type=optuna_optimizer_type,
+                    optimizer_alpha=optuna_optimizer_alpha,
+                    optimizer_threshold=optuna_optimizer_threshold,
+                    polynomial_degree=polynomial_degree,
+                    shuffle=shuffle,
+                    n_sessions_off_policy=n_sessions_off_policy,
+                    n_trials_off_policy=optuna_n_trials_off_policy,
+                    n_trials_same_action_off_policy=optuna_n_trials_same_action_off_policy,
+                    catch_convergence_warning=False,
+                    verbose=verbose,
+                    )
+                    
+                    spice_modules_optuna = {rnn_module: {} for rnn_module in rnn_modules}
+                    for rnn_module in rnn_modules:
+                        spice_modules_optuna[rnn_module][pid] = sindy_modules_optuna[rnn_module]
+                    agent_spice_optuna = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules_optuna, n_actions=agent_rnn._n_actions)
+                    probs_spice = get_update_dynamics(agent=agent_spice_optuna, experiment=data_pid.xs[0])[1]
+                    lik_spice_after_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
+                
+                likelihoods_spice_after_optuna.append(np.round(lik_spice_after_optuna, 5))
+                print(f"Likelihoods after optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE =  {np.round(lik_spice_before_optuna, 5)} -> {np.round(lik_spice_after_optuna, 5)}, Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)} -> {np.round(lik_rnn-lik_spice_after_optuna, 5)}")
+                
+                if lik_spice_after_optuna > lik_spice_before_optuna or np.isnan(lik_spice_before_optuna):
+                    sindy_modules_id = sindy_modules_optuna
+                
         for rnn_module in rnn_modules:
-            sindy_models[rnn_module][pid] = sindy_models_id[rnn_module]
+            sindy_modules[rnn_module][pid] = sindy_modules_id[rnn_module]
 
+    print("Optuna-optimized participants:", optuna_pids)
+    print("Likelihoods of RNN, SPICE (before), SPICE (after):")
+    df = {
+        'PID': optuna_pids,
+        'RNN': likelihoods_rnn,
+        'SPICE': likelihoods_spice_before_optuna,
+        'SPICE (Optuna)': likelihoods_spice_after_optuna,
+    }
+    print(pd.DataFrame(data=df))
+    
     # set up a SINDy-based agent by replacing the RNN-modules with the respective SINDy-model
-    agent_spice = AgentSpice(model_rnn=deepcopy(agent._model), sindy_modules=sindy_models, n_actions=agent._n_actions, deterministic=deterministic)
+    agent_spice = AgentSpice(model_rnn=deepcopy(agent_rnn._model), sindy_modules=sindy_modules, n_actions=agent_rnn._n_actions, deterministic=deterministic)
+    
+    # pruning unnecessary SINDy modules (i.e. modules which have no influence on the output but add up parameters)
+    if pruning:
+        agent_spice = module_pruning(
+            agent_spice=agent_spice,
+            dataset=data,
+            participant_ids=participant_ids,
+            verbose=True,
+            )
     
     # remove badly fitted participants
     if filter_bad_participants:
         agent_spice, participant_ids = remove_bad_participants(
             agent_spice=agent_spice,
-            agent_rnn=agent,
+            agent_rnn=agent_rnn,
             dataset=data,
             participant_ids=participant_ids,
+            trial_likelihood_difference_threshold=0.20,
             verbose=verbose,
         )
     
@@ -311,4 +372,5 @@ def fit_spice(
             loss += loss_metric(data=ys[pid, :len(probs)], probs=probs, n_parameters=n_parameters[pid])
             n_trials_total += len(probs)
         loss = loss/n_trials_total
+        
     return agent_spice, loss
