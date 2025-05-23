@@ -149,7 +149,7 @@ def run_training_and_evaluation(dataset, label):
     agent_sindy, _ = fit_spice(
         rnn_modules=list_rnn_modules,
         control_signals=list_control_parameters,
-        agent=agent_rnn,
+        agent_rnn=agent_rnn,
         data_off_policy=dataset,
         off_policy=True,            
         polynomial_degree=2,

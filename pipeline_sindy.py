@@ -31,9 +31,12 @@ def main(
     polynomial_degree = 2,
     n_trials_off_policy = 1024,
     n_sessions_off_policy = 1,
+    n_trials_same_action_off_policy = 5,
     verbose = True,
     use_optuna = False,
     filter_bad_participants = False,  # Added parameter to control filtering
+    pruning = False,
+    train_test_ratio = 1.0,
     
     # ground truth parameters
     beta_reward = 3.,
@@ -61,15 +64,15 @@ def main(
     
     # tracked variables and control signals in the RNN
     list_rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    list_control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
+    list_control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
     sindy_feature_list = list_rnn_modules + list_control_parameters
 
     # library setup: 
     # which terms are allowed as control inputs in each SINDy model
     # key is the SINDy model name, value is a list of allowed control inputs from the list of control signals 
     library_setup = {
-        'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
-        'x_value_reward_not_chosen': ['c_value_choice'],
+        'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+        'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
         'x_value_choice_chosen': ['c_value_reward'],
         'x_value_choice_not_chosen': ['c_value_reward'],
     }
@@ -151,11 +154,11 @@ def main(
         if participant_id is not None or participant_id != 0:
             participant_id = 0
         participant_ids = np.arange(agent_rnn._model.n_participants, dtype=int)
-        dataset_test, _, _ = create_dataset_bandits(agent, environment, 200, len(participant_ids))
+        dataset, _, _ = create_dataset_bandits(agent, environment, 200, len(participant_ids))
     else:
         # get data from experiments for later evaluation
-        dataset_test, _, df, _ = convert_dataset(data)
-        participant_ids = dataset_test.xs[..., -1].unique().int().cpu().numpy()
+        dataset, _, df, _ = convert_dataset(data)
+        participant_ids = dataset.xs[..., -1].unique().int().cpu().numpy()
         
     # ---------------------------------------------------------------------------------------------------
     # SINDy training
@@ -168,10 +171,11 @@ def main(
     agent_spice, loss_spice = fit_spice(
         rnn_modules=list_rnn_modules,
         control_signals=list_control_parameters,
-        agent=agent_rnn,
-        data=dataset_test,
+        agent_rnn=agent_rnn,
+        data=dataset,
         n_sessions_off_policy=n_sessions_off_policy,
         n_trials_off_policy=n_trials_off_policy,
+        n_trials_same_action_off_policy=n_trials_same_action_off_policy,
         polynomial_degree=polynomial_degree,
         library_setup=library_setup,
         filter_setup=filter_setup,
@@ -185,6 +189,8 @@ def main(
         verbose=verbose,
         use_optuna=use_optuna,
         filter_bad_participants=filter_bad_participants,
+        pruning=pruning,
+        train_test_ratio=train_test_ratio,
         )
     
     # If agent_spice is None, we couldn't fit the model, so return early
@@ -242,7 +248,7 @@ def main(
             agents = {'rnn': agent_rnn, 'sindy': agent_spice}
             plt_title = ''
             
-        fig, axs = plot_session(agents, dataset_test.xs[participant_id_test])
+        fig, axs = plot_session(agents, dataset.xs[participant_id_test])
         betas = agent_spice.get_betas()
         plt_title += r'SINDy: $\beta_{reward}=$'+str(np.round(betas['x_value_reward'], 2)) + r'; $\beta_{choice}=$'+str(np.round(betas['x_value_choice'], 2))
         

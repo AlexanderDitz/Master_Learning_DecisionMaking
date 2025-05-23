@@ -8,8 +8,8 @@ from utils.create_dataset_AgentSPICE import main as create_dataset_spice
 from pipeline_rnn import main as rnn_training
 
 # MCMC training configuration
-num_samples = 4096
-num_warmup = 1024
+num_samples = 5000
+num_warmup = 1000
 num_chains = 2
 hierarchical = True
 training_test_ratio = 0.8
@@ -19,7 +19,8 @@ epochs = 4096
 scheduler = True
 
 # Data generation configuration
-n_trials_per_session = 500
+n_trials_per_session = 200
+train_test_ratio = 0.8
 
 # empirical data
 data = 'data/eckstein2022/eckstein2022.csv'

@@ -5,8 +5,9 @@ import itertools
 import random
 from tqdm import tqdm
 import dill
+import torch
 
-from resources.bandits import AgentNetwork, AgentSpice, get_update_dynamics, BanditSession
+from resources.bandits import AgentNetwork, AgentSpice, get_update_dynamics, BanditSession, BanditsDrift
 from resources.rnn_utils import DatasetRNN
 from resources.model_evaluation import log_likelihood
 
@@ -384,3 +385,52 @@ def load_spice(file) -> Dict:
   with open(file, 'rb') as f:
     spice_modules = dill.load(f)
   return spice_modules
+
+
+def generate_off_policy_data(participant_id: int, n_trials_off_policy: int, n_trials_same_action_off_policy: int, n_sessions_off_policy: int = 1, n_actions: int = 2) -> DatasetRNN:
+  """Generates a simple off-policy dataset where each action is repeated n_trials_same_action_off_policy times and then switched.
+
+  Args:
+      participant_id (int): _description_
+      n_trials_off_policy (int): _description_
+      n_trials_same_action_off_policy (int): _description_
+      n_sessions_off_policy (int, optional): _description_. Defaults to 1.
+      n_actions (int, optional): _description_. Defaults to 2.
+
+  Returns:
+      DatasetRNN: Off-policy dataset
+  """
+  
+  # set up environment to create an off-policy dataset (w.r.t to trained RNN) of arbitrary length
+  # The trained RNN will then perform value updates to get off-policy data
+  environment = BanditsDrift(sigma=0.2, n_actions=n_actions)
+  
+  # create a dummy dataset where each choice is chosen for n times and then an action switch occures
+  xs = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*n_actions+1)) - 1
+  for session in range(n_sessions_off_policy):
+      # initialize first action
+      current_action = torch.zeros(n_actions)
+      current_action[0] = 1
+      for trial in range(n_trials_off_policy):
+          current_action_index = torch.argmax(current_action).int().item()
+          reward = torch.tensor(environment.step(current_action_index))
+          xs[session, trial, :-1] = torch.concat((current_action, reward))
+          # action switch - go to next possible action item and if final go to first one
+          if trial >= n_trials_same_action_off_policy and trial % n_trials_same_action_off_policy == 0:
+              current_action[current_action_index] = 0
+              current_action[current_action_index+1 if current_action_index+1 < len(current_action) else 0] = 1
+              
+  # setup of dataset
+  ys = xs[:, 1:, :n_actions]
+  xs = xs[:, :-1]
+  xs[..., -1] = participant_id
+  
+  # dataset_fit = DatasetRNN(xs_fit, ys_fit)
+  # # repeat the off-policy data for every participant and add the corresponding participant ID
+  # xs_fit = dataset_fit.xs.repeat(len(participant_ids), 1, 1)
+  # ys_fit = dataset_fit.ys.repeat(len(participant_ids), 1, 1)
+  # set participant ids correctly
+  # for index_pid in range(0, len(participant_ids)):
+  #     xs[n_sessions_off_policy*index_pid:n_sessions_off_policy*(index_pid+1):, :, -1] = participant_ids[index_pid]
+  
+  return DatasetRNN(xs=xs, ys=ys)

@@ -13,26 +13,16 @@ from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 
-import warnings
-from sklearn.exceptions import ConvergenceWarning  # Import the specific warning type
-
-warnings.filterwarnings("ignore", category=ConvergenceWarning)
-
-use_spice = True
 train_test_ratio = 0.8
 
 path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
-path_model_spice = 'params/eckstein2022/spice_eckstein2022.pkl'
-path_model_benchmark = 'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
-path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
+path_model_rnn = 'params/eckstein2022/rnn_eckstein2022_reward.pkl'
+path_model_spice = 'params/eckstein2022/spice_eckstein2022_reward.pkl'
+path_model_benchmark = None#'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
+path_model_baseline = None#'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
 
-# path_data = 'data/parameter_recovery/data_16p_0.csv'
-# path_model_rnn = 'params/parameter_recovery/params_16p_0.pkl'
-# path_model_benchmark = None
-# path_model_baseline = None
-
-models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
+models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+# models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnBr']
 dataset = convert_dataset(path_data)[0]
 # use these participant_ids if not defined later
@@ -47,9 +37,10 @@ participant_ids = dataset.xs[:, 0, -1].unique().cpu().numpy()
 # new: Fitted ApBr model -> Tells the "true" story of how much better SPICE models can actually be by setting a good relative baseline
 print("Setting up baseline agent from file", path_model_baseline)
 if path_model_baseline:
-    agent_baseline = setup_agent_mcmc(path_model_baseline)
+    agent_baseline = setup_agent_mcmc(path_model=path_model_baseline)
 else:
-    agent_baseline = [AgentQ(alpha_reward=0.3, beta_reward=1) for _ in range(len(dataset))]
+    # agent_baseline = [AgentQ(alpha_reward=0.3, beta_reward=1) for _ in range(len(dataset))]
+    agent_baseline = [AgentQ(alpha_reward=0., beta_reward=1, beta_choice=3) for _ in range(len(dataset))]
 
 n_parameters_baseline = 2
 
@@ -58,35 +49,35 @@ if path_model_benchmark:
     print("Setting up benchmark agent...")
     agent_benchmark = {}
     for model in models_benchmark:
-        agent_benchmark[model] = setup_agent_mcmc(path_model_benchmark.replace('MODEL', model))
-    mapping_n_parameters_benchmark = {
-        'ApBr': 2,
-        'ApAnBr': 3,
-        'ApBcBr': 3,
-        'ApAcBcBr': 4,
-        'ApAnBcBr': 4,
-        'ApAnAcBcBr': 5,
-    }
+        agent_benchmark[model] = setup_agent_mcmc(path_model=path_model_benchmark.replace('MODEL', model))
+    mapping_n_parameters_benchmark = {model: sum([letter.isupper() for letter in model]) for model in models_benchmark}
+    for model in mapping_n_parameters_benchmark:
+        # reduce for one parameter if Bcf is in model name because that one is either 1 or 0 and not fitted
+        if 'Bcf' in model:
+            mapping_n_parameters_benchmark[model] -= 1
 else:
-     models_benchmark = []
+    models_benchmark = []
 n_parameters_benchmark = 0
 
 # setup rnn agent
-print("Setting up RNN agent from file", path_model_rnn)
-agent_rnn = setup_agent_rnn(
-    path_model=path_model_rnn, 
-    list_sindy_signals=['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen'] + ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice'],
-    )
-n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
-
+if path_model_rnn is not None:
+    print("Setting up RNN agent from file", path_model_rnn)
+    agent_rnn = setup_agent_rnn(
+        path_model=path_model_rnn, 
+        list_sindy_signals=['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen'] + ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+        )
+    n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
+else:
+    n_parameters_rnn = 0
+    
 # setup spice agent
-if use_spice:
+if path_model_spice is not None:
     print("Setting up SPICE agent from file", path_model_spice)
     rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
+    control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
     sindy_library_setup = {
-        'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
-        'x_value_reward_not_chosen': ['c_value_choice'],
+        'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+        'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
         'x_value_choice_chosen': ['c_value_reward'],
         'x_value_choice_not_chosen': ['c_value_reward'],
     }
@@ -153,7 +144,7 @@ for index_data in tqdm(range(len(dataset))):
             continue
         data_xs = dataset.xs[index_data].cpu().numpy()
         # Using here dataset.xs instead of dataset.ys because of probs = get_update_dynamics(...): q_values[0] (0.5, 0.5) -> action[0] (1, 0) or (0, 1) 
-        data_ys = dataset.xs[index_data, :, :agent_rnn._n_actions].cpu().numpy()
+        data_ys = dataset.xs[index_data, :, :agent_baseline[0]._n_actions].cpu().numpy()
         
         # Baseline model
         probs_baseline = get_update_dynamics(experiment=data_xs, agent=agent_baseline[index_data])[1]
@@ -167,23 +158,18 @@ for index_data in tqdm(range(len(dataset))):
         scores_baseline_list.append(scores_baseline[0])
         
         # SPICE-RNN
-        probs_rnn = get_update_dynamics(experiment=data_xs, agent=agent_rnn)[1][-n_trials_test:]
-        scores_rnn = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_rnn[-n_trials_test:], n_parameters=n_parameters_rnn))
-        scores_rnn_list.append(scores_rnn[0])
+        if path_model_rnn is not None:
+            probs_rnn = get_update_dynamics(experiment=data_xs, agent=agent_rnn)[1][-n_trials_test:]
+            scores_rnn = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_rnn[-n_trials_test:], n_parameters=n_parameters_rnn))
+            scores_rnn_list.append(scores_rnn[0])
         
         # SPICE
-        if use_spice:
+        if path_model_spice is not None:
             probs_spice = get_update_dynamics(experiment=data_xs, agent=agent_spice)[1][-n_trials_test:]
             scores_spice = np.array(get_scores(data=data_ys[-n_trials_test:], probs=probs_spice, n_parameters=n_parameters_spice_all[pid]))
             scores_spice_list.append(scores_spice[0])
             n_parameters_spice += n_parameters_spice_all[pid]
 
-        # filtering for bad participants
-        # avg_trial_likelihood_spice = np.exp(-scores_spice[:1] / (n_trials_test * agent_rnn._n_actions))
-        # avg_trial_likelihood_rnn = np.exp(-scores_rnn[:1] / (n_trials_test * agent_rnn._n_actions))
-        # if avg_trial_likelihood_spice < 0.6 and avg_trial_likelihood_rnn - avg_trial_likelihood_spice > 0.1:
-        #     raise AttributeError(f"Trial likelihood difference between RNN ({avg_trial_likelihood_rnn}) and SPICE ({avg_trial_likelihood_spice}) is too big (> 0.1). Skipping participant {pid}.")
-        
         # Benchmark models
         # get scores of all benchmark models but keep only the best one for each session
         if path_model_benchmark:
@@ -206,8 +192,9 @@ for index_data in tqdm(range(len(dataset))):
         scores[0] += scores_baseline
         if path_model_benchmark:
             scores[1] += scores_benchmark[index_best_benchmark]
-        scores[2] += scores_rnn
-        if use_spice:
+        if path_model_rnn is not None:
+            scores[2] += scores_rnn
+        if path_model_spice is not None:
             scores[3] += scores_spice
         
         # track number of trials
@@ -220,25 +207,25 @@ for index_data in tqdm(range(len(dataset))):
 # Post processing
 # ------------------------------------------------------------
 
-scores_all = np.concatenate((
-    np.array(index_participants_list).reshape(-1, 1), 
-    np.array(n_trials_list).reshape(-1, 1),
-    np.array(scores_baseline_list).reshape(-1, 1), 
-    np.array(scores_rnn_list).reshape(-1, 1), 
-    np.array(scores_spice_list).reshape(-1, 1) if use_spice else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
-    ), axis=-1)
+# scores_all = np.concatenate((
+#     np.array(index_participants_list).reshape(-1, 1), 
+#     np.array(n_trials_list).reshape(-1, 1),
+#     np.array(scores_baseline_list).reshape(-1, 1), 
+#     np.array(scores_rnn_list).reshape(-1, 1), 
+#     np.array(scores_spice_list).reshape(-1, 1) if path_model_spice is not None else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
+#     ), axis=-1)
 
-import pandas as pd
-pd.DataFrame(np.round(scores_all, 2), columns=[
-    'Participant', 
-    'Trials', 
-    'Baseline', 
-    'RNN', 
-    'SPICE',
-    ]).to_csv('all_scores.csv')
+# import pandas as pd
+# pd.DataFrame(np.round(scores_all, 2), columns=[
+#     'Participant', 
+#     'Trials', 
+#     'Baseline', 
+#     'RNN', 
+#     'SPICE',
+#     ]).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
-scores = scores / (considered_trials * agent_rnn._n_actions)
+scores = scores / (considered_trials * agent_baseline[0]._n_actions)
 # avg_log_likelihood = -scores[:, :1] / (considered_trials * agent_rnn._n_actions)
 avg_trial_likelihood = np.exp(-scores[:, :1])
 

@@ -94,7 +94,7 @@ def setup_agent_spice(
     if path_spice is None or path_spice == '':
         # fit SPICE model to RNN
         agent_spice, _ = fit_spice(
-            agent=agent_rnn,
+            agent_rnn=agent_rnn,
             data=dataset,
             rnn_modules=rnn_modules,
             control_signals=control_parameters,
@@ -131,12 +131,16 @@ def setup_agent_mcmc(
     
     n_sessions = mcmc.get_samples()[list(mcmc.get_samples().keys())[0]].shape[-1]
     
+    model_name = path_model.split('_')[-1].split('.')[0]
+    
     agents = []
     
     for session in range(n_sessions):
         parameters = {
             'alpha_pos': 1,
             'alpha_neg': -1,
+            'alpha_cf_pos': 0,
+            'alpha_cf_neg': 0,
             'alpha_c': 1,
             'beta_c': 0,
             'beta_r': 1,
@@ -151,10 +155,20 @@ def setup_agent_mcmc(
         
         if np.mean(parameters['alpha_neg']) == -1:
             parameters['alpha_neg'] = parameters['alpha_pos']
+        
+        if np.mean(parameters['alpha_cf_pos']) == 0 and 'Bcf' in model_name:
+            parameters['alpha_cf_pos'] = parameters['alpha_pos']
+        
+        if np.mean(parameters['alpha_cf_neg']) == 0 and 'Acfp' in model_name:
+            parameters['alpha_cf_neg'] = parameters['alpha_cf_pos']
+        elif np.mean(parameters['alpha_cf_neg']) == 0 and 'Bcf' in model_name:
+            parameters['alpha_cf_neg'] = parameters['alpha_neg']
             
         agents.append(AgentQ(
             alpha_reward=parameters['alpha_pos'],
             alpha_penalty=parameters['alpha_neg'],
+            alpha_counterfactual_reward=parameters['alpha_cf_pos']*(1 if 'Bcf' in model_name else 0),
+            alpha_counterfactual_penalty=parameters['alpha_cf_neg']*(1 if 'Bcf' in model_name else 0),
             alpha_choice=parameters['alpha_c'],
             beta_reward=parameters['beta_r']*15, # same scaling as in mcmc model
             beta_choice=parameters['beta_c']*15, # same scaling as in mcmc model
