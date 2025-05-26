@@ -10,10 +10,10 @@ data = 'data/eckstein2022/eckstein2022.csv'
 output_file = 'params/eckstein2022/mcmc_eckstein2022.nc'
 
 num_samples = 5000
-num_warmup = 2500
+num_warmup = 1000
 num_chains = 2
 hierarchical = True
-train_test_ratio = 0.8
+train_test_ratio = 1.0
 
 for model in models:
     print("Fitting model", model, "...")
