@@ -76,14 +76,14 @@ def main(path_model, path_data, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    model = 'ApBr'
-    path_model = f'params/parameter_recovery/params_128p_0_{model}.nc'
-    path_data = 'data/parameter_recovery/data_128p_0.csv'
-    n_trials_per_session = 1000
+    model = 'ApAnBrAcfpAcfnBcfBch'
+    path_model = f'params/eckstein2022/mcmc_eckstein2022_{model}.nc'
+    path_data = 'data/eckstein2022/eckstein2022.csv'
+    n_trials_per_session = 200
     
     main(
         path_model=path_model,
         path_data=path_data,
-        path_save=path_data.replace('.', '_'+model+'.'),
+        path_save=path_data.replace('.', '_training_'+model+'.'),
         n_trials_per_session=n_trials_per_session,
         )

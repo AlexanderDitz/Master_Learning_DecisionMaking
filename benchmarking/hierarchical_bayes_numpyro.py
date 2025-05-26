@@ -164,7 +164,7 @@ def rl_model(model, choice, reward, hierarchical):
         beta_r = numpyro.sample("beta_r", scaled_beta(1, 1, 0, 15)) if model[4]==1 else 1
         beta_cf = 1.0 if model[7] else 0.0
     
-    def update(carry, x):#, alpha_pos, alpha_neg, alpha_c, beta_r, beta_ch):
+    def update(carry, x):
         r_values = carry[0]
         c_values = carry[1]
         ch, rw = x[:, :2], x[:, 2][:, None]

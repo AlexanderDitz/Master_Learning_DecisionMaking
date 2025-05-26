@@ -12,13 +12,13 @@ agent_spice, features, loss = pipeline_sindy.main(
     
     model = 'params/eckstein2022/rnn_eckstein2022_reward.pkl',
     data = 'data/eckstein2022/eckstein2022.csv',
-    save = True,
+    save = False,
     
     # general recovery parameters
-    participant_id=None,
+    participant_id=107,
     filter_bad_participants=False,
-    use_optuna=True,
-    pruning=True,
+    use_optuna=False,
+    pruning=False,
     
     # sindy parameters
     # optimizer_type="SR3_weighted_l1",

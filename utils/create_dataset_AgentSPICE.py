@@ -9,13 +9,15 @@ from resources.bandits import create_dataset, BanditsDrift, get_update_dynamics
 from utils.setup_agents import setup_agent_spice
 
 
-def main(path_model, path_data, path_save, n_trials_per_session):
+def main(path_rnn, path_spice, path_data, path_save, n_trials_per_session):
     # sindy configuration
     rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    control_parameters = ['c_action', 'c_reward', 'c_value_reward']
-    sindy_library_polynomial_degree = 2
+    control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
     sindy_library_setup = {
-        'x_learning_rate_reward': ['c_reward', 'c_value_reward'],
+        'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+        'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
+        'x_value_choice_chosen': ['c_value_reward'],
+        'x_value_choice_not_chosen': ['c_value_reward'],
     }
     sindy_filter_setup = {
         'x_learning_rate_reward': ['c_action', 1, True],
@@ -27,14 +29,14 @@ def main(path_model, path_data, path_save, n_trials_per_session):
 
     agent = setup_agent_spice(
         path_data=path_data, 
-        path_rnn=path_model,
+        path_rnn=path_rnn,
+        path_spice=path_spice,
         rnn_modules=rnn_modules,
         control_parameters=control_parameters,
         sindy_library_setup=sindy_library_setup,
         sindy_filter_setup=sindy_filter_setup,
         sindy_dataprocessing=sindy_dataprocessing,
-        sindy_library_polynomial_degree=sindy_library_polynomial_degree,
-        n_trials=n_trials_per_session,
+        sindy_library_polynomial_degree=1,
         deterministic=False,
         verbose=True,
         # participant_id=0,
@@ -86,13 +88,15 @@ def main(path_model, path_data, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    path_model = 'params/sugawara2021/params_sugawara2021.pkl'
-    path_data = 'data/sugawara2021/sugawara2021.csv'
-    n_trials_per_session = 300
+    path_rnn = 'params/eckstein2022/rnn_eckstein2022_reward.pkl'
+    path_spice = 'params/eckstein2022/spice_eckstein2022_reward.pkl'
+    path_data = 'data/eckstein2022/eckstein2022.csv'
+    n_trials_per_session = 200
     
     main(
-        path_model=path_model,
+        path_rnn=path_rnn,
+        path_spice=path_spice,
         path_data=path_data,
-        path_save=path_data.replace('.', '_spice.'),
+        path_save=path_data.replace('.', '_test_spice.'),
         n_trials_per_session=n_trials_per_session,
     )
