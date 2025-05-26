@@ -36,7 +36,7 @@ for d in datasets:
         scheduler=True,
         learning_rate=1e-4,
         l1_weight_decay=0.001,
-        train_test_ratio=0.8,
+        train_test_ratio=1.0,
         
         data=dataset,
         model=path_spice_rnn,
@@ -59,11 +59,12 @@ for d in datasets:
         participant_id=None,
         filter_bad_participants=False,
         use_optuna=True,
+        pruning=True,
         n_trials_off_policy=1000,
-        n_sessions_off_policy=1,
+        n_trials_same_action_off_policy=5,
         
         # sindy parameters
-        optimizer_type="SR3_weighted_l1",
+        optimizer_type="SR3_L1",
         optimizer_alpha=0.1,
         optimizer_threshold=0.05,
         polynomial_degree=1,
