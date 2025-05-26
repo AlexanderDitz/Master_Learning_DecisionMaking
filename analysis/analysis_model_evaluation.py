@@ -18,8 +18,8 @@ train_test_ratio = 0.8
 path_data = 'data/eckstein2022/eckstein2022.csv'
 path_model_rnn = 'params/eckstein2022/rnn_eckstein2022_reward.pkl'
 path_model_spice = 'params/eckstein2022/spice_eckstein2022_reward.pkl'
-path_model_benchmark = None#'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
-path_model_baseline = None#'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
+path_model_benchmark = 'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
+path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
 
 models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
 # models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
@@ -207,22 +207,22 @@ for index_data in tqdm(range(len(dataset))):
 # Post processing
 # ------------------------------------------------------------
 
-# scores_all = np.concatenate((
-#     np.array(index_participants_list).reshape(-1, 1), 
-#     np.array(n_trials_list).reshape(-1, 1),
-#     np.array(scores_baseline_list).reshape(-1, 1), 
-#     np.array(scores_rnn_list).reshape(-1, 1), 
-#     np.array(scores_spice_list).reshape(-1, 1) if path_model_spice is not None else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
-#     ), axis=-1)
+scores_all = np.concatenate((
+    np.array(index_participants_list).reshape(-1, 1), 
+    np.array(n_trials_list).reshape(-1, 1),
+    np.array(scores_baseline_list).reshape(-1, 1), 
+    np.array(scores_rnn_list).reshape(-1, 1), 
+    np.array(scores_spice_list).reshape(-1, 1) if path_model_spice is not None else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
+    ), axis=-1)
 
-# import pandas as pd
-# pd.DataFrame(np.round(scores_all, 2), columns=[
-#     'Participant', 
-#     'Trials', 
-#     'Baseline', 
-#     'RNN', 
-#     'SPICE',
-#     ]).to_csv('all_scores.csv')
+import pandas as pd
+pd.DataFrame(np.round(scores_all, 2), columns=[
+    'Participant', 
+    'Trials', 
+    'Baseline', 
+    'RNN', 
+    'SPICE',
+    ]).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
 scores = scores / (considered_trials * agent_baseline[0]._n_actions)
