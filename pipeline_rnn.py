@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable
 import argparse
+from typing import List
 
 # warnings.filterwarnings("ignore")
 
@@ -20,6 +21,7 @@ def main(
   checkpoint = False,
   model: str = None,
   data: str = None,
+  class_rnn: type = None,
 
   # rnn parameters
   hidden_size = 8,
@@ -38,6 +40,7 @@ def main(
   learning_rate = 5e-3,
   convergence_threshold = 0,
   scheduler = False,
+  additional_inputs_data: List[str] = None,
   
   # ground truth parameters
   n_trials = 200,
@@ -64,6 +67,8 @@ def main(
   
   # print cuda devices available
   print(f'Cuda available: {torch.cuda.is_available()}')
+  # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  device = torch.device('cpu')
   
   if not os.path.exists('params'):
     os.makedirs('params')
@@ -71,7 +76,6 @@ def main(
   if participant_id is None:
     participant_id = 0
   
-  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   
   dataset_test = None
   agent = None
@@ -124,7 +128,7 @@ def main(
 
     print('Generation of dataset complete.')
   else:
-    dataset, _, df, _ = convert_dataset.convert_dataset(data, sequence_length=sequence_length, device=device)
+    dataset, _, df, _ = convert_dataset.convert_dataset(data, sequence_length=sequence_length, device=device, additional_inputs=additional_inputs_data)
     # dataset_test = rnn_utils.DatasetRNN(dataset.xs, dataset.ys)
     
     # check if groundtruth parameters in data - only applicable to generated data with e.g. utils/create_dataset.py
@@ -170,14 +174,16 @@ def main(
     params_path = '' + model
 
   # define model
-  model = rnn.RLRNN(
+  if class_rnn is None:
+    class_rnn = rnn.RLRNN
+  model = class_rnn(
       n_actions=n_actions, 
       hidden_size=hidden_size, 
       embedding_size=embedding_size,
       dropout=dropout,
       n_participants=n_participants,
       ).to(device)
-
+  
   optimizer_rnn = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
   print('Setup of the RNN model complete.')

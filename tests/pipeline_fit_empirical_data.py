@@ -9,6 +9,10 @@ from pipeline_rnn import main as rnn_training
 from pipeline_sindy import main as sindy_training
 
 
+# ----------------------------------------------------------------------------------
+# FITTING CONFIGURATION
+# ----------------------------------------------------------------------------------
+
 FIT_MCMC = 0
 FIT_SPICE = 1
 FIT_TO_EMPIRICAL = 0

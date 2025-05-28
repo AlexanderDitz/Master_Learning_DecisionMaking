@@ -374,7 +374,7 @@ class AgentNetwork:
     if betas is not None:
       logits = np.sum(
         np.concatenate([
-          self._state[key] * betas[key] for key in self._state if 'x_value' in key
+          self._state[key] * betas[key] for key in self._state if key in betas 
           ]), 
         axis=0)
     else:
@@ -879,6 +879,7 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   q = np.zeros((n_trials, agent._n_actions))
   q_reward = np.zeros((n_trials, agent._n_actions))
   q_choice = np.zeros((n_trials, agent._n_actions))
+  q_trial = np.zeros((n_trials, agent._n_actions))
   learning_rate_reward = np.zeros((n_trials, agent._n_actions))
   choice_probs = np.zeros((n_trials, agent._n_actions))
 
@@ -890,12 +891,13 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
     q[trial] = agent.q
     q_reward[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
     q_choice[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros(agent._n_actions)
+    q_trial[trial] = agent._state['x_value_trial'] if 'x_value_trial' in agent._state else np.zeros(agent._n_actions)
     learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
     
     choice_probs[trial] = agent.get_choice_probs()
     agent.update(choice=np.argmax(choices[trial], axis=-1), reward=rewards[trial], participant_id=participant_id)
   
-  return (q, q_reward, q_choice, learning_rate_reward), choice_probs, agent
+  return (q, q_reward, q_choice, learning_rate_reward, q_trial), choice_probs, agent
 
 
 ###############

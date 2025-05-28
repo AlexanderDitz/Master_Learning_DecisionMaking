@@ -3,12 +3,44 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_rnn, pipeline_sindy
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
+from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
+
+
+# -------------------------------------------------------------------------------
+# SPICE CONFIGURATIONS
+# -------------------------------------------------------------------------------
 
 # path_datasets = 'data/parameter_recovery/data_128p_0.csv'
 # path_params = 'params/parameter_recovery_subs/_parameter_recovery_0'
+# class_rnn = RLRNN
+# sindy_config = SindyConfig
 
 path_datasets = 'data/eckstein2022/eckstein2022.csv'
 path_params = 'params/eckstein2022'
+class_rnn = RLRNN_eckstein2022
+sindy_config = SindyConfig_eckstein2022
+
+# path_datasets = 'data/dezfouli2019/dezfouli2019.csv'
+# path_params = 'params/dezfouli2019'
+# class_rnn = RLRNN_dezfouli2019
+# sindy_config = SindyConfig_dezfouli2019
+
+
+# -------------------------------------------------------------------------------
+# TRAINING CONFIGURATION
+# -------------------------------------------------------------------------------
+
+epochs=65536
+scheduler=True
+learning_rate=1e-4
+l1_weight_decay=0.001
+train_test_ratio=1.0
+
+
+# -------------------------------------------------------------------------------
+# SPICE PIPELINE
+# -------------------------------------------------------------------------------
 
 if not path_datasets.endswith('.csv'):
     datasets = os.listdir(path_datasets)
@@ -32,14 +64,15 @@ for d in datasets:
     path_spice_rnn = os.path.join(path_params, name_rnn)
     
     loss_rnn = pipeline_rnn.main(
-        epochs=65536,
-        scheduler=True,
-        learning_rate=1e-4,
-        l1_weight_decay=0.001,
-        train_test_ratio=1.0,
-        
         data=dataset,
         model=path_spice_rnn,
+        class_rnn=class_rnn,
+        
+        epochs=epochs,
+        scheduler=scheduler,
+        learning_rate=learning_rate,
+        l1_weight_decay=l1_weight_decay,
+        train_test_ratio=train_test_ratio,
         
         embedding_size=32,
         n_steps=32,
@@ -54,7 +87,8 @@ for d in datasets:
         
         data=dataset,
         model=path_spice_rnn,
-
+        class_rnn=class_rnn,
+        
         # general SPICE parameters
         participant_id=None,
         filter_bad_participants=False,
@@ -72,6 +106,8 @@ for d in datasets:
         
         save = True,
         get_loss = True,
+        
+        **sindy_config,
         )[-1]
     
     losses.append((loss_rnn, loss_spice))
