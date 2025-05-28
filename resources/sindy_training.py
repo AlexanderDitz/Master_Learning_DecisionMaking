@@ -105,6 +105,8 @@ def fit_spice(
     use_optuna: bool = False,
     filter_bad_participants: bool = False,
     pruning: bool = False,
+    optuna_trials_first_state: int = 50,
+    optuna_trials_second_state: int = 100,
     ) -> Tuple[AgentSpice, float]:
     """Fit a SPICE agent by replacing RNN modules with SINDy equations.
 
@@ -184,10 +186,11 @@ def fit_spice(
             probs_spice = get_update_dynamics(agent=agent_spice_id, experiment=data_pid.xs[0])[1]
             lik_rnn = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_rnn) / probs_rnn.size)
             lik_spice_before_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
-            if lik_rnn - lik_spice_before_optuna > 0.03 or np.isnan(lik_spice_before_optuna):
-                likelihoods_rnn.append(np.round(lik_rnn, 5))
-                likelihoods_spice_before_optuna.append(np.round(lik_spice_before_optuna, 5))
-                raise RuntimeError(f"Bad fit of SPICE model.\nLikelihoods before optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE = {np.round(lik_spice_before_optuna, 5)}; Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)}\nStarting optuna...")
+            if use_optuna:
+                if lik_rnn - lik_spice_before_optuna > 0.03 or np.isnan(lik_spice_before_optuna):
+                    likelihoods_rnn.append(np.round(lik_rnn, 5))
+                    likelihoods_spice_before_optuna.append(np.round(lik_spice_before_optuna, 5))
+                    raise RuntimeError(f"Bad fit of SPICE model.\nLikelihoods before optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE = {np.round(lik_spice_before_optuna, 5)}; Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)}\nStarting optuna...")
             
         except Exception as e:
             # If using Optuna, find the best optimizer configuration for this participant
@@ -207,7 +210,7 @@ def fit_spice(
                     filter_setup=filter_setup,
                     polynomial_degree=polynomial_degree,
                     n_sessions_off_policy=n_sessions_off_policy,
-                    n_trials_optuna=50,  # Adjust as needed
+                    n_trials_optuna=optuna_trials_first_state,  # Adjust as needed
                     verbose=verbose
                 )
                 
@@ -255,7 +258,7 @@ def fit_spice(
                 
                 if lik_rnn - lik_spice_after_optuna > 0.1 or np.isnan(lik_spice_after_optuna):
                     
-                    print(f"Did not find satisfying solution after 50 optuna trials.\nSPICE = {np.round(lik_spice_before_optuna, 5)} -> {np.round(lik_spice_after_optuna, 5)}\nStarting again with 100 trials...")
+                    print(f"Did not find satisfying solution after {optuna_trials_first_state} optuna trials.\nSPICE = {np.round(lik_spice_before_optuna, 5)} -> {np.round(lik_spice_after_optuna, 5)}\nStarting again with {optuna_trials_second_state} trials...")
                     
                     # Find optimal optimizer and parameters for this participant
                     sindy_config = optimize_for_participant(
@@ -269,7 +272,7 @@ def fit_spice(
                         filter_setup=filter_setup,
                         polynomial_degree=polynomial_degree,
                         n_sessions_off_policy=n_sessions_off_policy,
-                        n_trials_optuna=100,  # Adjust as needed
+                        n_trials_optuna=optuna_trials_second_state,  # Adjust as needed
                         verbose=verbose
                     )
                     
@@ -324,15 +327,16 @@ def fit_spice(
         for rnn_module in rnn_modules:
             sindy_modules[rnn_module][pid] = sindy_modules_id[rnn_module]
 
-    print("Optuna-optimized participants:", optuna_pids)
-    print("Likelihoods of RNN, SPICE (before), SPICE (after):")
-    df = {
-        'PID': optuna_pids,
-        'RNN': likelihoods_rnn,
-        'SPICE': likelihoods_spice_before_optuna,
-        'SPICE (Optuna)': likelihoods_spice_after_optuna,
-    }
-    print(pd.DataFrame(data=df))
+    if use_optuna:
+        print("Optuna-optimized participants:", optuna_pids)
+        print("Likelihoods of RNN, SPICE (before), SPICE (after):")
+        df = {
+            'PID': optuna_pids,
+            'RNN': likelihoods_rnn,
+            'SPICE': likelihoods_spice_before_optuna,
+            'SPICE (Optuna)': likelihoods_spice_after_optuna,
+        }
+        print(pd.DataFrame(data=df))
     
     # set up a SINDy-based agent by replacing the RNN-modules with the respective SINDy-model
     agent_spice = AgentSpice(model_rnn=deepcopy(agent_rnn._model), sindy_modules=sindy_modules, n_actions=agent_rnn._n_actions, deterministic=deterministic)
@@ -367,8 +371,9 @@ def fit_spice(
         mapping_modules_values = {module: 'x_value_choice' if 'choice' in module else 'x_value_reward' for module in agent_spice._model.submodules_sindy}
         n_parameters = agent_spice.count_parameters(mapping_modules_values=mapping_modules_values)
         for pid in participant_ids:
-            xs, ys = data.xs.cpu().numpy(), data.ys.cpu().numpy()
-            probs = get_update_dynamics(experiment=xs[pid], agent=agent_spice)[1]
+            mask_participant_id = data.xs[:, 0, -1] == pid
+            xs, ys = data.xs[mask_participant_id].cpu().numpy(), data.ys[mask_participant_id].cpu().numpy()
+            probs = get_update_dynamics(experiment=xs[0], agent=agent_spice)[1]
             loss += loss_metric(data=ys[pid, :len(probs)], probs=probs, n_parameters=n_parameters[pid])
             n_trials_total += len(probs)
         loss = loss/n_trials_total

@@ -2,6 +2,7 @@ import os, sys
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 import pandas as pd
 import seaborn as sns
 from copy import copy
@@ -10,7 +11,11 @@ from sklearn.linear_model import LinearRegression
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.setup_agents import setup_agent_spice
 from resources.bandits import AgentSpice
+from resources.rnn import RLRNN
+from resources.sindy_utils import SindyConfig
 
+
+save_plots = True
 
 # -----------------------------------------------------------------------------------------------
 # create a mapping of ground truth parameters to library parameters
@@ -27,20 +32,20 @@ mapping_x_learning_rate_reward = {
 
     'c_value_choice': lambda alpha_reward, alpha_penalty: 0,
     
-    'x_learning_rate_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
-    'c_value_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
+    # 'x_learning_rate_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
+    # 'c_value_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'x_learning_rate_reward c_reward': lambda alpha_reward, alpha_penalty: 0,
-    'c_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
+    # 'x_learning_rate_reward c_reward': lambda alpha_reward, alpha_penalty: 0,
+    # 'c_reward x_learning_rate_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'x_learning_rate_reward^2': lambda alpha_reward, alpha_penalty: 0,
+    # 'x_learning_rate_reward^2': lambda alpha_reward, alpha_penalty: 0,
     
-    'c_value_reward c_reward': lambda alpha_reward, alpha_penalty: 0,
-    'c_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
+    # 'c_value_reward c_reward': lambda alpha_reward, alpha_penalty: 0,
+    # 'c_reward c_value_reward': lambda alpha_reward, alpha_penalty: 0,
     
-    'c_value_reward^2': lambda alpha_reward, alpha_penalty: 0,
+    # 'c_value_reward^2': lambda alpha_reward, alpha_penalty: 0,
     
-    'c_reward^2': lambda alpha_reward, alpha_penalty: 0,
+    # 'c_reward^2': lambda alpha_reward, alpha_penalty: 0,
 }
 
 mapping_x_value_reward_not_chosen = {
@@ -55,7 +60,7 @@ mapping_x_value_reward_not_chosen = {
     # 'x_value_reward_not_chosen c_reward': lambda forget_rate: 0,
     # 'c_reward x_value_reward_not_chosen': lambda forget_rate: 0,
     
-    'x_value_reward_not_chosen^2': lambda forget_rate: 0,
+    # 'x_value_reward_not_chosen^2': lambda forget_rate: 0,
     
     # 'c_reward^2': lambda forget_rate: 0,
 }
@@ -63,12 +68,11 @@ mapping_x_value_reward_not_chosen = {
 mapping_x_value_choice_chosen = {
     '1': lambda alpha_choice: 1, #alpha_choice,
     
-    # 'x_C': lambda alpha_choice: 1-alpha_choice,
     'x_value_choice_chosen': lambda alpha_choice: 0,
     
     'c_value_reward': lambda alpha_choice: 0,
     
-    'x_value_choice_chosen^2': lambda alpha_choice: 0,
+    # 'x_value_choice_chosen^2': lambda alpha_choice: 0,
 }
 
 mapping_x_value_choice_not_chosen = {
@@ -78,7 +82,7 @@ mapping_x_value_choice_not_chosen = {
     
     'c_value_reward': lambda alpha_choice: 0,    
     
-    'x_value_choice_not_chosen^2': lambda alpha_choice: 0,
+    # 'x_value_choice_not_chosen^2': lambda alpha_choice: 0,
 }
 
 mapping_betas = {
@@ -199,34 +203,11 @@ iterations = 4
 base_name_data = 'data/parameter_recovery/data_SESSp_IT.csv'
 base_name_params = 'params/parameter_recovery'#/rnn_SESSp_IT.pkl'
 kw_participant_id = 'session'
-
-# setup spice agent
-rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-control_parameters = ['c_action', 'c_reward', 'c_value_reward', 'c_value_choice']
-sindy_library_polynomial_degree = 1
-sindy_library_setup = {
-    'x_learning_rate_reward': ['c_reward', 'c_value_reward', 'c_value_choice'],
-    'x_value_reward_not_chosen': ['c_value_choice'],
-    'x_value_choice_chosen': ['c_value_reward'],
-    'x_value_choice_not_chosen': ['c_value_reward'],
-}
-sindy_filter_setup = {
-    'x_learning_rate_reward': ['c_action', 1, True],
-    'x_value_reward_not_chosen': ['c_action', 0, True],
-    'x_value_choice_chosen': ['c_action', 1, True],
-    'x_value_choice_not_chosen': ['c_action', 0, True],
-}
-sindy_dataprocessing = {
-    'x_learning_rate_reward': [0, 0, 0],
-    'x_value_reward_not_chosen': [0, 0, 0],
-    'x_value_choice_chosen': [1, 1, 0],
-    'x_value_choice_not_chosen': [1, 1, 0],
-    'c_value_reward': [0, 0, 0],
-    'c_value_choice': [1, 1, 0],
-}
+path_plots = 'analysis/plots_parameter_recovery'
 
 # meta parameters
-mapping_lens = {'x_V_LR': 10, 'x_V_nc': 3, 'x_C': 3, 'x_C_nc': 3}
+# mapping_lens = {'x_V_LR': 10, 'x_V_nc': 3, 'x_C': 3, 'x_C_nc': 3}
+mapping_lens = {'x_V_LR': 5, 'x_V_nc': 3, 'x_C': 3, 'x_C_nc': 3}
 n_candidate_terms = np.sum([mapping_lens[key] for key in mapping_lens])
 n_params_q = 5
 
@@ -277,15 +258,16 @@ for index_sess, sess in enumerate(n_sessions):
         
         # setup of sindy agent for current dataset
         sindy_agent = setup_agent_spice(
+            class_rnn=RLRNN,
             path_rnn=path_rnn, 
             path_data=path_data,
             path_spice=path_spice,
-            rnn_modules=rnn_modules, 
-            control_parameters=control_parameters, 
-            sindy_library_polynomial_degree=sindy_library_polynomial_degree,
-            sindy_library_setup=sindy_library_setup,
-            sindy_filter_setup=sindy_filter_setup,
-            sindy_dataprocessing=sindy_dataprocessing,
+            rnn_modules=SindyConfig['rnn_modules'], 
+            control_parameters=SindyConfig['control_parameters'], 
+            sindy_library_setup=SindyConfig['library_setup'],
+            sindy_filter_setup=SindyConfig['filter_setup'],
+            sindy_dataprocessing=SindyConfig['dataprocessing_setup'],
+            sindy_library_polynomial_degree=1,
             use_optuna=True,
             )
         sindy_models = sindy_agent.get_modules()
@@ -392,13 +374,18 @@ for index_sess, sess in enumerate(n_sessions):
 # ------------------------------------------------
 
 # remove outliers in both true and recovered coefs where recovered coefficients are bigger than a big threshold (e.g. abs(recovered_coeff) > 1e1)
-threshold = 1e1
+threshold = 1e2
 removed_params = 0
 for index_sess in range(len(n_sessions)):
-    index_remove = recovered_params[index_sess] > threshold
-    true_params[index_sess][index_remove] = np.nan
-    recovered_params[index_sess][index_remove] = np.nan
-    removed_params += np.sum(index_remove)
+    mask_keep = np.all(recovered_params[index_sess] <= threshold, axis=1)
+
+    # Count the number of removed rows
+    removed_params += np.sum(~mask_keep)
+    
+    # Filter out the rows exceeding the threshold
+    true_params[index_sess] = true_params[index_sess][mask_keep]
+    recovered_params[index_sess] = recovered_params[index_sess][mask_keep]
+    
 print(f'excluded parameters because of high values: {removed_params}')
 
 # get all features across all libraries; remove dummy features with are named 'dummy'
@@ -495,6 +482,16 @@ identification_metrics_matrix = [
     [recall, f1_score],
 ]
 
+identification_xlabels = [
+    ['', ''],
+    ['Number of model parameters', 'Number of model parameters'],
+]
+
+identification_ylabels = [
+    ['Number of participants', ''],
+    ['Number of participants', ''],
+]
+
 identification_headers = [
     ['true positive', 'false pos'],
     ['false negative', 'true negative'],
@@ -505,20 +502,10 @@ identification_metrics_headers = [
     ['Recall', 'F1 Score'],
 ]
 
-identification_x_axis_labels = [
-    [None, None],
-    ['$n_{parameters}$', '$n_{parameters}$'],
-]
-
 bin_edges_params = np.arange(1, n_params_q+1)
 identification_x_axis_ticks = [
     [bin_edges_params, bin_edges_params],
     [bin_edges_params, bin_edges_params],
-]
-
-identification_y_axis_labels = [
-    ['$n_\{sessions\}$', None],
-    ['$n_\{sessions\}$', None],
 ]
 
 y_tick_labels = n_sessions + random_sampling
@@ -562,8 +549,15 @@ for index_row, row in enumerate(identification_matrix_mean):
                 vmin=v_min,
                 vmax=v_max,
                 )
-        axs[index_row, index_col].set_title(identification_headers[index_row][index_col])
-plt.show()
+        axs[index_row, index_col].set_title(identification_headers[index_row][index_col], fontsize=10)
+        axs[index_row, index_col].tick_params(labelsize=10)
+        axs[index_row, index_col].set_xlabel(identification_xlabels[index_row][index_col], fontsize=10)
+        axs[index_row, index_col].set_ylabel(identification_ylabels[index_row][index_col], fontsize=10)
+
+if save_plots:
+    plt.savefig(os.path.join(path_plots, 'ident_rates'), dpi=500)
+else:
+    plt.show()
 
 # line plots
 
@@ -600,13 +594,18 @@ for index_row, row in enumerate(identification_matrix_mean):
                 if index_row == len(identification_matrix_mean) - 1:
                     ax.set_xlabel('$n_{parameters}$')
                     ax.set_xticks(bin_edges_params)
+                    ax.tick_params(axis='x', labelsize=8)
                 else:
                     ax.set_xticklabels([])
 
                 ax.set_ylim([0, 1])
 axs[0, 0].legend()
 plt.tight_layout()
-plt.show()
+
+if save_plots:
+    plt.savefig(os.path.join(path_plots, 'ident_rates_lines'), dpi=500)
+else:
+    plt.show()
 
 # heatmap of accuracy, precision, true positive rate, false positive rate
 
@@ -634,8 +633,15 @@ for index_row, row in enumerate(identification_metrics_matrix):
                 vmin=v_min,
                 vmax=v_max,
                 )
-        axs[index_row, index_col].set_title(identification_metrics_headers[index_row][index_col])
-plt.show()
+        axs[index_row, index_col].set_title(identification_metrics_headers[index_row][index_col], fontsize=10)
+        axs[index_row, index_col].tick_params(labelsize=10)
+        axs[index_row, index_col].set_xlabel(identification_xlabels[index_row][index_col], fontsize=10)
+        axs[index_row, index_col].set_ylabel(identification_ylabels[index_row][index_col], fontsize=10)
+
+if save_plots:
+    plt.savefig(os.path.join(path_plots, 'ident_metrics'), dpi=500)
+else:
+    plt.show()
 
 # ------------------------------------------------
 # parameter correlation coefficients
@@ -734,40 +740,59 @@ plt.show()
 # plt.show()
 
 # scatter plot
-fig, axs = plt.subplots(
-    nrows=max((len(n_sessions), 2)),
-    ncols=len(feature_names),
-)
+
+# Adjust the width of each column
+col_width_ratios = []
+for index_feature in range(len(feature_names)):
+    feature_ranges = [
+        np.max(true_params[index_sess][:, index_feature]) - np.min(true_params[index_sess][:, index_feature])
+        for index_sess in range(len(n_sessions))
+    ]
+    # Use a fallback small value for zero ranges
+    col_width_ratios.append(max(max(feature_ranges), 0.1))  # Ensure non-zero width
+
+# Normalize width ratios
+col_width_ratios = [r / max(col_width_ratios) for r in col_width_ratios]
+
+fig = plt.figure(figsize=(10, 5))
+gs = GridSpec(len(n_sessions), len(feature_names), width_ratios=col_width_ratios)
 
 for index_sess in range(len(n_sessions)):
     for index_feature in range(len(feature_names)):
-        ax = axs[index_sess, index_feature]
-
+        # ax = axs[index_sess, index_feature]
+        ax = fig.add_subplot(gs[index_sess, index_feature])
+        
         # Scatter plot
         ax.scatter(
             true_params[index_sess][:, index_feature], 
             recovered_params[index_sess][:, index_feature], 
             marker='o', 
-            color='tab:red', 
+            color='cadetblue', 
             alpha=0.2,
+            # markersize=0.1,
         )
 
-        # Reference line
-        ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
-        
         # Calculate linear regression for trend line
         index_not_nan = (1-(np.isnan(true_params[index_sess][:, index_feature]) + np.isnan(recovered_params[index_sess][:, index_feature]))).astype(bool)
         model = LinearRegression()
         model.fit(true_params[index_sess][:, index_feature].reshape(-1, 1)[index_not_nan], recovered_params[index_sess][:, index_feature][index_not_nan])
         trend_line = model.predict(np.linspace(0, 1, 100).reshape(-1, 1))
         
-        # Plot dashed trend line
-        ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
-
-        # Axes settings
-        ax.set_ylim(0, 1)
-        ax.set_xlim(0, 1)
-
+        # Reference line
+        if true_params[index_sess][:, index_feature].max() > 0:
+            ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
+            # Plot dashed trend line
+            ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
+            # Axes settings
+            ax.set_ylim(0, 1)
+            ax.set_xlim(0, 1)
+        else:
+            # Axes settings
+            ax.set_ylim(-.1, .1)
+            ax.set_xlim(-.1, .1)
+            # Plot dashed trend line
+            ax.plot(np.linspace(-1, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
+            
         if index_sess != len(n_sessions) - 1:
             ax.tick_params(axis='x', which='both', labelbottom=False)  # No x-axis ticks
         else:
@@ -783,8 +808,10 @@ for index_sess in range(len(n_sessions)):
         if index_sess == 0:
             ax.set_title(feature_names[index_feature], fontsize=10)
 
-# Show plot
-plt.show()
+if save_plots:
+    plt.savefig(os.path.join(path_plots, 'param_recovery_scatter'), dpi=500)
+else:
+    plt.show()
 
 
 # box plot
@@ -793,16 +820,35 @@ plt.show()
 # Parameters for binning
 num_bins = 10  # Number of bins for 5% width (0.05 * 100 = 20 bins)
 bin_edges = np.linspace(0, 1, num_bins + 1)
+color_box = 'cadetblue'
+trend_line_color = 'black'
 
-fig, axs = plt.subplots(
-    nrows=max(len(n_sessions), 2),
-    ncols=len(feature_names),
-    figsize=(12, 6)
-)
+# fig, axs = plt.subplots(
+#     nrows=max(len(n_sessions), 2),
+#     ncols=len(feature_names),
+#     figsize=(12, 6)
+# )
+
+# Adjust the width of each column
+col_width_ratios = []
+for index_feature in range(len(feature_names)):
+    feature_ranges = [
+        np.max(true_params[index_sess][:, index_feature]) - np.min(true_params[index_sess][:, index_feature])
+        for index_sess in range(len(n_sessions))
+    ]
+    # Use a fallback small value for zero ranges
+    col_width_ratios.append(max(max(feature_ranges), 0.1))  # Ensure non-zero width
+
+# Normalize width ratios
+col_width_ratios = [r / max(col_width_ratios) for r in col_width_ratios]
+
+fig = plt.figure(figsize=(10, 5))
+gs = GridSpec(len(n_sessions), len(feature_names), width_ratios=col_width_ratios)
 
 for index_sess in range(len(n_sessions)):
     for index_feature in range(len(feature_names)):
-        ax = axs[index_sess, index_feature]
+        # ax = axs[index_sess, index_feature]
+        ax = fig.add_subplot(gs[index_sess, index_feature])
         
         # Prepare the data
         true_vals = true_params[index_sess][:, index_feature]
@@ -823,25 +869,32 @@ for index_sess in range(len(n_sessions)):
             widths=0.04, 
             patch_artist=True,
             showfliers=False,
-            boxprops=dict(facecolor="tab:red", color="tab:red", alpha=0.2),
+            boxprops=dict(facecolor=color_box, color=color_box, alpha=0.8),
             medianprops=dict(color="black", linewidth=2),
-            whiskerprops=dict(color="tab:red", linestyle="--", alpha=0.5),
-            capprops=dict(color="tab:red", alpha=0.5)
+            whiskerprops=dict(color=color_box, linestyle="--", alpha=0.5),
+            capprops=dict(color=color_box, alpha=0.5)
             )
-
-        # Reference line
-        ax.plot([0, 1], [0, 1], '--', color='tab:gray', linewidth=1)
         
         # Plot dashed trend line
         index_not_nan = (1-(np.isnan(true_params[index_sess][:, index_feature]) + np.isnan(recovered_params[index_sess][:, index_feature]))).astype(bool)
         model = LinearRegression()
         model.fit(true_params[index_sess][:, index_feature].reshape(-1, 1)[index_not_nan], recovered_params[index_sess][:, index_feature][index_not_nan])
         trend_line = model.predict(np.linspace(0, 1, 100).reshape(-1, 1))
-        ax.plot(np.linspace(0, 1, 100), trend_line, '--', color='tab:blue', label='Trend line')
         
-        # Axes settings
-        ax.set_ylim(-.1, 1.1)
-        ax.set_xlim(-.1, 1.1)
+        # Reference line
+        if true_params[index_sess][:, index_feature].max() > 0:
+            ax.plot([0, 1], [0, 1], ':', color='tab:gray', linewidth=1)
+            # Plot dashed trend line
+            ax.plot(np.linspace(0, 1, 100), trend_line, '--', color=trend_line_color, label='Trend line')
+            # Axes settings
+            ax.set_ylim(-.1, 1.1)
+            ax.set_xlim(-.1, 1.1)
+        else:
+            # Axes settings
+            ax.set_ylim(-.1, .1)
+            ax.set_xlim(-.1, .1)
+            # Plot dashed trend line
+            ax.plot(np.linspace(-1, 1, 100), trend_line, '--', color=trend_line_color, label='Trend line')
         
         if index_sess != len(n_sessions) - 1:
             ax.tick_params(axis='x', which='both', labelbottom=False)  # No x-axis ticks
@@ -859,4 +912,8 @@ for index_sess in range(len(n_sessions)):
             ax.set_title(feature_names[index_feature], fontsize=10)
 
 plt.tight_layout()
-plt.show()
+
+if save_plots:
+    plt.savefig(os.path.join(path_plots, 'param_recovery_box'), dpi=500)
+else:
+    plt.show()

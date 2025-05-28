@@ -6,44 +6,25 @@ from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import create_dataset, BanditsDrift, get_update_dynamics
-from utils.setup_agents import setup_agent_spice
+from utils.setup_agents import setup_agent_rnn
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
+from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 
-def main(path_rnn, path_spice, path_data, path_save, n_trials_per_session):
+def main(path_rnn, class_rnn, sindy_config, path_save, n_trials_per_session):
     # sindy configuration
-    rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
-    sindy_library_setup = {
-        'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
-        'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
-        'x_value_choice_chosen': ['c_value_reward'],
-        'x_value_choice_not_chosen': ['c_value_reward'],
-    }
-    sindy_filter_setup = {
-        'x_learning_rate_reward': ['c_action', 1, True],
-        'x_value_reward_not_chosen': ['c_action', 0, True],
-        'x_value_choice_chosen': ['c_action', 1, True],
-        'x_value_choice_not_chosen': ['c_action', 0, True],
-    }
-    sindy_dataprocessing = None
 
-    agent = setup_agent_spice(
-        path_data=path_data, 
-        path_rnn=path_rnn,
-        path_spice=path_spice,
-        rnn_modules=rnn_modules,
-        control_parameters=control_parameters,
-        sindy_library_setup=sindy_library_setup,
-        sindy_filter_setup=sindy_filter_setup,
-        sindy_dataprocessing=sindy_dataprocessing,
-        sindy_library_polynomial_degree=1,
+    agent = setup_agent_rnn(
+        class_rnn=class_rnn,
+        path_model=path_rnn,
+        list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
         deterministic=False,
-        verbose=True,
         # participant_id=0,
         )
 
     environment = BanditsDrift(sigma=0.2)
 
+    print('Creating dataset...')
     dataset, _, _ = create_dataset(
                 agent=agent,
                 environment=environment,
@@ -57,6 +38,7 @@ def main(path_rnn, path_spice, path_data, path_save, n_trials_per_session):
     session, choice, reward = [], [], []
     choice_prob_0, choice_prob_1, action_value_0, action_value_1, reward_value_0, reward_value_1, choice_value_0, choice_value_1 = [], [], [], [], [], [], [], []
 
+    print('Getting latent values...')
     for i in tqdm(range(len(dataset))):    
         # get update dynamics
         experiment = dataset.xs[i].cpu().numpy()
@@ -89,14 +71,15 @@ def main(path_rnn, path_spice, path_data, path_save, n_trials_per_session):
 
 if __name__=='__main__':
     path_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
-    path_spice = 'params/eckstein2022/spice_eckstein2022.pkl'
     path_data = 'data/eckstein2022/eckstein2022.csv'
+    class_rnn = RLRNN_eckstein2022
+    sindy_config = SindyConfig_eckstein2022
     n_trials_per_session = 200
     
     main(
         path_rnn=path_rnn,
-        path_spice=path_spice,
-        path_data=path_data,
-        path_save=path_data.replace('.', '_test_spice.'),
+        class_rnn=class_rnn,
+        sindy_config=sindy_config,
+        path_save=path_data.replace('.', '_test_rnn.'),
         n_trials_per_session=n_trials_per_session,
     )

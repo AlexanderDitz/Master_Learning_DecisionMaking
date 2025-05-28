@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import List, Dict
 
 sys.path.append('resources')
 from resources.bandits import AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset as create_dataset_bandits
@@ -17,12 +18,20 @@ from utils.setup_agents import setup_agent_rnn
 warnings.filterwarnings("ignore")
 
 def main(
+    class_rnn: type = None,
     model: str = None,
     data: str = None,
     save: bool = False,
     
     # generated dataset parameters
     participant_id: int = None,
+    
+    # sindy config
+    rnn_modules: List[str] = None,
+    control_parameters: List[str] = None,
+    library_setup: Dict[str, list] = None,
+    filter_setup: Dict[str, list] = None,
+    dataprocessing_setup: Dict[str, list] = None,
     
     # sindy parameters
     optimizer_type: str = "SR3_L1",
@@ -37,6 +46,8 @@ def main(
     filter_bad_participants = False,  # Added parameter to control filtering
     pruning = False,
     train_test_ratio = 1.0,
+    optuna_trials_first_state = 50,
+    optuna_trials_second_state = 100,
     
     # ground truth parameters
     beta_reward = 3.,
@@ -62,57 +73,58 @@ def main(
     # SINDy-agent setup
     # ---------------------------------------------------------------------------------------------------
     
-    # tracked variables and control signals in the RNN
-    list_rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    list_control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
-    sindy_feature_list = list_rnn_modules + list_control_parameters
-
-    # library setup: 
-    # which terms are allowed as control inputs in each SINDy model
-    # key is the SINDy model name, value is a list of allowed control inputs from the list of control signals 
-    library_setup = {
-        'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
-        'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
-        'x_value_choice_chosen': ['c_value_reward'],
-        'x_value_choice_not_chosen': ['c_value_reward'],
-    }
-
-    # data-filter setup: 
-    # which samples are allowed as training samples in each SINDy model based on the given filter condition (conditions are always equality conditions)
-    # key is the SINDy model name, value is a list with a triplet of values:
-    #   1. str: feature name to be used as a filter
-    #   2. numeric: the numeric filter condition
-    #   3. bool: remove feature from control inputs --> TODO: check if this is necessary or makes things just more complicated
-    # Multiple conditions can also be given as a list of triplets.
-    # Example:
-    #   'x_value_choice_not_chosen': ['c_action', 0, True] means that for the SINDy model 'x_value_choice_not_chosen', only samples where the feature 'c_action' == 0 are used for training the SINDy model. 
-    #   The control parameter 'c_action' is removed afterwards from the list of control signals for training of the model
-    filter_setup = {
-        # 'x_value_reward_chosen': ['c_action', 1, True], -> Remove this one as well
-        'x_learning_rate_reward': ['c_action', 1, True],
-        'x_value_reward_not_chosen': ['c_action', 0, True],
-        'x_value_choice_chosen': ['c_action', 1, True],
-        'x_value_choice_not_chosen': ['c_action', 0, True],
-    }
-
-    # data pre-processing setup:
-    # define the processing steps for each variable and control signal.
-    # possible processing steps are: 
-    #   1. Trimming: Remove the first 25% of the samples along the time-axis. This is useful if the RNN begins with a variable at 0 but then accumulates first first to a specific default value, i.e. the range changes from (0, p) to (q, q+p). That way the data is cleared of the accumulation process. Trimming will be active for all variables, if it is active for one. 
-    #   2. Offset-Clearing: Clearup any offset by determining the minimal value q of a variable and move the value range from (q, q+p) -> (0, p). This step makes SINDy equations less complex and aligns them more with RL-Theory
-    #   3. Normalization: Scale the value range of a variable to x_max - x_min = 1. Offset-Clearing is recommended to achieve a value range of (0, 1) 
-    # The processing steps are passed in the form of a binary triplet in this order: (Trimming, Offset-Clearing, Normalization) 
-    dataprocessing_setup = {
-        'x_learning_rate_reward': [0, 0, 0],
-        'x_value_reward_not_chosen': [0, 0, 0],
-        'x_value_choice_chosen': [1, 1, 0],
-        'x_value_choice_not_chosen': [1, 1, 0],
-        # 'c_action': [0, 0, 0],
-        # 'c_reward': [0, 0, 0],
-        'c_value_reward': [0, 0, 0],
-        'c_value_choice': [1, 1, 0],
-    }
+    # # tracked variables and control signals in the RNN
+    # rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
+    # control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
     
+    # # library setup: 
+    # # which terms are allowed as control inputs in each SINDy model
+    # # key is the SINDy model name, value is a list of allowed control inputs from the list of control signals 
+    # library_setup = {
+    #     'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+    #     'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
+    #     'x_value_choice_chosen': ['c_value_reward'],
+    #     'x_value_choice_not_chosen': ['c_value_reward'],
+    # }
+
+    # # data-filter setup: 
+    # # which samples are allowed as training samples in each SINDy model based on the given filter condition (conditions are always equality conditions)
+    # # key is the SINDy model name, value is a list with a triplet of values:
+    # #   1. str: feature name to be used as a filter
+    # #   2. numeric: the numeric filter condition
+    # #   3. bool: remove feature from control inputs --> TODO: check if this is necessary or makes things just more complicated
+    # # Multiple conditions can also be given as a list of triplets.
+    # # Example:
+    # #   'x_value_choice_not_chosen': ['c_action', 0, True] means that for the SINDy model 'x_value_choice_not_chosen', only samples where the feature 'c_action' == 0 are used for training the SINDy model. 
+    # #   The control parameter 'c_action' is removed afterwards from the list of control signals for training of the model
+    # filter_setup = {
+    #     # 'x_value_reward_chosen': ['c_action', 1, True], -> Remove this one as well
+    #     'x_learning_rate_reward': ['c_action', 1, True],
+    #     'x_value_reward_not_chosen': ['c_action', 0, True],
+    #     'x_value_choice_chosen': ['c_action', 1, True],
+    #     'x_value_choice_not_chosen': ['c_action', 0, True],
+    # }
+
+    # # data pre-processing setup:
+    # # define the processing steps for each variable and control signal.
+    # # possible processing steps are: 
+    # #   1. Trimming: Remove the first 25% of the samples along the time-axis. This is useful if the RNN begins with a variable at 0 but then accumulates first first to a specific default value, i.e. the range changes from (0, p) to (q, q+p). That way the data is cleared of the accumulation process. Trimming will be active for all variables, if it is active for one. 
+    # #   2. Offset-Clearing: Clearup any offset by determining the minimal value q of a variable and move the value range from (q, q+p) -> (0, p). This step makes SINDy equations less complex and aligns them more with RL-Theory
+    # #   3. Normalization: Scale the value range of a variable to x_max - x_min = 1. Offset-Clearing is recommended to achieve a value range of (0, 1) 
+    # # The processing steps are passed in the form of a binary triplet in this order: (Trimming, Offset-Clearing, Normalization) 
+    # dataprocessing_setup = {
+    #     'x_learning_rate_reward': [0, 0, 0],
+    #     'x_value_reward_not_chosen': [0, 0, 0],
+    #     'x_value_choice_chosen': [1, 1, 0],
+    #     'x_value_choice_not_chosen': [1, 1, 0],
+    #     # 'c_action': [0, 0, 0],
+    #     # 'c_reward': [0, 0, 0],
+    #     'c_value_reward': [0, 0, 0],
+    #     'c_value_choice': [1, 1, 0],
+    # }
+    
+    sindy_feature_list = rnn_modules + control_parameters
+
     if not check_library_setup(library_setup, sindy_feature_list, verbose=True):
         raise ValueError('Library setup does not match feature list.')
         
@@ -127,8 +139,9 @@ def main(
         file_rnn = model
     
     agent_rnn = setup_agent_rnn(
+        class_rnn=class_rnn,
         path_model=file_rnn,
-        list_sindy_signals=list_rnn_modules+list_control_parameters,
+        list_sindy_signals=rnn_modules+control_parameters,
     )
     
     # ---------------------------------------------------------------------------------------------------
@@ -169,8 +182,8 @@ def main(
     
     # setup the SINDy-agent
     agent_spice, loss_spice = fit_spice(
-        rnn_modules=list_rnn_modules,
-        control_signals=list_control_parameters,
+        rnn_modules=rnn_modules,
+        control_signals=control_parameters,
         agent_rnn=agent_rnn,
         data=dataset,
         n_sessions_off_policy=n_sessions_off_policy,
@@ -191,6 +204,8 @@ def main(
         filter_bad_participants=filter_bad_participants,
         pruning=pruning,
         train_test_ratio=train_test_ratio,
+        optuna_trials_first_state=optuna_trials_first_state,
+        optuna_trials_second_state=optuna_trials_second_state,
         )
     
     # If agent_spice is None, we couldn't fit the model, so return early
@@ -215,13 +230,15 @@ def main(
     
     if analysis and len(participant_ids) > 0:
         participant_id_test = participant_id if participant_id is not None else participant_ids[0]
+        mask_participant_id = dataset.xs[:, 0, -1] == participant_id_test
+        experiment_test = dataset.xs[mask_participant_id][4]
         
         agent_rnn.new_sess(participant_id=participant_id_test)
         agent_spice.new_sess(participant_id=participant_id_test)
         
         # print sindy equations from tested sindy agent
         print('\nDiscovered SPICE models:')
-        for module in list_rnn_modules:
+        for module in rnn_modules:
             if participant_id_test in agent_spice._model.submodules_sindy[module]:
                 agent_spice._model.submodules_sindy[module][participant_id_test].print()
             else:
@@ -248,12 +265,13 @@ def main(
             agents = {'rnn': agent_rnn, 'sindy': agent_spice}
             plt_title = ''
             
-        fig, axs = plot_session(agents, dataset.xs[participant_id_test])
+        fig, axs = plot_session(agents, experiment_test)
         betas = agent_spice.get_betas()
         plt_title += r'SINDy: $\beta_{reward}=$'+str(np.round(betas['x_value_reward'], 2)) + r'; $\beta_{choice}=$'+str(np.round(betas['x_value_choice'], 2))
         
         fig.suptitle(plt_title)
         plt.show()
+        # plt.savefig('example_recovered_dynamics.png', dpi=500)
     
     features = {}
     for module in agent_spice._model.submodules_sindy:
@@ -271,7 +289,7 @@ def main(
     features['beta_choice'] = {}
     for pid in participant_ids:
         pid = int(pid)
-        if pid in agent_spice._model.submodules_sindy[list_rnn_modules[0]]:
+        if pid in agent_spice._model.submodules_sindy[rnn_modules[0]]:
             agent_spice.new_sess(participant_id=pid)
             betas = agent_spice.get_betas()
             features['beta_reward'][pid] = betas['x_value_reward']

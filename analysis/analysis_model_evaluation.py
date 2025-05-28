@@ -12,16 +12,28 @@ from utils.setup_agents import setup_agent_rnn, setup_agent_spice, setup_agent_m
 from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
 from benchmarking.hierarchical_bayes_numpyro import rl_model
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
+from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
-train_test_ratio = 0.8
+train_test_ratio = 1.0
 
-path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model_rnn = 'params/eckstein2022/rnn_eckstein2022_reward.pkl'
-path_model_spice = 'params/eckstein2022/spice_eckstein2022_reward.pkl'
-path_model_benchmark = 'params/eckstein2022/mcmc_eckstein2022_MODEL.nc'
-path_model_baseline = 'params/eckstein2022/mcmc_eckstein2022_ApBr.nc'
-
+dataset = 'eckstein2022'
 models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+sindy_config = SindyConfig_eckstein2022
+rnn_class = RLRNN_eckstein2022
+
+# dataset = 'dezfouli2019'
+# models_benchmark = []
+# sindy_config = SindyConfig_dezfouli2019
+# rnn_class = RLRNN_dezfouli2019
+
+
+path_data = f'data/{dataset}/{dataset}.csv'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}.pkl'
+path_model_spice = f'params/{dataset}/spice_{dataset}.pkl'
+path_model_baseline = f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
+path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+
 # models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnBr']
 dataset = convert_dataset(path_data)[0]
@@ -63,8 +75,9 @@ n_parameters_benchmark = 0
 if path_model_rnn is not None:
     print("Setting up RNN agent from file", path_model_rnn)
     agent_rnn = setup_agent_rnn(
+        class_rnn=rnn_class,
         path_model=path_model_rnn, 
-        list_sindy_signals=['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen'] + ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+        list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
         )
     n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
 else:
@@ -73,39 +86,18 @@ else:
 # setup spice agent
 if path_model_spice is not None:
     print("Setting up SPICE agent from file", path_model_spice)
-    rnn_modules = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen']
-    control_parameters = ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice']
-    sindy_library_setup = {
-        'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
-        'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
-        'x_value_choice_chosen': ['c_value_reward'],
-        'x_value_choice_not_chosen': ['c_value_reward'],
-    }
-    sindy_filter_setup = {
-        'x_learning_rate_reward': ['c_action', 1, True],
-        'x_value_reward_not_chosen': ['c_action', 0, True],
-        'x_value_choice_chosen': ['c_action', 1, True],
-        'x_value_choice_not_chosen': ['c_action', 0, True],
-    }
-    sindy_dataprocessing = None#{
-    #     'x_learning_rate_reward': [0, 0, 0],
-    #     'x_value_reward_not_chosen': [0, 0, 0],
-    #     'x_value_choice_chosen': [1, 1, 0],
-    #     'x_value_choice_not_chosen': [1, 1, 0],
-    #     'c_value_reward': [0, 0, 0],
-    #     'c_value_choice': [1, 1, 0],
-    # }
-
+    
     # get SPICE agent
     agent_spice = setup_agent_spice(
+        class_rnn=rnn_class,
         path_rnn=path_model_rnn,
         path_spice=path_model_spice,
         path_data=path_data,
-        rnn_modules=rnn_modules,
-        control_parameters=control_parameters,
-        sindy_library_setup=sindy_library_setup,
-        sindy_filter_setup=sindy_filter_setup,
-        sindy_dataprocessing=sindy_dataprocessing,
+        rnn_modules=sindy_config['rnn_modules'],
+        control_parameters=sindy_config['control_parameters'],
+        sindy_library_setup=sindy_config['library_setup'],
+        sindy_filter_setup=sindy_config['filter_setup'],
+        sindy_dataprocessing=sindy_config['dataprocessing_setup'],
         sindy_library_polynomial_degree=1,
         regularization=0.1,
         threshold=0.05,
