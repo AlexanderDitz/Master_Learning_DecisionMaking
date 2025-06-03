@@ -12,31 +12,31 @@ from utils.setup_agents import setup_agent_rnn, setup_agent_spice, setup_agent_m
 from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
 from benchmarking.hierarchical_bayes_numpyro import rl_model
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_age_eckstein2022
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
-train_test_ratio = 1.0
+train_test_ratio = 0.8
 
 dataset = 'eckstein2022'
 models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
 sindy_config = SindyConfig_eckstein2022
 rnn_class = RLRNN_eckstein2022
+# rnn_class = RLRNN_age_eckstein2022
 
 # dataset = 'dezfouli2019'
 # models_benchmark = []
 # sindy_config = SindyConfig_dezfouli2019
 # rnn_class = RLRNN_dezfouli2019
 
-
-path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}.pkl'
-path_model_baseline = f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
-path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+path_data = f'data/{dataset}/{dataset}_age.csv'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_test.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_l1_0_1.pkl'
+path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
+path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
 
 # models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnBr']
-dataset = convert_dataset(path_data)[0]
+dataset = convert_dataset(path_data, additional_inputs=['age'])[0]
 # use these participant_ids if not defined later
 participant_ids = dataset.xs[:, 0, -1].unique().cpu().numpy()
 
@@ -192,29 +192,29 @@ for index_data in tqdm(range(len(dataset))):
         # track number of trials
         considered_trials += n_trials_test
     except Exception as e:
-        print(e)
+        raise e
         failed_attempts += 1
 
 # ------------------------------------------------------------
 # Post processing
 # ------------------------------------------------------------
 
-scores_all = np.concatenate((
-    np.array(index_participants_list).reshape(-1, 1), 
-    np.array(n_trials_list).reshape(-1, 1),
-    np.array(scores_baseline_list).reshape(-1, 1), 
-    np.array(scores_rnn_list).reshape(-1, 1), 
-    np.array(scores_spice_list).reshape(-1, 1) if path_model_spice is not None else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
-    ), axis=-1)
+# scores_all = np.concatenate((
+#     np.array(index_participants_list).reshape(-1, 1), 
+#     np.array(n_trials_list).reshape(-1, 1),
+#     np.array(scores_baseline_list).reshape(-1, 1), 
+#     np.array(scores_rnn_list).reshape(-1, 1), 
+#     np.array(scores_spice_list).reshape(-1, 1) if path_model_spice is not None else np.zeros_like(np.array(scores_rnn_list).reshape(-1, 1)),
+#     ), axis=-1)
 
-import pandas as pd
-pd.DataFrame(np.round(scores_all, 2), columns=[
-    'Participant', 
-    'Trials', 
-    'Baseline', 
-    'RNN', 
-    'SPICE',
-    ]).to_csv('all_scores.csv')
+# import pandas as pd
+# pd.DataFrame(np.round(scores_all, 2), columns=[
+#     'Participant', 
+#     'Trials', 
+#     'Baseline', 
+#     'RNN', 
+#     'SPICE',
+#     ]).to_csv('all_scores.csv')
 
 # compute trial-level metrics (and NLL -> Likelihood)
 scores = scores / (considered_trials * agent_baseline[0]._n_actions)

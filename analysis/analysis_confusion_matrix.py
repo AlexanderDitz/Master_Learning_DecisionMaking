@@ -22,11 +22,15 @@ from utils.colormap import truncate_colormap
 
 # dataset settings
 dataset = "eckstein2022"
-models = ["ApBr", "ApAnBrAcfpAcfnBcfBch", "spice"]
+models = ["ApBr", "ApAnBrAcfpAcfnBcfBch"]
+
+spice_model_name = "spice"
+
+models.append(spice_model_name)
 
 # file settings
-path_data = f'data/{dataset}/{dataset}_test_MODEL.csv'
-path_model_rnn = f'params/{dataset}/confusion_matrix/rnn_{dataset}_SIMULATED.pkl'
+path_data = f'data/{dataset}/{dataset}_test_SIMULATED.csv'
+path_model_spice = f'params/{dataset}/confusion_matrix/rnn_{dataset}_SIMULATED.pkl'
 path_model_mcmc = f'params/{dataset}/confusion_matrix/mcmc_{dataset}_SIMULATED_FITTED.nc'
 
 n_actions = 2
@@ -35,25 +39,47 @@ n_actions = 2
 # SETUP MODELS
 #----------------------------------------------------------------------------------------------
 
+simulated_models = deepcopy(models)
+if 'spice' in simulated_models:
+    simulated_models.remove('spice')
+    simulated_models.append('rnn')
+
+print("Simulated models:", simulated_models)
+print("Fitted models:", models)
+
 agents = {}
-for simulated_model in models:
+for simulated_model in simulated_models:
     agents[simulated_model] = {}
     for fitted_model in models:
         agents[simulated_model][fitted_model] = None
         
-        if fitted_model.lower() != "spice":
+        if fitted_model.lower() != spice_model_name:
             agent = setup_agent_mcmc(
                 path_model=path_model_mcmc.replace('SIMULATED', simulated_model).replace('FITTED', fitted_model)
                 )
             n_params = 2 if fitted_model == "ApBr" else 6
         else:
-            agent = setup_agent_rnn(
-                class_rnn=RLRNN, 
-                path_model=path_model_rnn.replace('SIMULATED', simulated_model), 
-                list_sindy_signals=SindyConfig['rnn_modules']+SindyConfig['control_parameters'],
+            if spice_model_name == "rnn":
+                agent = setup_agent_rnn(
+                    class_rnn=RLRNN, 
+                    path_model=path_model_spice.replace('SIMULATED', simulated_model), 
+                    list_sindy_signals=SindyConfig['rnn_modules']+SindyConfig['control_parameters'],
+                    )
+                n_params = 12.647059  # avg n params of eckstein2022-SPICE models
+            elif spice_model_name == "spice":
+                agent = setup_agent_spice(
+                    class_rnn=RLRNN,
+                    path_spice=path_model_spice.replace('SIMULATED', simulated_model).replace('rnn', 'spice', 1),
+                    path_rnn=path_model_spice.replace('SIMULATED', simulated_model),
+                    path_data=path_data.replace('SIMULATED', fitted_model),
+                    rnn_modules=SindyConfig['rnn_modules'],
+                    control_parameters=SindyConfig['control_parameters'],
+                    sindy_library_setup=SindyConfig['library_setup'],
+                    sindy_filter_setup=SindyConfig['filter_setup'],
+                    sindy_dataprocessing=SindyConfig['dataprocessing_setup'],
+                    sindy_library_polynomial_degree=1,
                 )
-            n_params = 12.647059  # avg n params of eckstein2022-SPICE models
-        
+                n_params = 12.647059  # avg n params of eckstein2022-SPICE models
         agents[simulated_model][fitted_model] = (agent, n_params)
 
 
@@ -64,10 +90,10 @@ for simulated_model in models:
 metrics = ['nll', 'aic', 'bic']
 confusion_matrix = {metric: np.zeros((len(models), len(models))) for metric in metrics}
 
-for index_simulated_model, simulated_model in enumerate(models):
+for index_simulated_model, simulated_model in enumerate(simulated_models):
     
     # get data and choice probabilities from simulated model
-    dataset = convert_dataset(file=path_data.replace('MODEL', simulated_model))[0]
+    dataset = convert_dataset(file=path_data.replace('SIMULATED', simulated_model))[0]
     n_sessions = len(dataset)
     metrics_session = {metric: np.zeros((n_sessions, len(models))) for metric in metrics}
 
@@ -110,11 +136,20 @@ cmap = truncate_colormap(plt.cm.viridis, minval=0.5, maxval=1.0)
 
 # Plot NLL confusion matrix
 for index_metric, metric in enumerate(metrics):
-    sns.heatmap(confusion_matrix[metric], annot=True, xticklabels=models, yticklabels=models, cmap=cmap,
-                vmax=1, vmin=0, ax=axes[index_metric])
+    sns.heatmap(
+        confusion_matrix[metric], 
+        annot=False, 
+        xticklabels=models, 
+        yticklabels=models, 
+        cmap=cmap,
+        vmax=1, 
+        vmin=0, 
+        ax=axes[index_metric],
+        )
     axes[index_metric].set_xlabel("Fitted Model")
     axes[index_metric].set_ylabel("Simulated Model")
     axes[index_metric].set_title("Confusion Matrix: " + metric.upper())
 
 # Show the figure
-plt.show()
+plt.savefig('analysis/plots_eckstein2022/confusion_matrix.png', dpi=500)
+# plt.show()
