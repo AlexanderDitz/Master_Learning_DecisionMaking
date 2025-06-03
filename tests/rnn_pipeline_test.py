@@ -10,9 +10,9 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_a
 # SPICE CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
-# class_rnn = RLRNN_age_eckstein2022
-class_rnn = RLRNN_eckstein2022
-path_model = 'params/eckstein2022/rnn_eckstein2022_test.pkl'
+class_rnn = RLRNN_age_eckstein2022
+# class_rnn = RLRNN_eckstein2022
+path_model = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
 path_data = 'data/eckstein2022/eckstein2022_age.csv'
 additional_inputs = ['age']
 
@@ -28,9 +28,9 @@ additional_inputs = ['age']
 _, loss = pipeline_rnn.main(
     
     checkpoint=False,
-    epochs=4096, # <- 2^16
+    epochs=65536, # <- 2^16
     scheduler=True,
-    learning_rate=1e-2,
+    learning_rate=1e-4,
     l1_weight_decay=0.001,
     train_test_ratio=0.8,
     
