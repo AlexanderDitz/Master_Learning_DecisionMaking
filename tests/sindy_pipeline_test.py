@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_sindy
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_age_eckstein2022
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 
@@ -16,10 +16,12 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 # class_rnn = RLRNN
 # sindy_config = SindyConfig
 
-path_data = 'data/eckstein2022/eckstein2022_training_rnn.csv'
-path_model = 'params/eckstein2022/confusion_matrix/rnn_eckstein2022_rnn.pkl'
-class_rnn = RLRNN_eckstein2022
+path_data = 'data/eckstein2022/eckstein2022_age.csv'
+path_model = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
+# class_rnn = RLRNN_eckstein2022
+class_rnn = RLRNN_age_eckstein2022
 sindy_config = SindyConfig_eckstein2022
+additional_inputs = ['age']
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019.pkl'
@@ -36,13 +38,14 @@ agent_spice, features, loss = pipeline_sindy.main(
     class_rnn=class_rnn,
     model = path_model,
     data = path_data,
-    save = True,
+    additional_inputs_data=additional_inputs,
+    save = False,
     
     # general recovery parameters
-    participant_id=None,
+    participant_id=0,
     filter_bad_participants=False,
-    use_optuna=True,
-    pruning=True,
+    use_optuna=False,
+    pruning=False,
     
     # sindy parameters
     # optimizer_type="SR3_weighted_l1",
@@ -55,7 +58,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     n_trials_same_action_off_policy=5,
     optuna_trials_first_state=50,
     optuna_trials_second_state=100,
-    verbose=False,
+    verbose=True,
     
     # generated training dataset parameters
     n_actions=2,
@@ -70,7 +73,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     counterfactual=False,
     alpha_counterfactual=0.,
     
-    analysis=False,
+    analysis=True,
     get_loss=False,
     
     **sindy_config,

@@ -12,9 +12,9 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_a
 
 class_rnn = RLRNN_age_eckstein2022
 # class_rnn = RLRNN_eckstein2022
-path_model = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
-path_data = 'data/eckstein2022/eckstein2022_age.csv'
-additional_inputs = ['age']
+path_model = 'params/eckstein2022/rnn_eckstein2022_age_gender.pkl'
+path_data = 'data/eckstein2022/eckstein2022_age_gender.csv'
+additional_inputs = ['age', 'gender']
 
 # class_rnn = RLRNN_dezfouli2019
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_test.pkl'
