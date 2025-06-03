@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from resources.bandits import create_dataset, BanditsDrift, get_update_dynamics, AgentQ
+from resources.bandits import create_dataset, get_update_dynamics, AgentQ, BanditsDrift, BanditsFlip_eckstein2022
 from resources.rnn_utils import DatasetRNN
 from utils.setup_agents import setup_agent_mcmc
 from utils.convert_dataset import convert_dataset
@@ -24,7 +24,8 @@ def main(path_model, path_data, path_save, n_trials_per_session):
     agent = setup_agent_mcmc(path_model)
     
     for session in tqdm(range(n_sessions)):
-        environment = BanditsDrift(sigma=0.2)
+        # environment = BanditsDrift(sigma=0.2)
+        environment = BanditsFlip_eckstein2022()
         dataset = create_dataset(
                     agent=agent[session],
                     environment=environment,
@@ -35,7 +36,8 @@ def main(path_model, path_data, path_save, n_trials_per_session):
         
         dataset.xs[..., -1] = torch.full_like(dataset.xs[..., -1], session)
         
-        xs[session] = dataset.xs[0]
+        xs[session, :, :dataset.xs.shape[-1]-1] = dataset.xs[0, :, :-1]
+        xs[session, :, -1] = dataset.xs[0, :, -1]
         ys[session] = dataset.ys[0]
 
     dataset = DatasetRNN(xs, ys)
@@ -44,8 +46,9 @@ def main(path_model, path_data, path_save, n_trials_per_session):
     # general dataset columns
     session, choice, reward = [], [], []
     choice_prob_0, choice_prob_1, action_value_0, action_value_1, reward_value_0, reward_value_1, choice_value_0, choice_value_1 = [], [], [], [], [], [], [], []
-
-    for i in range(len(dataset)):    
+    
+    print('getting latent values...')
+    for i in tqdm(range(len(dataset))):    
         # get update dynamics
         experiment = dataset.xs[i].cpu().numpy()
         qs, choice_probs, _ = get_update_dynamics(experiment, agent[i])
@@ -76,14 +79,14 @@ def main(path_model, path_data, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    model = 'ApAnBrAcfpAcfnBcfBch'
+    model = 'ApBr'
     path_model = f'params/eckstein2022/mcmc_eckstein2022_{model}.nc'
     path_data = 'data/eckstein2022/eckstein2022.csv'
-    n_trials_per_session = 200
+    n_trials_per_session = 500
     
     main(
         path_model=path_model,
         path_data=path_data,
-        path_save=path_data.replace('.', '_training_'+model+'.'),
+        path_save=path_data.replace('.', '_simulated_'+model+'.'),
         n_trials_per_session=n_trials_per_session,
         )

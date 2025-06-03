@@ -231,7 +231,7 @@ def main(
     if analysis and len(participant_ids) > 0:
         participant_id_test = participant_id if participant_id is not None else participant_ids[0]
         mask_participant_id = dataset.xs[:, 0, -1] == participant_id_test
-        experiment_test = dataset.xs[mask_participant_id][4]
+        experiment_test = dataset.xs[mask_participant_id][0]
         
         agent_rnn.new_sess(participant_id=participant_id_test)
         agent_spice.new_sess(participant_id=participant_id_test)

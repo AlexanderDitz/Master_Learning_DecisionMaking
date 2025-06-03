@@ -5,9 +5,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from benchmarking.hierarchical_bayes_numpyro import main
 
 # models = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
-models = ['ApBrAcfpBcfBch']
-data = 'data/eckstein2022/eckstein2022.csv'
-output_file = 'params/eckstein2022/mcmc_eckstein2022.nc'
+models = ['ApBr']
+data = 'data/eckstein2022/eckstein2022_training_rnn.csv'
+output_file = 'params/eckstein2022/confusion_matrix/mcmc_eckstein2022.nc'
 
 num_samples = 5000
 num_warmup = 1000

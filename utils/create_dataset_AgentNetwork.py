@@ -5,24 +5,23 @@ import pandas as pd
 from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from resources.bandits import create_dataset, BanditsDrift, get_update_dynamics
+from resources.bandits import create_dataset, get_update_dynamics, BanditsDrift, BanditsFlip_eckstein2022
 from utils.setup_agents import setup_agent_rnn
 from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 
 def main(path_rnn, class_rnn, sindy_config, path_save, n_trials_per_session):
-    # sindy configuration
-
+    
+    # environment = BanditsDrift(sigma=0.2)
+    environment = BanditsFlip_eckstein2022()
+    
     agent = setup_agent_rnn(
         class_rnn=class_rnn,
         path_model=path_rnn,
         list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
         deterministic=False,
-        # participant_id=0,
         )
-
-    environment = BanditsDrift(sigma=0.2)
 
     print('Creating dataset...')
     dataset, _, _ = create_dataset(
@@ -70,7 +69,7 @@ def main(path_rnn, class_rnn, sindy_config, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    path_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
+    path_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_001.pkl'
     path_data = 'data/eckstein2022/eckstein2022.csv'
     class_rnn = RLRNN_eckstein2022
     sindy_config = SindyConfig_eckstein2022

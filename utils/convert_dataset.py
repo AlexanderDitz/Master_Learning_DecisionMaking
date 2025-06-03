@@ -145,7 +145,7 @@ def convert_dataset(
         # write additional inputs after choices and rewards and before grouping variables
         if additional_inputs is not None and len(additional_inputs) > 0:
             for index, additional_input in enumerate(additional_inputs):
-                xs[index_group, :len(choice), n_actions*2+index] = group[1][additional_input].values.astype(int)
+                xs[index_group, :len(choice), n_actions*2+index] = group[1][additional_input].values
         
         experiment = BanditSession(
             choices=group[1][df_choice].values,

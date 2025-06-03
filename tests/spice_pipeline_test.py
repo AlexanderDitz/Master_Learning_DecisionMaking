@@ -34,8 +34,8 @@ sindy_config = SindyConfig_eckstein2022
 epochs=65536
 scheduler=True
 learning_rate=1e-4
-l1_weight_decay=0.001
-train_test_ratio=1.0
+l1_weight_decay=0.#001
+train_test_ratio=0.8
 
 
 # -------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ for d in datasets:
         verbose=True,
         
         save = True,
-        get_loss = True,
+        get_loss = False,
         
         **sindy_config,
         )[-1]

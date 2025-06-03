@@ -1,43 +1,56 @@
+import os
 import pandas as pd
 import numpy as np
 
 
-path = 'data/sugawara2021_143_raw.csv'
-data = pd.read_csv(path)
+path = 'data/raw_data/eckstein2022'
 
-session_id = 'subjectid'
-reward_id = 'reward'
-choice_id = 'key'
-rt_id = 'rt'
+meta_data = 'data/raw_data/eckstein2022/SLCN.csv'
 
-mapping_key = {
-    0: -1,
-    33: 0,
-    36: 1,
-}
+kw_participant_id = 'sID'
+kw_age = 'age - years'
+kw_reward_id = 'reward'
+kw_choice_id = 'selected_box'
+kw_correct_choice_id = 'correct_box'
+kw_rt_id = 'RT'
 
-mapping_reward = {
-    -10: 0,
-    10: 1,
-}
+columns_out = ['session', 'age', 'choice', 'reward', 'correct_choice', 'rt']
 
-rewards = data[reward_id].values
-choices = data[choice_id].values
-rts = data[rt_id].values
-sessions = data[session_id].values
 
-for m in mapping_key:
-    choices[choices == m] = mapping_key[m]
+# read meta data and map meta data to participant id
+meta_data = pd.read_csv(meta_data)
 
-for m in mapping_reward:
-    rewards[rewards == m] = mapping_reward[m]
-    
-rewards = rewards[choices != -1]
-rts = rts[choices != -1]
-sessions = sessions[choices != -1]
-choices = choices[choices != -1]
+all_data = []
+for file in os.listdir(path):
 
-data = pd.DataFrame(np.stack((sessions, choices, rewards, rts), axis=-1), columns=('session', 'choice', 'reward', 'rt'))
+    try:
+        data = pd.read_csv(os.path.join(path, file))
 
+        rewards = data[kw_reward_id].values
+        choices = data[kw_choice_id].values
+        correct_choices = data[kw_correct_choice_id].values
+        rts = data[kw_rt_id].values
+        participant_id = data[kw_participant_id].values
+        
+        # get relevant meta data
+        age = meta_data[meta_data[kw_participant_id]==participant_id[0]][kw_age].values + np.zeros_like(participant_id)
+        
+        rewards = rewards[choices != -1]
+        rts = rts[choices != -1]
+        participant_id = participant_id[choices != -1]
+        choices = choices[choices != -1]
+        correct_choices = correct_choices[choices != -1]
+
+        all_data.append(np.stack((participant_id, age, choices, rewards, correct_choices, rts), axis=-1))
+    except Exception as e:
+        print(e)
+        print(f"Could not process file {file} because of some error...")
+        
+
+data = np.concatenate(all_data)
+# normalize age
+data[:, 1] = (data[:, 1] - data[:, 1].min()) / (data[:, 1].max()-data[:, 1].min())
+
+data = pd.DataFrame(data, columns=columns_out)
 print(data)
-data.to_csv('data/sugawara2021_143_processed.csv', index=False)
+data.to_csv('data/eckstein2022_age.csv', index=False)
