@@ -22,6 +22,7 @@ def main(
     model: str = None,
     data: str = None,
     save: bool = False,
+    additional_inputs_data: List[str] = None,
     
     # generated dataset parameters
     participant_id: int = None,
@@ -170,7 +171,7 @@ def main(
         dataset, _, _ = create_dataset_bandits(agent, environment, 200, len(participant_ids))
     else:
         # get data from experiments for later evaluation
-        dataset, _, df, _ = convert_dataset(data)
+        dataset, _, df, _ = convert_dataset(data, additional_inputs=additional_inputs_data)
         participant_ids = dataset.xs[..., -1].unique().int().cpu().numpy()
         
     # ---------------------------------------------------------------------------------------------------
@@ -274,26 +275,26 @@ def main(
         # plt.savefig('example_recovered_dynamics.png', dpi=500)
     
     features = {}
-    for module in agent_spice._model.submodules_sindy:
-        features[module] = {}
-        for pid in agent_spice._model.submodules_sindy[module]:
-            features_i = np.array(agent_spice._model.submodules_sindy[module][pid].get_feature_names())
-            coeffs_i = agent_spice._model.submodules_sindy[module][pid].coefficients()[0]
-            index_u = [not 'dummy' in f for f in features_i]
-            features_i = features_i[index_u]
-            coeffs_i = coeffs_i[index_u]
-            # features[model][pid] = tuple(features_i)
-            features[module][pid] = tuple(coeffs_i)
+    # for module in agent_spice._model.submodules_sindy:
+    #     features[module] = {}
+    #     for pid in agent_spice._model.submodules_sindy[module]:
+    #         features_i = np.array(agent_spice._model.submodules_sindy[module][pid].get_feature_names())
+    #         coeffs_i = agent_spice._model.submodules_sindy[module][pid].coefficients()[0]
+    #         index_u = [not 'dummy' in f for f in features_i]
+    #         features_i = features_i[index_u]
+    #         coeffs_i = coeffs_i[index_u]
+    #         # features[model][pid] = tuple(features_i)
+    #         features[module][pid] = tuple(coeffs_i)
     
-    features['beta_reward'] = {}
-    features['beta_choice'] = {}
-    for pid in participant_ids:
-        pid = int(pid)
-        if pid in agent_spice._model.submodules_sindy[rnn_modules[0]]:
-            agent_spice.new_sess(participant_id=pid)
-            betas = agent_spice.get_betas()
-            features['beta_reward'][pid] = betas['x_value_reward']
-            features['beta_choice'][pid] = betas['x_value_choice']
+    # features['beta_reward'] = {}
+    # features['beta_choice'] = {}
+    # for pid in participant_ids:
+    #     pid = int(pid)
+    #     if pid in agent_spice._model.submodules_sindy[rnn_modules[0]]:
+    #         agent_spice.new_sess(participant_id=pid, additional_embedding_inputs=)
+    #         betas = agent_spice.get_betas()
+    #         features['beta_reward'][pid] = betas['x_value_reward']
+    #         features['beta_choice'][pid] = betas['x_value_choice']
         
     return agent_spice, features, loss_spice
 

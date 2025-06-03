@@ -20,23 +20,25 @@ train_test_ratio = 0.8
 dataset = 'eckstein2022'
 models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
 sindy_config = SindyConfig_eckstein2022
-rnn_class = RLRNN_eckstein2022
-# rnn_class = RLRNN_age_eckstein2022
+# rnn_class = RLRNN_eckstein2022
+rnn_class = RLRNN_age_eckstein2022
+additional_inputs = ['age', 'gender']
 
 # dataset = 'dezfouli2019'
 # models_benchmark = []
 # sindy_config = SindyConfig_dezfouli2019
 # rnn_class = RLRNN_dezfouli2019
+# additional_inputs = []
 
-path_data = f'data/{dataset}/{dataset}_age.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_test.pkl'
+path_data = f'data/{dataset}/{dataset}_age_gender.csv'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_age_gender.pkl'
 path_model_spice = None#f'params/{dataset}/spice_{dataset}_l1_0_1.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
 path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
 
 # models_benchmark = ['ApBr', 'ApAnBr', 'ApBcBr', 'ApAcBcBr', 'ApAnBcBr', 'ApAnAcBcBr']
 # models_benchmark = ['ApAnBr']
-dataset = convert_dataset(path_data, additional_inputs=['age'])[0]
+dataset = convert_dataset(path_data, additional_inputs=additional_inputs)[0]
 # use these participant_ids if not defined later
 participant_ids = dataset.xs[:, 0, -1].unique().cpu().numpy()
 

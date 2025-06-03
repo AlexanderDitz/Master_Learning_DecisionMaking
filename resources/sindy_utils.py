@@ -386,7 +386,7 @@ def load_spice(file) -> Dict:
   return spice_modules
 
 
-def generate_off_policy_data(participant_id: int, n_trials_off_policy: int, n_trials_same_action_off_policy: int, n_sessions_off_policy: int = 1, n_actions: int = 2) -> DatasetRNN:
+def generate_off_policy_data(participant_id: int, block: int, experiment_id: int, n_trials_off_policy: int, n_trials_same_action_off_policy: int, n_sessions_off_policy: int = 1, n_actions: int = 2, additional_inputs: np.ndarray = np.zeros(0)) -> DatasetRNN:
   """Generates a simple off-policy dataset where each action is repeated n_trials_same_action_off_policy times and then switched.
 
   Args:
@@ -405,7 +405,7 @@ def generate_off_policy_data(participant_id: int, n_trials_off_policy: int, n_tr
   environment = BanditsDrift(sigma=0.2, n_actions=n_actions)
   
   # create a dummy dataset where each choice is chosen for n times and then an action switch occures
-  xs = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*n_actions+1)) - 1
+  xs = torch.zeros((n_sessions_off_policy, n_trials_off_policy, 2*n_actions+3+additional_inputs.shape[-1])) - 1
   for session in range(n_sessions_off_policy):
       # initialize first action
       current_action = torch.zeros(n_actions)
@@ -413,7 +413,7 @@ def generate_off_policy_data(participant_id: int, n_trials_off_policy: int, n_tr
       for trial in range(n_trials_off_policy):
           current_action_index = torch.argmax(current_action).int().item()
           reward = torch.tensor(environment.step(current_action_index))
-          xs[session, trial, :-1] = torch.concat((current_action, reward))
+          xs[session, trial, :2*n_actions] = torch.concat((current_action, reward))
           # action switch - go to next possible action item and if final go to first one
           if trial >= n_trials_same_action_off_policy and trial % n_trials_same_action_off_policy == 0:
               current_action[current_action_index] = 0
@@ -422,6 +422,9 @@ def generate_off_policy_data(participant_id: int, n_trials_off_policy: int, n_tr
   # setup of dataset
   ys = xs[:, 1:, :n_actions]
   xs = xs[:, :-1]
+  xs[..., 2*n_actions:-3] = additional_inputs
+  xs[..., -3] = block
+  xs[..., -2] = experiment_id
   xs[..., -1] = participant_id
   
   # dataset_fit = DatasetRNN(xs_fit, ys_fit)

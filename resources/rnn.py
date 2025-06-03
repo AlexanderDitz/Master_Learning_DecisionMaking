@@ -693,7 +693,7 @@ class RLRNN_age_eckstein2022(BaseRNN):
         self.embedding_size = embedding_size
         if embedding_size > 1:
             # use ExtendedEmbedding in order to accomodate the age into the embedding
-            self.participant_embedding = ExtendedEmbedding(num_embeddings=n_participants, num_inputs=1, embedding_dim=self.embedding_size)
+            self.participant_embedding = ExtendedEmbedding(num_embeddings=n_participants, num_inputs=2, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1
             self.participant_embedding = DummyModule()
@@ -726,7 +726,7 @@ class RLRNN_age_eckstein2022(BaseRNN):
         
         # First, we have to initialize all the inputs and outputs (i.e. logits)
         input_variables, embedding_variables, logits, timesteps = self.init_forward_pass(inputs, prev_state, batch_first)
-        actions, rewards, _, age = input_variables
+        actions, rewards, _, additional_information = input_variables
         participant_id, _ = embedding_variables
         
         # derive more observations
@@ -734,7 +734,7 @@ class RLRNN_age_eckstein2022(BaseRNN):
         # rewards_not_chosen = ((1-actions) * rewards).sum(dim=-1, keepdim=True).repeat(1, 1, self._n_actions)
         
         # Here we compute now the participant embeddings for each entry in the batch
-        participant_embedding = self.participant_embedding(participant_id[:, 0].int(), age[0])
+        participant_embedding = self.participant_embedding(participant_id[:, 0].int(), additional_information[0])
         
         # get scaling factors
         scaling_factors = {}
