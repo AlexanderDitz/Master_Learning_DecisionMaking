@@ -667,7 +667,7 @@ class RLRNN_eckstein2022(BaseRNN):
         return logits, self.get_state()
 
 
-class RLRNN_age_eckstein2022(BaseRNN):
+class RLRNN_meta_eckstein2022(BaseRNN):
     
     init_values = {
             'x_value_reward': 0.5,
@@ -693,7 +693,7 @@ class RLRNN_age_eckstein2022(BaseRNN):
         self.embedding_size = embedding_size
         if embedding_size > 1:
             # use ExtendedEmbedding in order to accomodate the age into the embedding
-            self.participant_embedding = ExtendedEmbedding(num_embeddings=n_participants, num_inputs=2, embedding_dim=self.embedding_size)
+            self.participant_embedding = ExtendedEmbedding(num_embeddings=n_participants, num_inputs=1, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1
             self.participant_embedding = DummyModule()

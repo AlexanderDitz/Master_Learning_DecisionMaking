@@ -12,7 +12,7 @@ from utils.setup_agents import setup_agent_rnn, setup_agent_spice, setup_agent_m
 from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
 from benchmarking.hierarchical_bayes_numpyro import rl_model
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_age_eckstein2022
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 train_test_ratio = 0.8
@@ -21,7 +21,7 @@ dataset = 'eckstein2022'
 models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
 sindy_config = SindyConfig_eckstein2022
 # rnn_class = RLRNN_eckstein2022
-rnn_class = RLRNN_age_eckstein2022
+rnn_class = RLRNN_meta_eckstein2022
 additional_inputs = ['age', 'gender']
 
 # dataset = 'dezfouli2019'
