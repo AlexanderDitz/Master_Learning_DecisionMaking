@@ -189,6 +189,7 @@ def fit_spice(
         
         if use_optuna:
             if lik_rnn - lik_spice_before_optuna > optuna_threshold or np.isnan(lik_spice_before_optuna):
+                print(f"Likelihoods before optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE =  {np.round(lik_spice_before_optuna, 5)}; Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)}")
                 likelihoods_rnn.append(np.round(lik_rnn, 5))
                 likelihoods_spice_before_optuna.append(np.round(lik_spice_before_optuna, 5))
                 

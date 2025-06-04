@@ -12,8 +12,8 @@ from utils.setup_agents import setup_agent_rnn, setup_agent_spice, setup_agent_m
 from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
 from benchmarking.hierarchical_bayes_numpyro import rl_model
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022
-from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_trials
+from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials
 
 train_test_ratio = 0.8
 
@@ -22,7 +22,7 @@ models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnB
 sindy_config = SindyConfig_eckstein2022
 # rnn_class = RLRNN_eckstein2022
 rnn_class = RLRNN_meta_eckstein2022
-additional_inputs = ['age', 'gender']
+additional_inputs = ['age']#, 'gender']
 
 # dataset = 'dezfouli2019'
 # models_benchmark = []
@@ -30,9 +30,9 @@ additional_inputs = ['age', 'gender']
 # rnn_class = RLRNN_dezfouli2019
 # additional_inputs = []
 
-path_data = f'data/{dataset}/{dataset}_age_gender.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_age_gender.pkl'
-path_model_spice = None#f'params/{dataset}/spice_{dataset}_l1_0_1.pkl'
+path_data = f'data/{dataset}/{dataset}_age.csv'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_age.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_l1_0.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
 path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
 

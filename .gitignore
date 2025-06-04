@@ -6,4 +6,5 @@ __pycache__/*
 benchmarking/params/*
 benchmarking/__pycache__/*
 benchmarking/results/*
+benchmarking/studies/*
 data/*

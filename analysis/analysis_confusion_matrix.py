@@ -24,7 +24,7 @@ from utils.colormap import truncate_colormap
 dataset = "eckstein2022"
 models = ["ApBr", "ApAnBrAcfpAcfnBcfBch"]
 
-spice_model_name = "spice"
+spice_model_name = "rnn"
 
 models.append(spice_model_name)
 
@@ -138,7 +138,7 @@ cmap = truncate_colormap(plt.cm.viridis, minval=0.5, maxval=1.0)
 for index_metric, metric in enumerate(metrics):
     sns.heatmap(
         confusion_matrix[metric], 
-        annot=False, 
+        annot=True, 
         xticklabels=models, 
         yticklabels=models, 
         cmap=cmap,
@@ -149,7 +149,21 @@ for index_metric, metric in enumerate(metrics):
     axes[index_metric].set_xlabel("Fitted Model")
     axes[index_metric].set_ylabel("Simulated Model")
     axes[index_metric].set_title("Confusion Matrix: " + metric.upper())
+plt.show()
 
-# Show the figure
+# Save a figure without annotation
+for index_metric, metric in enumerate(metrics):
+    sns.heatmap(
+        confusion_matrix[metric], 
+        annot=True, 
+        xticklabels=models, 
+        yticklabels=models, 
+        cmap=cmap,
+        vmax=1, 
+        vmin=0, 
+        ax=axes[index_metric],
+        )
+    axes[index_metric].set_xlabel("Fitted Model")
+    axes[index_metric].set_ylabel("Simulated Model")
+    axes[index_metric].set_title("Confusion Matrix: " + metric.upper())
 plt.savefig('analysis/plots_eckstein2022/confusion_matrix.png', dpi=500)
-# plt.show()

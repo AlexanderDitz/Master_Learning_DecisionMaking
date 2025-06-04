@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_rnn
-from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_meta_eckstein2022
+from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_trials
 
 
 # -------------------------------------------------------------------------------
@@ -12,8 +12,8 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_m
 
 class_rnn = RLRNN_meta_eckstein2022
 # class_rnn = RLRNN_eckstein2022
-path_model = 'params/eckstein2022/rnn_eckstein2022_test.pkl'
-path_data = 'data/eckstein2022/eckstein2022_age_gender.csv'
+path_model = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
+path_data = 'data/eckstein2022/eckstein2022_age.csv'
 additional_inputs = ['age']#, 'gender']
 
 # class_rnn = RLRNN_dezfouli2019
@@ -28,9 +28,9 @@ additional_inputs = ['age']#, 'gender']
 _, loss = pipeline_rnn.main(
     
     checkpoint=False,
-    epochs=1, # <- 2^16
+    epochs=4096, # <- 2^16
     scheduler=True,
-    learning_rate=1e-4,
+    learning_rate=1e-2,
     l1_weight_decay=0.001,
     train_test_ratio=0.8,
     
@@ -62,5 +62,5 @@ _, loss = pipeline_rnn.main(
     alpha_counterfactual=0.,
     
     analysis=True,
-    participant_id=2,
+    participant_id=0,
 )
