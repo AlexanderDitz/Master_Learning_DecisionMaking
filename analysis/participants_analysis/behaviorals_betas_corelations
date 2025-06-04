@@ -1,0 +1,248 @@
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
+import warnings
+
+warnings.filterwarnings('ignore')
+
+def load_and_prepare_data(csv_path='AAAAsindy_analysis_with_metrics.csv'):
+    """
+    Load data for beta-behavioral correlation analysis
+    """
+    df = pd.read_csv(csv_path)
+    return df
+
+def create_beta_behavioral_scatter_plots(df, output_dir):
+    """
+    Create scatter plots of beta parameters vs behavioral measures, 
+    color-coded by age category
+    """
+    
+    # Define the measures and parameters
+    beta_params = ['beta_reward', 'beta_choice']
+    behavioral_measures = [
+        'stay_after_reward',
+        'switch_rate', 
+        'perseveration',
+        'avg_reward',
+        'avg_rt'
+    ]
+    
+    # Filter available measures
+    available_betas = [col for col in beta_params if col in df.columns]
+    available_behaviors = [col for col in behavioral_measures if col in df.columns]
+    
+    if not available_betas or not available_behaviors:
+        print("Missing required columns for beta-behavioral analysis!")
+        return
+    
+    print(f"Available beta parameters: {available_betas}")
+    print(f"Available behavioral measures: {available_behaviors}")
+    
+    # Check for age category column
+    age_col = None
+    possible_age_cols = ['Age_Category', 'age_category', 'Age category', 'category']
+    for col in possible_age_cols:
+        if col in df.columns:
+            age_col = col
+            break
+    
+    if age_col is None:
+        print("No age category column found. Creating age categories from Age...")
+        if 'Age' in df.columns:
+            # Create age categories based on tertiles
+            age_tertiles = df['Age'].quantile([0.33, 0.67]).values
+            df['Age_Category'] = pd.cut(df['Age'], 
+                                      bins=[0, age_tertiles[0], age_tertiles[1], 100],
+                                      labels=[1, 2, 3],
+                                      include_lowest=True)
+            age_col = 'Age_Category'
+        else:
+            print("No Age column found either. Using default category.")
+            df['Age_Category'] = 1
+            age_col = 'Age_Category'
+    
+    # Define age category colors
+    category_colors = {
+        1: '#C6E2FF',  # Light blue
+        2: '#1E90FF',  # Medium blue  
+        3: '#003366'   # Dark blue
+    }
+    
+    # Create the plot grid: 2 rows (beta_reward, beta_choice) x 5 columns (behavioral measures)
+    fig, axes = plt.subplots(2, 5, figsize=(25, 12))
+    fig.suptitle('Beta Parameters vs Behavioral Measures by Age Category', fontsize=20, y=0.95)
+    
+    # Create plots for each beta parameter (rows) and behavioral measure (columns)
+    for row_idx, beta in enumerate(available_betas):
+        for col_idx, behavior in enumerate(available_behaviors):
+            ax = axes[row_idx, col_idx]
+            
+            # Get data for this combination, removing NaN values
+            plot_data = df[[beta, behavior, age_col]].dropna()
+            
+            if len(plot_data) == 0:
+                ax.text(0.5, 0.5, 'No Data Available', 
+                       ha='center', va='center', transform=ax.transAxes, fontsize=12)
+                ax.set_title(f'{beta.replace("_", " ").title()} vs {behavior.replace("_", " ").title()}')
+                continue
+            
+            # Plot scatter points by age category
+            for category in sorted(plot_data[age_col].unique()):
+                if pd.isna(category):
+                    continue
+                    
+                category_data = plot_data[plot_data[age_col] == category]
+                if len(category_data) == 0:
+                    continue
+                
+                # Convert category to int for color mapping
+                cat_int = int(category) if not pd.isna(category) else 1
+                color = category_colors.get(cat_int, '#808080')  # Default gray if category not found
+                
+                ax.scatter(
+                    category_data[behavior], 
+                    category_data[beta],
+                    c=color,
+                    alpha=0.7,
+                    s=60,
+                    edgecolors='black',
+                    linewidth=0.5,
+                    label=f'Category {cat_int}'
+                )
+            
+            # Calculate and display correlation
+            if len(plot_data) >= 10:
+                r, p = pearsonr(plot_data[behavior], plot_data[beta])
+                
+                # Add correlation text
+                ax.text(0.05, 0.95, f'r = {r:.3f}\np = {p:.3f}', 
+                       transform=ax.transAxes, fontsize=11,
+                       verticalalignment='top',
+                       bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+                
+                # Add trend line
+                z = np.polyfit(plot_data[behavior], plot_data[beta], 1)
+                p_trend = np.poly1d(z)
+                x_trend = np.linspace(plot_data[behavior].min(), plot_data[behavior].max(), 100)
+                ax.plot(x_trend, p_trend(x_trend), "r--", alpha=0.8, linewidth=2)
+            
+            # Set labels and title
+            ax.set_xlabel(behavior.replace('_', ' ').title(), fontsize=12)
+            ax.set_ylabel(beta.replace('_', ' ').title(), fontsize=12)
+            ax.set_title(f'{beta.replace("_", " ").title()} vs {behavior.replace("_", " ").title()}', 
+                        fontsize=14, pad=10)
+            ax.grid(True, alpha=0.3)
+            
+            # Add legend only to the first plot of each row
+            if col_idx == 0:
+                ax.legend(loc='upper right', fontsize=10)
+    
+    # Create a custom legend for age categories
+    legend_elements = []
+    for cat, color in category_colors.items():
+        legend_elements.append(plt.Line2D([0], [0], marker='o', color='w', 
+                                        markerfacecolor=color, markersize=10,
+                                        markeredgecolor='black', markeredgewidth=0.5,
+                                        label=f'Age Category {cat}'))
+    
+    # Add the legend to the figure
+    fig.legend(handles=legend_elements, loc='center right', bbox_to_anchor=(0.98, 0.5), 
+               fontsize=12, title='Age Categories', title_fontsize=14)
+    
+    # Adjust layout
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.90, right=0.92, left=0.06, bottom=0.08, 
+                       wspace=0.25, hspace=0.35)
+    
+    # Save the plot
+    plt.savefig(os.path.join(output_dir, 'beta_behavioral_correlations_by_age.png'), 
+                dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Beta-behavioral correlation plot saved to: {os.path.join(output_dir, 'beta_behavioral_correlations_by_age.png')}")
+
+
+def create_correlation_summary_table(df, output_dir):
+    """
+    Create a summary table of correlations between beta parameters and behavioral measures
+    """
+    
+    beta_params = ['beta_reward', 'beta_choice']
+    behavioral_measures = [
+        'stay_after_reward',
+        'switch_rate', 
+        'perseveration',
+        'avg_reward',
+        'avg_rt'
+    ]
+    
+    # Filter available measures
+    available_betas = [col for col in beta_params if col in df.columns]
+    available_behaviors = [col for col in behavioral_measures if col in df.columns]
+    
+    correlation_data = []
+    
+    for beta in available_betas:
+        for behavior in available_behaviors:
+            # Overall correlation
+            subset = df[[beta, behavior]].dropna()
+            if len(subset) >= 10:
+                r, p = pearsonr(subset[beta], subset[behavior])
+                correlation_data.append({
+                    'Beta_Parameter': beta.replace('_', ' ').title(),
+                    'Behavioral_Measure': behavior.replace('_', ' ').title(),
+                    'Correlation': r,
+                    'P_Value': p,
+                    'N_Samples': len(subset),
+                    'Abs_Correlation': abs(r)
+                })
+    
+    if correlation_data:
+        corr_df = pd.DataFrame(correlation_data)
+        corr_df = corr_df.sort_values('Abs_Correlation', ascending=False)
+        corr_df.to_csv(os.path.join(output_dir, 'beta_behavioral_correlations_summary.csv'), index=False)
+        
+        print("\nTop Beta-Behavioral Correlations:")
+        print("=" * 60)
+        for _, row in corr_df.head(10).iterrows():
+            significance = ""
+            if row['P_Value'] < 0.001:
+                significance = "***"
+            elif row['P_Value'] < 0.01:
+                significance = "**"
+            elif row['P_Value'] < 0.05:
+                significance = "*"
+            
+            print(f"{row['Beta_Parameter']} ↔ {row['Behavioral_Measure']}: "
+                  f"r={row['Correlation']:.3f}, p={row['P_Value']:.3f} {significance}")
+
+
+def main():
+    # Set up output directory
+    output_dir = '/Users/martynaplomecka/closedloop_rl/analysis/participants_analysis_plots/beta_behavioral_correlations'
+    os.makedirs(output_dir, exist_ok=True)
+    
+    print(f"Output directory: {output_dir}")
+    
+    # Load data
+    print("Loading data...")
+    df = load_and_prepare_data()
+    
+    print(f"Dataset shape: {df.shape}")
+    
+    # Create scatter plots
+    print("\nCreating beta-behavioral correlation scatter plots...")
+    create_beta_behavioral_scatter_plots(df, output_dir)
+    
+    # Create summary table
+    print("\nCreating correlation summary table...")
+    create_correlation_summary_table(df, output_dir)
+    
+    print("\nAnalysis complete!")
+
+
+if __name__ == "__main__":
+    main()
