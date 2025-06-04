@@ -47,6 +47,7 @@ def main(
     filter_bad_participants = False,  # Added parameter to control filtering
     pruning = False,
     train_test_ratio = 1.0,
+    optuna_threshold = 0.03,
     optuna_trials_first_state = 50,
     optuna_trials_second_state = 100,
     
@@ -205,6 +206,7 @@ def main(
         filter_bad_participants=filter_bad_participants,
         pruning=pruning,
         train_test_ratio=train_test_ratio,
+        optuna_threshold=optuna_threshold,
         optuna_trials_first_state=optuna_trials_first_state,
         optuna_trials_second_state=optuna_trials_second_state,
         )
