@@ -32,7 +32,7 @@ def convert_dataset(
     # convert all participant ids to numeric values if necessary
     # if not pd.to_numeric(df[df_participant_id], errors='coerce').notna().all():
     # Map unique participant IDs to numeric values
-    id_map = {pid: idx for idx, pid in enumerate(df[df_participant_id].unique())}
+    id_map = {pid: idx for idx, pid in enumerate(df[df_participant_id].unique())} #this line
     # Replace participant IDs with numeric values
     df[df_participant_id] = df[df_participant_id].map(id_map)    
     

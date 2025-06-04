@@ -21,6 +21,9 @@ from resources.sindy_utils import load_spice
 from utils.setup_agents import setup_agent_rnn
 
 
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
 
 #  BEHAVIORAL METRICS 
 data_path = 'data/eckstein2022/eckstein2022.csv'
