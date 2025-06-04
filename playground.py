@@ -1,8 +1,9 @@
 import numpy as np
 from utils.convert_dataset import convert_dataset
 
-file = 'data/eckstein2022/eckstein2022_age_gender.csv'
+file = 'data/eckstein2022/eckstein2022_age.csv'
 
-dataset = convert_dataset(file)[0]
+dataset, _, df, _ = convert_dataset(file)
 
-print(len(dataset.xs[:, 0, -1].unique()))
+print(dataset.xs[:, 0, -1].unique())
+print(df['session'].unique())
