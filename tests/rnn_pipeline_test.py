@@ -3,18 +3,18 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_rnn
-from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_age_eckstein2022
+from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_meta_eckstein2022
 
 
 # -------------------------------------------------------------------------------
 # SPICE CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
-class_rnn = RLRNN_age_eckstein2022
+class_rnn = RLRNN_meta_eckstein2022
 # class_rnn = RLRNN_eckstein2022
-path_model = 'params/eckstein2022/rnn_eckstein2022_age_gender.pkl'
+path_model = 'params/eckstein2022/rnn_eckstein2022_test.pkl'
 path_data = 'data/eckstein2022/eckstein2022_age_gender.csv'
-additional_inputs = ['age', 'gender']
+additional_inputs = ['age']#, 'gender']
 
 # class_rnn = RLRNN_dezfouli2019
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_test.pkl'
@@ -28,7 +28,7 @@ additional_inputs = ['age', 'gender']
 _, loss = pipeline_rnn.main(
     
     checkpoint=False,
-    epochs=65536, # <- 2^16
+    epochs=1, # <- 2^16
     scheduler=True,
     learning_rate=1e-4,
     l1_weight_decay=0.001,

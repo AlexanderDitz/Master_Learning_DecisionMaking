@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_sindy
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_age_eckstein2022
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 
@@ -19,7 +19,7 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 path_data = 'data/eckstein2022/eckstein2022_age.csv'
 path_model = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
 # class_rnn = RLRNN_eckstein2022
-class_rnn = RLRNN_age_eckstein2022
+class_rnn = RLRNN_meta_eckstein2022
 sindy_config = SindyConfig_eckstein2022
 additional_inputs = ['age']
 
