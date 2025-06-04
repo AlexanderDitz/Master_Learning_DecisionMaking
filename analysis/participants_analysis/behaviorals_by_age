@@ -1,0 +1,306 @@
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import f_oneway, ttest_ind
+import warnings
+
+warnings.filterwarnings('ignore')
+
+def load_and_prepare_data(csv_path='AAAAsindy_analysis_with_metrics.csv'):
+    """
+    Load data for behavioral measures by age category analysis
+    """
+    df = pd.read_csv(csv_path)
+    return df
+
+def create_behavioral_measures_by_age_plots(df, output_dir):
+    """
+    Create bar plots showing behavioral measures by age category
+    """
+    
+    # Define behavioral measures (only the 4 specified ones)
+    behavioral_measures = [
+        'stay_after_reward',
+        'switch_rate',
+        'perseveration',
+        'avg_rt'
+    ]
+    
+    # Filter available measures
+    available_behaviors = [col for col in behavioral_measures if col in df.columns]
+    
+    if not available_behaviors:
+        print("No behavioral measures found in the dataframe!")
+        return
+    
+    print(f"Available behavioral measures: {available_behaviors}")
+    
+    # Check for age category column
+    age_col = None
+    possible_age_cols = ['Age_Category', 'age_category', 'Age category', 'category']
+    for col in possible_age_cols:
+        if col in df.columns:
+            age_col = col
+            break
+    
+    if age_col is None:
+        print("No age category column found. Creating age categories from Age...")
+        if 'Age' in df.columns:
+            # Create age categories based on tertiles
+            age_tertiles = df['Age'].quantile([0.33, 0.67]).values
+            df['Age_Category'] = pd.cut(df['Age'], 
+                                      bins=[0, age_tertiles[0], age_tertiles[1], 100],
+                                      labels=[1, 2, 3],
+                                      include_lowest=True)
+            age_col = 'Age_Category'
+        else:
+            print("No Age column found either. Using default category.")
+            df['Age_Category'] = 1
+            age_col = 'Age_Category'
+    
+    # Define age category colors (same as previous script)
+    category_colors = {
+        1: '#C6E2FF',  # Light blue
+        2: '#1E90FF',  # Medium blue  
+        3: '#003366'   # Dark blue
+    }
+    
+    # Calculate grid dimensions for 2x2 layout
+    n_measures = len(available_behaviors)
+    if n_measures <= 4:
+        n_cols = 2  # 2x2 layout for 4 or fewer measures
+        n_rows = 2
+    else:
+        n_cols = 3  # 3 columns for more measures
+        n_rows = (n_measures + n_cols - 1) // n_cols
+    
+    # Create the plot grid
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 10))
+    fig.suptitle('Behavioral Measures by Age Category', fontsize=20, y=0.96)
+    
+    # Flatten axes array for easy indexing
+    if n_rows == 1 or n_cols == 1:
+        if n_rows == 1 and n_cols == 1:
+            axes_flat = [axes]
+        else:
+            axes_flat = axes.flatten()
+    else:
+        axes_flat = axes.flatten()
+    
+    # Get age categories and ensure they're sorted
+    age_categories = sorted([cat for cat in df[age_col].unique() if not pd.isna(cat)])
+    age_categories = [int(cat) for cat in age_categories]
+    
+    print(f"Age categories found: {age_categories}")
+    
+    # Create plots for each behavioral measure
+    for idx, behavior in enumerate(available_behaviors):
+        ax = axes_flat[idx]
+        
+        # Calculate means and SEMs for each age category
+        means = []
+        sems = []
+        colors = []
+        category_labels = []
+        
+        for category in age_categories:
+            category_data = df[df[age_col] == category][behavior].dropna()
+            
+            if len(category_data) > 0:
+                mean_val = category_data.mean()
+                sem_val = category_data.std() / np.sqrt(len(category_data))
+                means.append(mean_val)
+                sems.append(sem_val)
+                colors.append(category_colors.get(category, '#808080'))
+                category_labels.append(f'Category {category}\n(n={len(category_data)})')
+            else:
+                means.append(0)
+                sems.append(0)
+                colors.append(category_colors.get(category, '#808080'))
+                category_labels.append(f'Category {category}\n(n=0)')
+        
+        # Create bar plot
+        x_pos = np.arange(len(age_categories))
+        bars = ax.bar(x_pos, means, yerr=sems, capsize=5, 
+                     color=colors, alpha=0.8, edgecolor='black', linewidth=1)
+        
+        # Add value labels on top of bars
+        for bar, mean_val, sem_val in zip(bars, means, sems):
+            height = bar.get_height()
+            if height > 0:
+                ax.text(bar.get_x() + bar.get_width()/2., height + sem_val + max(means)*0.01,
+                       f'{mean_val:.3f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
+        
+        # Perform statistical tests if we have data from multiple categories
+        if len([m for m in means if m > 0]) > 1:
+            # Get data for statistical testing
+            groups = []
+            for category in age_categories:
+                category_data = df[df[age_col] == category][behavior].dropna()
+                if len(category_data) > 0:
+                    groups.append(category_data.values)
+            
+            if len(groups) >= 2:
+                # ANOVA test
+                try:
+                    f_stat, p_anova = f_oneway(*groups)
+                    
+                    # Add statistical significance indicator
+                    if p_anova < 0.001:
+                        sig_text = "p < 0.001***"
+                    elif p_anova < 0.01:
+                        sig_text = f"p = {p_anova:.3f}**"
+                    elif p_anova < 0.05:
+                        sig_text = f"p = {p_anova:.3f}*"
+                    else:
+                        sig_text = f"p = {p_anova:.3f}ns"
+                    
+                    ax.text(0.02, 0.98, f'ANOVA: {sig_text}', transform=ax.transAxes,
+                           fontsize=10, verticalalignment='top',
+                           bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+                           
+                except Exception as e:
+                    print(f"Statistical test failed for {behavior}: {e}")
+        
+        # Customize the plot
+        ax.set_xlabel('Age Category', fontsize=12)
+        ax.set_ylabel(behavior.replace('_', ' ').title(), fontsize=12)
+        ax.set_title(behavior.replace('_', ' ').title(), fontsize=14, pad=15)
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(category_labels, fontsize=10)
+        ax.grid(True, alpha=0.3, axis='y')
+        
+        # Set y-axis to start from 0 unless all values are negative
+        if min(means) >= 0:
+            ax.set_ylim(bottom=0)
+        
+        # Add some padding to the top
+        y_max = max([m + s for m, s in zip(means, sems) if m > 0] + [0])
+        if y_max > 0:
+            ax.set_ylim(top=y_max * 1.15)
+    
+    # Turn off any unused subplots
+    for idx in range(len(available_behaviors), len(axes_flat)):
+        axes_flat[idx].axis('off')
+    
+    # Create a legend for age categories
+    legend_elements = []
+    for cat in age_categories:
+        color = category_colors.get(cat, '#808080')
+        legend_elements.append(plt.Rectangle((0,0),1,1, facecolor=color, 
+                                           edgecolor='black', linewidth=1,
+                                           label=f'Age Category {cat}'))
+    
+    # Add legend to the figure - positioned more to the right
+    fig.legend(handles=legend_elements, loc='center right', bbox_to_anchor=(0.99, 0.5),
+               fontsize=12, title='Age Categories', title_fontsize=14)
+    
+    # Adjust layout - lower the plots and add more space on the right for legend
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.88, right=0.85, left=0.08, bottom=0.12,
+                       wspace=0.30, hspace=0.45)
+    
+    # Save the plot
+    plt.savefig(os.path.join(output_dir, 'behavioral_measures_by_age_category.png'), 
+                dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Behavioral measures by age plot saved to: {os.path.join(output_dir, 'behavioral_measures_by_age_category.png')}")
+
+
+def create_behavioral_summary_table(df, output_dir):
+    """
+    Create a summary table of behavioral measures by age category
+    """
+    
+    behavioral_measures = [
+        'stay_after_reward',
+        'switch_rate',
+        'perseveration',
+        'avg_rt'
+    ]
+    
+    # Filter available measures
+    available_behaviors = [col for col in behavioral_measures if col in df.columns]
+    
+    # Get age category column
+    age_col = None
+    possible_age_cols = ['Age_Category', 'age_category', 'Age category', 'category']
+    for col in possible_age_cols:
+        if col in df.columns:
+            age_col = col
+            break
+    
+    if age_col is None and 'Age' in df.columns:
+        age_tertiles = df['Age'].quantile([0.33, 0.67]).values
+        df['Age_Category'] = pd.cut(df['Age'], 
+                                  bins=[0, age_tertiles[0], age_tertiles[1], 100],
+                                  labels=[1, 2, 3],
+                                  include_lowest=True)
+        age_col = 'Age_Category'
+    
+    if age_col is None:
+        print("Cannot create summary table - no age information available")
+        return
+    
+    summary_data = []
+    age_categories = sorted([cat for cat in df[age_col].unique() if not pd.isna(cat)])
+    
+    for behavior in available_behaviors:
+        for category in age_categories:
+            category_data = df[df[age_col] == category][behavior].dropna()
+            
+            if len(category_data) > 0:
+                summary_data.append({
+                    'Behavioral_Measure': behavior.replace('_', ' ').title(),
+                    'Age_Category': int(category),
+                    'Mean': category_data.mean(),
+                    'SEM': category_data.std() / np.sqrt(len(category_data)),
+                    'Std': category_data.std(),
+                    'N': len(category_data),
+                    'Min': category_data.min(),
+                    'Max': category_data.max()
+                })
+    
+    if summary_data:
+        summary_df = pd.DataFrame(summary_data)
+        summary_df = summary_df.sort_values(['Behavioral_Measure', 'Age_Category'])
+        summary_df.to_csv(os.path.join(output_dir, 'behavioral_measures_by_age_summary.csv'), index=False)
+        
+        print("\nBehavioral Measures Summary by Age Category:")
+        print("=" * 80)
+        
+        for behavior in summary_df['Behavioral_Measure'].unique():
+            print(f"\n{behavior}:")
+            behavior_data = summary_df[summary_df['Behavioral_Measure'] == behavior]
+            for _, row in behavior_data.iterrows():
+                print(f"  Category {row['Age_Category']}: {row['Mean']:.3f} ± {row['SEM']:.3f} (n={row['N']})")
+
+
+def main():
+    # Set up output directory
+    output_dir = '/Users/martynaplomecka/closedloop_rl/analysis/participants_analysis_plots/behavioral_by_age'
+    os.makedirs(output_dir, exist_ok=True)
+    
+    print(f"Output directory: {output_dir}")
+    
+    # Load data
+    print("Loading data...")
+    df = load_and_prepare_data()
+    
+    print(f"Dataset shape: {df.shape}")
+    
+    # Create bar plots
+    print("\nCreating behavioral measures by age category plots...")
+    create_behavioral_measures_by_age_plots(df, output_dir)
+    
+    # Create summary table
+    print("\nCreating summary table...")
+    create_behavioral_summary_table(df, output_dir)
+    
+    print("\nAnalysis complete!")
+
+
+if __name__ == "__main__":
+    main()
