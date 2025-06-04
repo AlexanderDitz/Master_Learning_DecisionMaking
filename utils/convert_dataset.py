@@ -6,6 +6,7 @@ from typing import List
 import pandas as pd
 import numpy as np
 import warnings
+from copy import copy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn_utils import DatasetRNN
@@ -26,6 +27,8 @@ def convert_dataset(
     
     # replace all nan values with -1
     df = df.replace(np.nan, -1)
+    
+    original_df = copy(df)
     
     groupby_kw = [df_participant_id, df_experiment_id, df_block]
     
@@ -48,6 +51,7 @@ def convert_dataset(
     
     if not df_block in df.columns:
         df[df_block] = 0
+        original_df[df_block] = 0
     else:
         # normalize block numbers
         blocks_max = df[df_block].max()
@@ -63,6 +67,7 @@ def convert_dataset(
     choice_min = np.nanmin(choices[choices != -1])
     choices[choices != -1] = choices[choices != -1] - choice_min
     df[df_choice] = choices
+    original_df[df_choice] = choices
     
     # number of possible actions
     n_actions = int(df[df_choice].max() + 1)
@@ -166,4 +171,4 @@ def convert_dataset(
         
         experiment_list.append(experiment)
         
-    return DatasetRNN(xs, ys, device=device, sequence_length=sequence_length), experiment_list, df, (probs_choice, values_action, values_reward, values_choice)
+    return DatasetRNN(xs, ys, device=device, sequence_length=sequence_length), experiment_list, original_df, (probs_choice, values_action, values_reward, values_choice)
