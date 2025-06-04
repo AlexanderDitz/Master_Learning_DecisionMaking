@@ -2,13 +2,9 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-
 import sys
 import os
-import pandas as pd
-import numpy as np
 import torch
-from tqdm import tqdm
 from copy import deepcopy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -19,19 +15,15 @@ from resources.model_evaluation import log_likelihood, bayesian_information_crit
 from resources.bandits import get_update_dynamics, AgentSpice
 from resources.sindy_utils import load_spice, SindyConfig_eckstein2022
 from utils.setup_agents import setup_agent_rnn
-from utils.convert_dataset import convert_dataset
 from resources.rnn import RLRNN_eckstein2022, RLRNN_meta_eckstein2022, ExtendedEmbedding
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
 
-#  BEHAVIORAL METRICS 
+# ─── BEHAVIORAL METRICS ─────────────────────────────────────────────────────────────────────────────────
+
 data_path = 'data/eckstein2022/eckstein2022_age.csv'
 slcn_path = '/Users/martynaplomecka/closedloop_rl/data/eckstein2022/SLCN.csv'
 
 # (1a) Read raw CSV and cast 'session' → int
 dataset, _, original_df, _ = convert_dataset(file=data_path, additional_inputs=['age'])
-#original_df = pd.read_csv(data_path)
 original_df['session'] = original_df['session'].astype(int)
 
 # (1b) Read SLCN metadata and cast 'ID' → int
@@ -48,6 +40,7 @@ slcn_mapping = {}
 for _, row in slcn_df.iterrows():
     slcn_mapping[row['ID']] = row.to_dict()
 
+# Get a list of unique session IDs from original_df
 unique_sessions = original_df['session'].unique().tolist()
 
 behavior_metrics = []
@@ -161,9 +154,7 @@ behavior_df = pd.DataFrame(behavior_metrics)
 print(f"Behavioral metrics computed for {len(behavior_df)} participants.")
 
 
-
-# here we have the SINDy and RNN models part
-
+# ─── SINDy AND RNN MODELS ──────────────────────────────────────────────────────────────────────────────
 
 model_rnn_path = '/Users/martynaplomecka/closedloop_rl/params/eckstein2022/rnn_eckstein2022_age.pkl'
 model_spice_path = '/Users/martynaplomecka/closedloop_rl/params/eckstein2022/spice_eckstein2022_age.pkl'
@@ -176,7 +167,9 @@ additional_inputs = ['age']
 
 agent_rnn = setup_agent_rnn(
     path_model=model_rnn_path,
-    class_rnn = class_rnn, list_sindy_signals = sindy_config["rnn_modules"] + sindy_config['control_parameters'])
+    class_rnn=class_rnn,
+    list_sindy_signals=sindy_config["rnn_modules"] + sindy_config['control_parameters']
+)
 
 spice_modules = load_spice(file=model_spice_path)
 agent_spice = AgentSpice(
@@ -187,66 +180,74 @@ agent_spice = AgentSpice(
 
 list_rnn_modules = SindyConfig_eckstein2022["rnn_modules"]
 
-#n_participants = agent_spice._model.participant_embedding.weight.data.shape[0]
-n_participants = dataset.xs[..., -1].unique().shape[0]
-participant_ids = list(range(n_participants))
+# Build mappings between “real session ID” and SPICE’s internal index 0..(N-1)
+session_to_index = {pid: i for i, pid in enumerate(unique_sessions)}
+index_to_session = {i: pid for i, pid in enumerate(unique_sessions)}
 
-# Map SPICE index → real pid (from unique_sessions)
-index_to_pid = {}
-for i, pid in enumerate(unique_sessions):
-    if i < n_participants:
-        index_to_pid[i] = pid
+n_participants = len(unique_sessions)
+# Now `participant_ids` is the list of real session IDs, not 0..n_participants-1
+participant_ids = unique_sessions
 
 print(f"Total unique sessions: {len(unique_sessions)}")
 print(f"SPICE knows about {n_participants} participants")
-print(f"Mapped {len(index_to_pid)} indices to actual PIDs")
+print(f"Mapped {len(index_to_session)} indices to actual PIDs")
 
 # Collect all SINDy feature names
 all_feature_names = set()
 for module in list_rnn_modules:
-    for idx in agent_spice._model.submodules_sindy[module]:
-        sindy_model = agent_spice._model.submodules_sindy[module][idx]
+    for idx_internal in agent_spice._model.submodules_sindy[module]:
+        sindy_model = agent_spice._model.submodules_sindy[module][idx_internal]
         for name in sindy_model.get_feature_names():
             all_feature_names.add(f"{module}_{name}")
 
-# Extract embedding matrix
+# Extract embedding matrix from the SPICE model
 if isinstance(agent_spice._model.participant_embedding, torch.nn.Embedding):
     embedding_matrix = agent_spice._model.participant_embedding.weight.detach().cpu().numpy()
 elif isinstance(agent_spice._model.participant_embedding, ExtendedEmbedding):
     embedding_matrix = agent_spice._model.participant_embedding.embedding.weight.detach().cpu().numpy()
-#embedding_matrix = agent_spice._model.participant_embedding.weight.detach().cpu().numpy() if isinstance(agent_spice._model.participant_embedding, torch.nn.Embedding) else 
+else:
+    raise RuntimeError("Unknown embedding type in SPICE model.")
+
 embedding_size = embedding_matrix.shape[1]
 
-# Precompute betas
+# ─── PRECOMPUTE BETAS (fixed) ─────────────────────────────────────────────────────────────────────────
+
 features = {'beta_reward': {}, 'beta_choice': {}}
-for idx in participant_ids:
-    if idx not in index_to_pid:
+
+for pid in participant_ids:
+    # Filter original_df on the real session ID (pid)
+    subset = original_df[original_df["session"] == pid]
+    if subset.empty:
+        print(f"Warning: no rows in original_df where session == {pid}")
         continue
-    age = np.array(original_df[original_df["session"]==idx]["age"].values[0])
-    agent_spice.new_sess(participant_id=idx, additional_embedding_inputs=age)
+
+    age = float(subset["age"].iloc[0])
+    internal_idx = session_to_index[pid]
+
+    # Initialize SPICE for this internal index with the participant’s age
+    agent_spice.new_sess(participant_id=internal_idx, additional_embedding_inputs=age)
     betas = agent_spice.get_betas()
-    features['beta_reward'][idx] = betas.get('x_value_reward', 0.0)
-    features['beta_choice'][idx] = betas.get('x_value_choice', 0.0)
+    features['beta_reward'][internal_idx] = betas.get('x_value_reward', 0.0)
+    features['beta_choice'][internal_idx] = betas.get('x_value_choice', 0.0)
 
 # Build the SINDy‐params DataFrame
 sindy_params = []
-for idx in tqdm(participant_ids, desc="Extracting SINDy/RNN params"):
-    if idx not in index_to_pid:
-        continue
-    pid = index_to_pid[idx]
+for internal_idx in tqdm(range(n_participants), desc="Extracting SINDy/RNN params"):
+    pid = index_to_session[internal_idx]
     param_dict = {'participant_id': pid}
 
+    # Initialize all feature columns to 0.0
     for feat in all_feature_names:
         param_dict[feat] = 0.0
 
-    # Insert beta_reward and beta_choice
-    param_dict['beta_reward'] = features['beta_reward'].get(idx, 0.0)
-    param_dict['beta_choice'] = features['beta_choice'].get(idx, 0.0)
+    # Insert beta_reward and beta_choice (if they exist)
+    param_dict['beta_reward'] = features['beta_reward'].get(internal_idx, 0.0)
+    param_dict['beta_choice'] = features['beta_choice'].get(internal_idx, 0.0)
 
     # Fill in each submodule’s coefficients
     for module in list_rnn_modules:
-        if idx in agent_spice._model.submodules_sindy[module]:
-            model = agent_spice._model.submodules_sindy[module][idx]
+        if internal_idx in agent_spice._model.submodules_sindy[module]:
+            model = agent_spice._model.submodules_sindy[module][internal_idx]
             coefs = model.model.steps[-1][1].coef_.flatten()
             for i, name in enumerate(model.get_feature_names()):
                 param_dict[f"{module}_{name}"] = coefs[i]
@@ -254,13 +255,13 @@ for idx in tqdm(participant_ids, desc="Extracting SINDy/RNN params"):
         else:
             param_dict[f"params_{module}"] = 0
 
-    # Total nonzero SINDy parameters across all four submodules
+    # Total nonzero SINDy parameters across all submodules
     param_dict['total_params'] = sum(param_dict[f"params_{m}"] for m in list_rnn_modules)
 
     # Append embedding entries
-    if idx < embedding_matrix.shape[0]:
+    if internal_idx < embedding_matrix.shape[0]:
         for j in range(embedding_size):
-            param_dict[f'embedding_{j}'] = embedding_matrix[idx, j]
+            param_dict[f'embedding_{j}'] = embedding_matrix[internal_idx, j]
     else:
         for j in range(embedding_size):
             param_dict[f'embedding_{j}'] = np.nan
@@ -278,36 +279,37 @@ print(f"After inner‐join of SINDy + behavior: {len(merged_df)} participants")
 
 # ─── SECTION 3: CALCULATE MODEL EVALUATION METRICS ─────────────────────────────────────────────────────
 
-dataset_test, _, _, _ = convert_dataset(data_path)
-dataset_test = dataset
+# Reload or reuse the same dataset object for testing
+dataset_test, _, _, _ = convert_dataset(file=data_path, additional_inputs=['age'])
+dataset_test = dataset  # ensure we use the original dataset
 
 metrics_data = []
-for idx in tqdm(participant_ids, desc="Computing model metrics"):
-    if idx not in index_to_pid:
-        continue
-    real_pid = index_to_pid[idx]
+for internal_idx in tqdm(range(n_participants), desc="Computing model metrics"):
+    pid = index_to_session[internal_idx]
 
-    # Only compute metrics if real_pid was in the merged_df
-    if real_pid not in set(merged_df['participant_id']):
+    # Only compute metrics if this pid is in the merged_df
+    if pid not in set(merged_df['participant_id']):
         continue
 
-    mask = (dataset_test.xs[:, 0, -1] == idx)
+    # Mask for selecting trials belonging to this SPICE index
+    mask = (dataset_test.xs[:, 0, -1] == internal_idx)
     if not mask.any():
         continue
 
     participant_data = DatasetRNN(*dataset_test[mask])
 
-    # Reset agents
-    agent_spice.new_sess(participant_id=idx)
-    agent_rnn.new_sess(participant_id=idx)
+    # Reset agents before computing predictions
+    agent_spice.new_sess(participant_id=internal_idx)
+    agent_rnn.new_sess(participant_id=internal_idx)
 
-    # Get predicted probabilities
+    # Get predicted probabilities from both models
     _, probs_spice, _ = get_update_dynamics(
         experiment=participant_data.xs, agent=agent_spice
     )
     _, probs_rnn, _ = get_update_dynamics(
         experiment=participant_data.xs, agent=agent_rnn
     )
+
     n_trials_test = len(probs_spice)
     if n_trials_test == 0:
         continue
@@ -320,9 +322,9 @@ for idx in tqdm(participant_ids, desc="Computing model metrics"):
     rnn_per_trial_like = np.exp(ll_rnn / (n_trials_test * agent_rnn._n_actions))
 
     n_params_dict = agent_spice.count_parameters()
-    if idx not in n_params_dict:
+    if internal_idx not in n_params_dict:
         continue
-    n_parameters_spice = n_params_dict[idx]
+    n_parameters_spice = n_params_dict[internal_idx]
 
     bic_spice = bayesian_information_criterion(
         data=true_actions,
@@ -332,7 +334,7 @@ for idx in tqdm(participant_ids, desc="Computing model metrics"):
     aic_spice = 2 * n_parameters_spice - 2 * ll_spice
 
     metrics_data.append({
-        'participant_id': real_pid,        
+        'participant_id': pid,
         'nll_spice': -ll_spice,
         'nll_rnn': -ll_rnn,
         'trial_likelihood_spice': spice_per_trial_like,
@@ -346,7 +348,7 @@ for idx in tqdm(participant_ids, desc="Computing model metrics"):
 metrics_df = pd.DataFrame(metrics_data)
 print(f"Number of participants with model metrics: {len(metrics_df)}")
 
-# ─── MERGE 2: KEEP ONLY PARTICIPANTS WHO ALSO HAVE METRICS !!! 
+# ─── MERGE 2: KEEP ONLY PARTICIPANTS WHO ALSO HAVE METRICS ───────────────────────────────────────────────
 final_df = pd.merge(merged_df, metrics_df, on='participant_id', how='inner')
 print(f"After inner‐join with metrics: {len(final_df)} participants")
 
@@ -355,4 +357,3 @@ final_df.to_csv('fixed_sindy_analysis_with_metrics.csv', index=False)
 behavior_df.to_csv('behavior_metrics_fixed.csv', index=False)
 sindy_df.to_csv('sindy_parameters.csv', index=False)
 metrics_df.to_csv('model_evaluation_metrics.csv', index=False)
-
