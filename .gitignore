@@ -8,3 +8,7 @@ benchmarking/__pycache__/*
 benchmarking/results/*
 benchmarking/studies/*
 data/*
+*.csv
+*.png
+*.pyc
+*/__pycache__/*

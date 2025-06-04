@@ -474,14 +474,14 @@ class AgentSpice(AgentNetwork):
     participant_ids = list(submodules[keys_submodules[0]].keys())
     n_parameters = {participant_id: 0 for participant_id in participant_ids}
     for participant_id in participant_ids:
-      self.new_sess(participant_id=participant_id)
+      self.new_sess(participant_id=participant_id, additional_embedding_inputs=self._additional_meta_data)
       betas = self.get_betas()
       # count all non-zero coefficients in SINDy modules with considering the corresponding beta value which potentially can set all influences of this module to 0 
       for submodule in submodules:
         parameters_module = submodules[submodule][participant_id].coefficients()
         # n_parameters_module = n_parameters_module * (n_parameters_module > 0.05)
         if betas is not None:
-          beta_value_module = betas[mapping_modules_values[submodule]]
+          #beta_value_module = betas[mapping_modules_values[submodule]]
           # n_parameters[participant_id] += (parameters_module * beta_value_module != 0).sum()
           n_parameters[participant_id] += (parameters_module != 0).sum()
         else:

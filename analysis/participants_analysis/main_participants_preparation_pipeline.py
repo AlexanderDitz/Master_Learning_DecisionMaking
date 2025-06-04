@@ -17,20 +17,21 @@ from utils.convert_dataset import convert_dataset
 from resources.rnn_utils import DatasetRNN
 from resources.model_evaluation import log_likelihood, bayesian_information_criterion
 from resources.bandits import get_update_dynamics, AgentSpice
-from resources.sindy_utils import load_spice
+from resources.sindy_utils import load_spice, SindyConfig_eckstein2022
 from utils.setup_agents import setup_agent_rnn
-
-
+from utils.convert_dataset import convert_dataset
+from resources.rnn import RLRNN_eckstein2022, RLRNN_meta_eckstein2022, ExtendedEmbedding
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
 #  BEHAVIORAL METRICS 
-data_path = 'data/eckstein2022/eckstein2022.csv'
+data_path = 'data/eckstein2022/eckstein2022_age.csv'
 slcn_path = '/Users/martynaplomecka/closedloop_rl/data/eckstein2022/SLCN.csv'
 
 # (1a) Read raw CSV and cast 'session' → int
-original_df = pd.read_csv(data_path)
+dataset, _, original_df, _ = convert_dataset(file=data_path, additional_inputs=['age'])
+#original_df = pd.read_csv(data_path)
 original_df['session'] = original_df['session'].astype(int)
 
 # (1b) Read SLCN metadata and cast 'ID' → int
@@ -164,22 +165,18 @@ print(f"Behavioral metrics computed for {len(behavior_df)} participants.")
 # here we have the SINDy and RNN models part
 
 
-model_rnn_path = '/Users/martynaplomecka/closedloop_rl/params/eckstein2022/rnn_eckstein2022_reward.pkl'
-model_spice_path = '/Users/martynaplomecka/closedloop_rl/params/eckstein2022/spice_eckstein2022_reward.pkl'
+model_rnn_path = '/Users/martynaplomecka/closedloop_rl/params/eckstein2022/rnn_eckstein2022_age.pkl'
+model_spice_path = '/Users/martynaplomecka/closedloop_rl/params/eckstein2022/spice_eckstein2022_age.pkl'
+
+class_rnn = RLRNN_meta_eckstein2022
+sindy_config = SindyConfig_eckstein2022
+additional_inputs = ['age']
+
+
 
 agent_rnn = setup_agent_rnn(
     path_model=model_rnn_path,
-    list_sindy_signals=[
-        'x_learning_rate_reward',
-        'x_value_reward_not_chosen',
-        'x_value_choice_chosen',
-        'x_value_choice_not_chosen',
-        'c_action',
-        'c_reward_chosen',
-        'c_value_reward',
-        'c_value_choice'
-    ]
-)
+    class_rnn = class_rnn, list_sindy_signals = sindy_config["rnn_modules"] + sindy_config['control_parameters'])
 
 spice_modules = load_spice(file=model_spice_path)
 agent_spice = AgentSpice(
@@ -188,14 +185,10 @@ agent_spice = AgentSpice(
     n_actions=agent_rnn._n_actions
 )
 
-list_rnn_modules = [
-    'x_learning_rate_reward',
-    'x_value_reward_not_chosen',
-    'x_value_choice_chosen',
-    'x_value_choice_not_chosen'
-]
+list_rnn_modules = SindyConfig_eckstein2022["rnn_modules"]
 
-n_participants = agent_spice._model.participant_embedding.weight.data.shape[0]
+#n_participants = agent_spice._model.participant_embedding.weight.data.shape[0]
+n_participants = dataset.xs[..., -1].unique().shape[0]
 participant_ids = list(range(n_participants))
 
 # Map SPICE index → real pid (from unique_sessions)
@@ -217,7 +210,11 @@ for module in list_rnn_modules:
             all_feature_names.add(f"{module}_{name}")
 
 # Extract embedding matrix
-embedding_matrix = agent_spice._model.participant_embedding.weight.detach().cpu().numpy()
+if isinstance(agent_spice._model.participant_embedding, torch.nn.Embedding):
+    embedding_matrix = agent_spice._model.participant_embedding.weight.detach().cpu().numpy()
+elif isinstance(agent_spice._model.participant_embedding, ExtendedEmbedding):
+    embedding_matrix = agent_spice._model.participant_embedding.embedding.weight.detach().cpu().numpy()
+#embedding_matrix = agent_spice._model.participant_embedding.weight.detach().cpu().numpy() if isinstance(agent_spice._model.participant_embedding, torch.nn.Embedding) else 
 embedding_size = embedding_matrix.shape[1]
 
 # Precompute betas
@@ -225,7 +222,8 @@ features = {'beta_reward': {}, 'beta_choice': {}}
 for idx in participant_ids:
     if idx not in index_to_pid:
         continue
-    agent_spice.new_sess(participant_id=idx)
+    age = np.array(original_df[original_df["session"]==idx]["age"].values[0])
+    agent_spice.new_sess(participant_id=idx, additional_embedding_inputs=age)
     betas = agent_spice.get_betas()
     features['beta_reward'][idx] = betas.get('x_value_reward', 0.0)
     features['beta_choice'][idx] = betas.get('x_value_choice', 0.0)
@@ -281,6 +279,7 @@ print(f"After inner‐join of SINDy + behavior: {len(merged_df)} participants")
 # ─── SECTION 3: CALCULATE MODEL EVALUATION METRICS ─────────────────────────────────────────────────────
 
 dataset_test, _, _, _ = convert_dataset(data_path)
+dataset_test = dataset
 
 metrics_data = []
 for idx in tqdm(participant_ids, desc="Computing model metrics"):
@@ -320,12 +319,7 @@ for idx in tqdm(participant_ids, desc="Computing model metrics"):
     spice_per_trial_like = np.exp(ll_spice / (n_trials_test * agent_rnn._n_actions))
     rnn_per_trial_like = np.exp(ll_rnn / (n_trials_test * agent_rnn._n_actions))
 
-    n_params_dict = agent_spice.count_parameters(
-        mapping_modules_values={
-            m: 'x_value_choice' if 'choice' in m else 'x_value_reward'
-            for m in agent_spice._model.submodules_sindy
-        }
-    )
+    n_params_dict = agent_spice.count_parameters()
     if idx not in n_params_dict:
         continue
     n_parameters_spice = n_params_dict[idx]
@@ -338,7 +332,7 @@ for idx in tqdm(participant_ids, desc="Computing model metrics"):
     aic_spice = 2 * n_parameters_spice - 2 * ll_spice
 
     metrics_data.append({
-        'participant_id': real_pid,
+        'participant_id': real_pid,        
         'nll_spice': -ll_spice,
         'nll_rnn': -ll_rnn,
         'trial_likelihood_spice': spice_per_trial_like,
