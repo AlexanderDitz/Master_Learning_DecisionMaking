@@ -12,7 +12,7 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_eckstein2022, RLRNN_m
 
 # class_rnn = RLRNN_meta_eckstein2022
 class_rnn = RLRNN_eckstein2022
-path_model = 'params/eckstein2022/rnn_eckstein2022_l1_0.pkl'
+path_model = 'params/eckstein2022/rnn_eckstein2022_lr_0_01_d_0_l1_0.pkl'
 path_data = 'data/eckstein2022/eckstein2022_age.csv'
 additional_inputs = None#['age']
 
@@ -30,9 +30,11 @@ _, loss = pipeline_rnn.main(
     checkpoint=False,
     epochs=65536, # <- 2^16
     scheduler=True,
-    learning_rate=1e-3,
-    l1_weight_decay=0.005,
-    train_test_ratio=0.8,
+    learning_rate=1e-2,
+    l1_weight_decay=0,
+    train_test_ratio=1.0,
+    n_steps=-1,
+    dropout=0,
     save_checkpoints=True,
     
     class_rnn=class_rnn,
@@ -42,9 +44,7 @@ _, loss = pipeline_rnn.main(
     
     # hand-picked params
     embedding_size=32,
-    n_steps=32,
     l2_weight_decay=0,
-    dropout=0.25,
     batch_size=-1,
     sequence_length=-1,
     bagging=True,
