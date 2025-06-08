@@ -215,6 +215,8 @@ def fit_model(
     l1_weight_decay: float = 1e-4,
     l2_weight_decay: float = 1e-4,
     verbose: bool = True,
+    path_save_checkpoints: str = None,
+    meta_optimization: bool = False,
     ):
     """_summary_
 
@@ -239,7 +241,7 @@ def fit_model(
     # initialize dataloader
     if batch_size == -1:
         batch_size = len(dataset_train)
-        
+    
     # use random sampling with replacement
     if bagging:
         batch_size = max(batch_size, 64)
@@ -251,12 +253,12 @@ def fit_model(
         dataloader_test = DataLoader(dataset_test, batch_size=len(dataset_test))
     
     # set up learning rate scheduler
+    warmup_steps = 256 if epochs > 256 else 1 #int(epochs * 0.125/16)
     if scheduler and optimizer is not None:
-        warmup_steps = 64 if epochs > 64 else 0 #int(epochs * 0.125/16)
         # Define the LambdaLR scheduler for warm-up
         def warmup_lr_lambda(current_step):
             if current_step < warmup_steps:
-                return float(current_step) / float(max(1, warmup_steps)) * 10
+                return min(1e-1, float(current_step) / float(max(1, warmup_steps))) * 100
             return 1.0  # No change after warm-up phase
 
         # Create the scheduler with the Lambda function
@@ -284,6 +286,7 @@ def fit_model(
     loss_train = 0
     loss_test = 0
     iterations_per_epoch = max(len(dataset_train), 64) // batch_size
+    save_at_epoch = warmup_steps
     
     # start training
     while continue_training:
@@ -362,7 +365,12 @@ def fit_model(
                     #     scheduler.step(epoch=n_calls_to_train_model)
                     else:
                         scheduler.step()
-                    
+            
+            # save checkpoint
+            if path_save_checkpoints and n_calls_to_train_model == save_at_epoch:
+                torch.save(model.state_dict(), path_save_checkpoints.replace('.', f'_ep{n_calls_to_train_model}.'))
+                save_at_epoch *= 2
+                
         except KeyboardInterrupt:
             continue_training = False
             msg = 'Training interrupted. Continuing with further operations...'

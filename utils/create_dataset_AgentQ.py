@@ -8,20 +8,26 @@ from resources.rnn_utils import parameter_file_naming
 from resources.bandits import create_dataset, AgentQ, AgentQ_SampleZeros, BanditsDrift, BanditsSwitch, get_update_dynamics
 
 
-n_sessions = [16, 32, 64, 128, 256]
-n_trials_per_session = 400
-n_iterations_per_n_sessions = 4
+n_sessions = [128]#[16, 32, 64, 128, 256]
+n_trials_per_session = 100
+n_iterations_per_n_sessions = 1
 sigma = 0.2
-base_name = 'data/parameter_recovery/data_*.csv'
+base_name = 'data/data_*.csv'
+sample_parameters = False
 
 for iteration in range(n_iterations_per_n_sessions):
     for n_sess in n_sessions:
         dataset_name = base_name.replace('*', f'{n_sess}p_{iteration}')
 
-        agent = AgentQ_SampleZeros(
+        # agent = AgentQ_SampleZeros(
+        #     beta_reward=3.,
+        #     beta_choice=.5,
+        #     zero_threshold=0.2,
+        #     )
+        
+        agent = AgentQ(
             beta_reward=3.,
-            beta_choice=.5,
-            zero_threshold=0.2,
+            beta_choice=1,
             )
 
         environment = BanditsDrift(sigma=sigma)
@@ -31,7 +37,7 @@ for iteration in range(n_iterations_per_n_sessions):
                     environment=environment,
                     n_trials=n_trials_per_session,
                     n_sessions=n_sess,
-                    sample_parameters=True,
+                    sample_parameters=sample_parameters,
                     verbose=False,
                     )
 

@@ -9,7 +9,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import AgentQ, AgentNetwork, AgentSpice, BanditSession, get_update_dynamics, plot_session as plt_session
 from resources.rnn_utils import DatasetRNN
 
-def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], experiment: Union[BanditSession, np.ndarray], labels: List[str] = None, save: str = None):    
+def plot_session(
+    agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], 
+    experiment: Union[BanditSession, np.ndarray], 
+    labels: List[str] = None, 
+    save: str = None, 
+    display_choice: int = 0,
+    ):    
     # plot the dynamcis associated with the first arm
     
     # valid keys in agent dictionary
@@ -17,15 +23,15 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
     
     n_actions = agents[list(agents.keys())[0]]._n_actions
     if isinstance(experiment, BanditSession):
-        choices = np.eye(n_actions)[experiment.choices.astype(int)][:, 0]
-        rewards = experiment.rewards[:, 0]
+        choices = np.eye(n_actions)[experiment.choices.astype(int)][:, display_choice]
+        rewards = experiment.rewards[:, display_choice]
     elif isinstance(experiment, np.ndarray) or isinstance(experiment, torch.Tensor):
         if isinstance(experiment, torch.Tensor):
             experiment = experiment.detach().cpu().numpy()
         assert experiment.ndim == 2, 'Experiment data should have only two dimensions -> (timesteps, features)'
         # choices = experiment[:, :n_actions].argmax(axis=-1)
         # rewards = np.array([exp[choices[i]] for i, exp in enumerate(experiment[:, n_actions:2*n_actions])])  
-        choices = experiment[:, 0]
+        choices = experiment[:, display_choice]
         rewards = experiment[:, n_actions]  
     
     list_probs = []
@@ -79,7 +85,7 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
         compare=True,
         choices=choices,
         rewards=rewards,
-        timeseries=probs[:, :, 0],
+        timeseries=probs[:, :, display_choice],
         timeseries_name='$P(action)$',
         color=colors,
         labels=labels,
@@ -93,7 +99,7 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
         compare=True,
         choices=choices,
         rewards=rewards,
-        timeseries=q_value[:, :, 0],
+        timeseries=q_value[:, :, display_choice],
         timeseries_name='$q$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
@@ -106,7 +112,7 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
         compare=True,
         choices=choices,
         rewards=rewards,
-        timeseries=q_reward[:, :, 0],
+        timeseries=q_reward[:, :, display_choice],
         timeseries_name='$q_{reward}$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
@@ -119,7 +125,7 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
         compare=True,
         choices=choices,
         rewards=rewards,
-        timeseries=alphas[:, :, 0],
+        timeseries=alphas[:, :, display_choice],
         timeseries_name=r'$\alpha$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
@@ -132,7 +138,7 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
         compare=True,
         choices=choices,
         rewards=rewards,
-        timeseries=q_choice[:, :, 0],
+        timeseries=q_choice[:, :, display_choice],
         timeseries_name='$q_{choice}$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
@@ -145,7 +151,7 @@ def plot_session(agents: Dict[str, Union[AgentSpice, AgentNetwork, AgentQ]], exp
         compare=True,
         choices=choices,
         rewards=rewards,
-        timeseries=q_trial[:, :, 0],
+        timeseries=q_trial[:, :, display_choice],
         timeseries_name='$q_{trial}$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),

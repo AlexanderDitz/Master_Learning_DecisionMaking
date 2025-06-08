@@ -26,7 +26,10 @@ def setup_rnn(
 ) -> BaseRNN:
     
     # get n_participants and hidden_size from state dict
-    state_dict = torch.load(path_model, map_location=torch.device('cpu'))['model']
+    state_dict = torch.load(path_model, map_location=torch.device('cpu'))
+    
+    if 'model' in state_dict:
+        state_dict = state_dict['model']
     
     participant_embedding_index = [i for i, s in enumerate(list(state_dict.keys())) if 'participant_embedding' in s]
     participant_embedding_bool = True if len(participant_embedding_index) > 0 else False
@@ -144,8 +147,8 @@ def setup_agent_mcmc(
             'alpha_neg': -1,
             'alpha_cf_pos': 0,
             'alpha_cf_neg': 0,
-            'alpha_c': 1,
-            'beta_c': 0,
+            'alpha_ch': 1,
+            'beta_ch': 0,
             'beta_r': 1,
         }
         
@@ -172,9 +175,9 @@ def setup_agent_mcmc(
             alpha_penalty=parameters['alpha_neg'],
             alpha_counterfactual_reward=parameters['alpha_cf_pos']*(1 if 'Bcf' in model_name else 0),
             alpha_counterfactual_penalty=parameters['alpha_cf_neg']*(1 if 'Bcf' in model_name else 0),
-            alpha_choice=parameters['alpha_c'],
+            alpha_choice=parameters['alpha_ch'],
             beta_reward=parameters['beta_r']*15, # same scaling as in mcmc model
-            beta_choice=parameters['beta_c']*15, # same scaling as in mcmc model
+            beta_choice=parameters['beta_ch']*15, # same scaling as in mcmc model
         ))
     
     return agents

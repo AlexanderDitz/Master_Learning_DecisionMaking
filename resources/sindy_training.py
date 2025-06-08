@@ -35,7 +35,9 @@ def module_pruning(agent_spice: AgentSpice, dataset: DatasetRNN, participant_ids
                 print("Participant ID", pid, "not found in SPICE model. Skipped that participant.")
             continue
         
-        agent_spice.new_sess(participant_id=pid)
+        mask_participant_id = dataset.xs[:, 0, -1] == pid
+        additional_embedding_inputs = dataset.xs[mask_participant_id, 0, agent_spice._n_actions*2:-3]
+        agent_spice.new_sess(participant_id=pid, additional_embedding_inputs=additional_embedding_inputs)
         keys_betas = agent_spice.get_betas().keys()
         if not any([agent_spice.get_betas()[key] == 0 for key in keys_betas]):
             continue
@@ -254,7 +256,7 @@ def fit_spice(
                 probs_spice = get_update_dynamics(agent=agent_spice_optuna, experiment=data_pid.xs[0])[1]
                 lik_spice_after_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
                 
-                if lik_rnn - lik_spice_after_optuna > 0.1 or np.isnan(lik_spice_after_optuna):
+                if optuna_trials_second_state > 0 and (lik_rnn - lik_spice_after_optuna > 0.1 or np.isnan(lik_spice_after_optuna)):
                     
                     print(f"Did not find satisfying solution after {optuna_trials_first_state} optuna trials.\nSPICE = {np.round(lik_spice_before_optuna, 5)} -> {np.round(lik_spice_after_optuna, 5)}\nStarting again with {optuna_trials_second_state} trials...")
                     

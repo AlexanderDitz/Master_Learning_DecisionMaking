@@ -3,8 +3,8 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_sindy
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_trials
-from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_rearranged
+from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 
 # -------------------------------------------------------------------------------
@@ -16,17 +16,18 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 # class_rnn = RLRNN
 # sindy_config = SindyConfig
 
-path_data = 'data/eckstein2022/eckstein2022_age.csv'
-path_model = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
-# class_rnn = RLRNN_eckstein2022
-class_rnn = RLRNN_meta_eckstein2022
+path_data = 'data/eckstein2022/eckstein2022.csv'
+path_model = 'params/eckstein2022/rnn_eckstein2022_l1_0_005.pkl'
+class_rnn = RLRNN_eckstein2022
+# class_rnn = RLRNN_meta_eckstein2022
 sindy_config = SindyConfig_eckstein2022
-additional_inputs = ['age']
+additional_inputs = None#['age']
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019.pkl'
 # class_rnn = RLRNN_dezfouli2019
 # sindy_config = SindyConfig_dezfouli2019
+# additional_inputs = None
 
 
 # -------------------------------------------------------------------------------
@@ -57,8 +58,8 @@ agent_spice, features, loss = pipeline_sindy.main(
     n_sessions_off_policy=1,
     n_trials_same_action_off_policy=5,
     optuna_threshold=0.05,
-    optuna_trials_first_state=20,
-    optuna_trials_second_state=20,
+    optuna_trials_first_state=50,
+    optuna_trials_second_state=0,
     verbose=False,
     
     # generated training dataset parameters

@@ -12,7 +12,7 @@ class GRUModule(nn.Module):
         self.gru_in = nn.GRU(input_size, 1)
         # self.dropout = nn.Dropout(dropout)
         self.linear_out = nn.Linear(1, 1)
-       
+
     def forward(self, inputs):
         n_actions = inputs.shape[1]
         inputs = inputs.view(inputs.shape[0]*inputs.shape[1], inputs.shape[2]).unsqueeze(0)
@@ -48,7 +48,7 @@ class CustomEmbedding(nn.Module):
     
     def get_embedding(self, one_hot_encoded: torch.Tensor):
         return self.linear(one_hot_encoded)
-    
+
 
 class ExtendedEmbedding(nn.Module):
     
@@ -363,7 +363,7 @@ class RLRNN(BaseRNN):
             self.participant_embedding = torch.nn.Sequential(
                 torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
             #     # CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
-                torch.nn.ReLU(),
+                torch.nn.LeakyReLU(),
                 torch.nn.Dropout(p=dropout),
                 )
             # self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
@@ -373,8 +373,8 @@ class RLRNN(BaseRNN):
         
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
@@ -516,7 +516,9 @@ class RLRNN_eckstein2022(BaseRNN):
         **kwargs,
     ):
         
-        super(RLRNN_eckstein2022, self).__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device, n_participants=n_participants)
+        super().__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device, n_participants=n_participants)
+        
+        self.dropout = nn.Dropout(dropout)
         
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
@@ -524,18 +526,18 @@ class RLRNN_eckstein2022(BaseRNN):
             # self.participant_embedding = torch.nn.Sequential(
             #     torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
             #     # CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
-            #     torch.nn.ReLU(),
+            #     torch.nn.LeakyReLU(),
             #     torch.nn.Dropout(p=dropout),
             #     )
             self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1
             self.participant_embedding = DummyModule()
-        
+            
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
@@ -568,7 +570,7 @@ class RLRNN_eckstein2022(BaseRNN):
         # rewards_not_chosen = ((1-actions) * rewards).sum(dim=-1, keepdim=True).repeat(1, 1, self._n_actions)
         
         # Here we compute now the participant embeddings for each entry in the batch
-        participant_embedding = self.participant_embedding(participant_id[:, 0].int())
+        participant_embedding = self.dropout(self.participant_embedding(participant_id[:, 0].int()))
         
         # get scaling factors
         scaling_factors = {}
@@ -617,7 +619,7 @@ class RLRNN_eckstein2022(BaseRNN):
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 )
-           
+
             next_value_reward_not_chosen = self.call_module(
                 key_module='x_value_reward_not_chosen',
                 key_state='x_value_reward',
@@ -665,15 +667,14 @@ class RLRNN_eckstein2022(BaseRNN):
         logits = self.post_forward_pass(logits, batch_first)
                 
         return logits, self.get_state()
+    
 
-
-class RLRNN_eckstein2022_trials(BaseRNN):
+class RLRNN_eckstein2022_rearranged(BaseRNN):
     
     init_values = {
             'x_value_reward': 0.5,
             'x_value_choice': 0.,
             'x_learning_rate_reward': 0.,
-            'x_value_trial': 0.,
         }
     
     def __init__(
@@ -684,7 +685,7 @@ class RLRNN_eckstein2022_trials(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'x_value_trial', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice', 'c_value_trial'],
+        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
@@ -696,7 +697,7 @@ class RLRNN_eckstein2022_trials(BaseRNN):
             # self.participant_embedding = torch.nn.Sequential(
             #     torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
             #     # CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
-            #     torch.nn.ReLU(),
+            #     torch.nn.LeakyReLU(),
             #     torch.nn.Dropout(p=dropout),
             #     )
             self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
@@ -706,15 +707,14 @@ class RLRNN_eckstein2022_trials(BaseRNN):
         
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
-        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=4+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_trial'] = self.setup_module(input_size=0+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         
         # set up hard-coded equations
         self.submodules_eq['x_value_reward_chosen'] = self.x_value_reward_chosen
@@ -762,9 +762,11 @@ class RLRNN_eckstein2022_trials(BaseRNN):
                 self.record_signal('x_value_reward_not_chosen', self.state['x_value_reward'])
                 self.record_signal('x_value_choice_chosen', self.state['x_value_choice'])
                 self.record_signal('x_value_choice_not_chosen', self.state['x_value_choice'])
-                self.record_signal('x_value_trial', self.state['x_value_trial'])
-                self.record_signal('c_value_trial', self.state['x_value_trial'])
-                
+            
+            # ------------------------------------------------------------------------------------------
+            # Fit reward-driven values
+            # ------------------------------------------------------------------------------------------
+            
             # updates for x_value_reward
             learning_rate_reward = self.call_module(
                 key_module='x_learning_rate_reward',
@@ -775,7 +777,6 @@ class RLRNN_eckstein2022_trials(BaseRNN):
                     # reward_not_chosen, 
                     self.state['x_value_reward'], 
                     self.state['x_value_choice'],
-                    self.state['x_value_trial'],
                     ),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
@@ -802,22 +803,26 @@ class RLRNN_eckstein2022_trials(BaseRNN):
                     reward_chosen, 
                     # reward_not_chosen, 
                     self.state['x_value_choice'],
-                    self.state['x_value_trial'],
                     ),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 # activation_rnn=torch.nn.functional.sigmoid,
                 )
             
+            # updating the memory state
+            self.state['x_learning_rate_reward'] = learning_rate_reward
+            self.state['x_value_reward'] = next_value_reward_chosen + next_value_reward_not_chosen
+            
+            # ------------------------------------------------------------------------------------------
+            # Fit choice-driven values
+            # ------------------------------------------------------------------------------------------
+            
             # updates for x_value_choice
             next_value_choice_chosen = self.call_module(
                 key_module='x_value_choice_chosen',
                 key_state='x_value_choice',
                 action=action,
-                inputs=(
-                    self.state['x_value_reward'],
-                    self.state['x_value_trial'],
-                    ),
+                inputs=(self.state['x_value_reward']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
@@ -827,31 +832,15 @@ class RLRNN_eckstein2022_trials(BaseRNN):
                 key_module='x_value_choice_not_chosen',
                 key_state='x_value_choice',
                 action=1-action,
-                inputs=(
-                    self.state['x_value_reward'],
-                    self.state['x_value_trial'],
-                    ),
+                inputs=(self.state['x_value_reward']),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
                 activation_rnn=torch.nn.functional.sigmoid,
                 )
             
-            next_value_trial = self.call_module(
-                key_module='x_value_trial',
-                key_state='x_value_trial',
-                action=None,
-                inputs=None,
-                participant_embedding=participant_embedding,
-                participant_index=participant_id,
-                # activation_rnn=torch.nn.functional.sigmoid,
-                )
-            
-            # updating the memory state
-            self.state['x_learning_rate_reward'] = learning_rate_reward
-            self.state['x_value_reward'] = next_value_reward_chosen + next_value_reward_not_chosen
+            # updating the memory state            
             self.state['x_value_choice'] = next_value_choice_chosen + next_value_choice_not_chosen
-            self.state['x_value_trial'] = next_value_trial
-            
+             
             # Now keep track of the logit in the output array
             logits[timestep] = self.state['x_value_reward'] * scaling_factors['x_value_reward'] + self.state['x_value_choice'] * scaling_factors['x_value_choice']
             
@@ -894,8 +883,8 @@ class RLRNN_meta_eckstein2022(BaseRNN):
         
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
@@ -942,7 +931,6 @@ class RLRNN_meta_eckstein2022(BaseRNN):
             if not self.training and len(self.submodules_sindy)==0:
                 self.record_signal('c_action', action)
                 self.record_signal('c_reward_chosen', reward_chosen)
-                # self.record_signal('c_reward_not_chosen', reward_not_chosen)
                 self.record_signal('c_value_reward', self.state['x_value_reward'])
                 self.record_signal('c_value_choice', self.state['x_value_choice'])
                 self.record_signal('x_learning_rate_reward', self.state['x_learning_rate_reward'])
@@ -1033,7 +1021,6 @@ class RLRNN_dezfouli2019(BaseRNN):
             'x_value_reward': 0.5,
             'x_value_choice': 0.,
             'x_learning_rate_reward': 0.,
-            # 'x_value_trial': 0.,
         }
     
     def __init__(
@@ -1044,7 +1031,7 @@ class RLRNN_dezfouli2019(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_block', 'c_value_reward', 'c_value_choice'],
+        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
@@ -1056,7 +1043,7 @@ class RLRNN_dezfouli2019(BaseRNN):
             # self.participant_embedding = torch.nn.Sequential(
             #     torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
             #     # CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
-            #     torch.nn.ReLU(),
+            #     torch.nn.LeakyReLU(),
             #     torch.nn.Dropout(p=dropout),
             #     )
             self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
@@ -1066,14 +1053,14 @@ class RLRNN_dezfouli2019(BaseRNN):
         
         # scaling factor (inverse noise temperature) for each participant
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.ReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
         
         # set up the submodules
-        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=4+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         # self.submodules_rnn['x_value_trial'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
         
         # set up hard-coded equations
@@ -1115,16 +1102,12 @@ class RLRNN_dezfouli2019(BaseRNN):
             if not self.training and len(self.submodules_sindy)==0:
                 self.record_signal('c_action', action)
                 self.record_signal('c_reward_chosen', reward_chosen)
-                # self.record_signal('c_reward_not_chosen', reward_not_chosen)
-                self.record_signal('c_block', block)
                 self.record_signal('c_value_reward', self.state['x_value_reward'])
                 self.record_signal('c_value_choice', self.state['x_value_choice'])
-                # self.record_signal('c_value_trial', self.state['x_value_trial'])
                 self.record_signal('x_learning_rate_reward', self.state['x_learning_rate_reward'])
                 self.record_signal('x_value_reward_not_chosen', self.state['x_value_reward'])
                 self.record_signal('x_value_choice_chosen', self.state['x_value_choice'])
                 self.record_signal('x_value_choice_not_chosen', self.state['x_value_choice'])
-                # self.record_signal('x_value_trial', self.state['x_value_trial'])
                 
             # updates for x_value_reward
             learning_rate_reward = self.call_module(
@@ -1133,9 +1116,6 @@ class RLRNN_dezfouli2019(BaseRNN):
                 action=action,
                 inputs=(
                     reward_chosen,
-                    # reward_not_chosen, 
-                    block,
-                    # self.state['x_value_trial'],
                     self.state['x_value_reward'], 
                     self.state['x_value_choice'],
                     ),
@@ -1162,14 +1142,10 @@ class RLRNN_dezfouli2019(BaseRNN):
                 action=1-action,
                 inputs=(
                     reward_chosen,
-                    # reward_not_chosen, 
-                    block,
-                    # self.state['x_value_trial'],
                     self.state['x_value_choice'],
                     ),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
-                # activation_rnn=torch.nn.functional.sigmoid,
                 )
             
             # updates for x_value_choice
@@ -1178,8 +1154,6 @@ class RLRNN_dezfouli2019(BaseRNN):
                 key_state='x_value_choice',
                 action=action,
                 inputs=(
-                    block,
-                    # self.state['x_value_trial'],
                     self.state['x_value_reward'],
                     ),
                 participant_embedding=participant_embedding,
@@ -1192,8 +1166,6 @@ class RLRNN_dezfouli2019(BaseRNN):
                 key_state='x_value_choice',
                 action=1-action,
                 inputs=(
-                    block,
-                    # self.state['x_value_trial'],
                     self.state['x_value_reward'],
                     ),
                 participant_embedding=participant_embedding,
@@ -1201,21 +1173,10 @@ class RLRNN_dezfouli2019(BaseRNN):
                 activation_rnn=torch.nn.functional.sigmoid,
                 )
             
-            # # updates for trial value
-            # next_value_trial = self.call_module(
-            #     key_module='x_value_trial',
-            #     key_state='x_value_trial',
-            #     inputs=(block),
-            #     activation_rnn=torch.nn.functional.sigmoid,
-            #     participant_embedding=participant_embedding,
-            #     participant_index=participant_id,
-            # )
-            
             # updating the memory state
             self.state['x_learning_rate_reward'] = learning_rate_reward
             self.state['x_value_reward'] = next_value_reward_chosen + next_value_reward_not_chosen
             self.state['x_value_choice'] = next_value_choice_chosen + next_value_choice_not_chosen
-            # self.state['x_value_trial'] = next_value_trial
             
             # Now keep track of the logit in the output array
             logits[timestep] = self.state['x_value_reward'] * scaling_factors['x_value_reward'] + self.state['x_value_choice'] * scaling_factors['x_value_choice']
@@ -1224,3 +1185,4 @@ class RLRNN_dezfouli2019(BaseRNN):
         logits = self.post_forward_pass(logits, batch_first)
                 
         return logits, self.get_state()
+    

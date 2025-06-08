@@ -63,6 +63,7 @@ def main(
   
   analysis: bool = False,
   participant_id: int = 0,
+  save_checkpoints: bool = False,
   ):
   
   # print cuda devices available
@@ -201,8 +202,8 @@ def main(
     model, optimizer_rnn, _ = rnn_training.fit_model(
         model=model,
         dataset_train=dataset_train,
-        dataset_test=None,
-        # dataset_test=dataset_test,
+        # dataset_test=None,
+        dataset_test=dataset_test,
         # dataset_test=dataset_train,
         optimizer=optimizer_rnn,
         convergence_threshold=convergence_threshold,
@@ -213,10 +214,9 @@ def main(
         scheduler=scheduler,
         l1_weight_decay=l1_weight_decay,
         l2_weight_decay=l2_weight_decay,
+        path_save_checkpoints=params_path if save_checkpoints else None,
     )
-    
-    # TODO: Add module pruning for RNN
-    
+        
     # save trained parameters
     state_dict = {'model': model.state_dict(), 'optimizer': optimizer_rnn.state_dict()}
     

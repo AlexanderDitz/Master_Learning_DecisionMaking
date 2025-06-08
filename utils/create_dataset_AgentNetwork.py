@@ -69,16 +69,17 @@ def main(path_rnn, class_rnn, sindy_config, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    path_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_001.pkl'
+    path_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_005.pkl'
     path_data = 'data/eckstein2022/eckstein2022.csv'
     class_rnn = RLRNN_eckstein2022
     sindy_config = SindyConfig_eckstein2022
     n_trials_per_session = 200
+    get_latent_values = False
     
     main(
         path_rnn=path_rnn,
         class_rnn=class_rnn,
         sindy_config=sindy_config,
-        path_save=path_data.replace('.', '_test_rnn.'),
+        path_save=path_data.replace('.', '_simulated_rnn.'),
         n_trials_per_session=n_trials_per_session,
     )
