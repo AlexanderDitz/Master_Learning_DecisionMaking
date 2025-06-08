@@ -3,61 +3,51 @@ import os
 
 import matplotlib.pyplot as plt
 from copy import deepcopy
+import numpy as np
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import pipeline_sindy
-from resources.sindy_utils import load_spice
-from resources.bandits import AgentSpice
 from utils.convert_dataset import convert_dataset
 from utils.plotting import plot_session
+from utils.setup_agents import setup_agent_spice, setup_agent_rnn
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_meta_eckstein2022, RLRNN_dezfouli2019
+from resources.sindy_utils import load_spice, SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
-model_rnn = 'params/eckstein2022/rnn_eckstein2022.pkl'
-model_spice = 'params/eckstein2022/spice_eckstein2022.pkl'
-data = 'data/eckstein2022/eckstein2022.csv'
+model_rnn = 'params/eckstein2022/rnn_eckstein2022_age.pkl'
+model_spice = 'params/eckstein2022/spice_eckstein2022_age.pkl'
+data = 'data/eckstein2022/eckstein2022_age.csv'
+class_rnn = RLRNN_meta_eckstein2022
+sindy_config = SindyConfig_eckstein2022
+additional_inputs = ['age']
 
-agent_spice, features, loss = pipeline_sindy.main(
-    
-    # data='data/parameter_recovery/data_32p_0.csv',
-    # model='params/parameter_recovery/params_32p_0.pkl',
-    
-    model = model_rnn,
-    data = data,
-    
-    # general recovery parameters
-    participant_id=0,
-    filter_bad_participants=True,
-    
-    # sindy parameters
-    polynomial_degree=1,
-    optimizer_alpha=0.1,
-    optimizer_threshold=0.05,
-    n_trials_off_policy=1000,
-    n_sessions_off_policy=1,
-    verbose=True,
-    
-    # generated training dataset parameters
-    n_actions=2,
-    sigma=0.2,
-    beta_reward=1.,
-    alpha=0.25,
-    alpha_penalty=0.25,
-    forget_rate=0.,
-    confirmation_bias=0.,
-    beta_choice=1.,
-    alpha_choice=1.,
-    counterfactual=False,
-    alpha_counterfactual=0.,
-    
-    analysis=True,
-    get_loss=True,
-)
-print(loss)
+participant_id = 1
 
 # here starts the testing of the loading functionality
-agent_spice_preload = deepcopy(agent_spice)
-spice_modules = load_spice(file=model_spice)
-AgentSpice(model_rnn=agent_spice_preload._model, sindy_modules=spice_modules, n_actions=agent_spice_preload._n_actions)
+agent_spice = setup_agent_spice(
+    class_rnn=class_rnn, 
+    path_spice=model_spice,
+    path_rnn=model_rnn, 
+    path_data=data,
+    rnn_modules=sindy_config['rnn_modules'],
+    control_parameters=sindy_config['control_parameters'],
+    sindy_library_setup=sindy_config['library_setup'],
+    sindy_filter_setup=sindy_config['filter_setup'],
+    sindy_dataprocessing=sindy_config['dataprocessing_setup'],
+    sindy_library_polynomial_degree=1,
+)
 
-dataset = convert_dataset(file=data)[0]
-fig, axs = plot_session(experiment=dataset.xs[0], agents={'groundtruth': agent_spice_preload, 'sindy': agent_spice})
+agent_rnn = setup_agent_rnn(
+    class_rnn=class_rnn,
+    path_model=model_rnn,
+    list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
+)
+
+dataset = convert_dataset(file=data, additional_inputs=additional_inputs)[0]
+
+agent_spice.new_sess(participant_id=participant_id, additional_embedding_inputs=np.array(0.5))
+
+modules = agent_spice.get_modules()
+print("\nFitted modules for participant", participant_id)
+for module in modules:
+    modules[module][participant_id].print()
+fig, axs = plot_session(experiment=dataset.xs[participant_id], agents={'rnn': agent_rnn, 'sindy': agent_spice})
 plt.show()

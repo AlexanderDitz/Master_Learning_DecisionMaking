@@ -24,7 +24,7 @@ def log_likelihood(data: np.ndarray, probs: np.ndarray, **kwargs):
     probs = np.clip(probs, epsilon, 1 - epsilon)
     
     # Calculate log-likelihood for each observation
-    log_likelihoods = data * np.log(probs) + (1 - data) * np.log(1 - probs)
+    log_likelihoods = data * np.log(probs)# + (1 - data) * np.log(1 - probs)
     # log_likelihoods = data * np.log(probs)
     # log_likelihoods = np.sum(data * np.log(probs), axis=-1)
     

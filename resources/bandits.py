@@ -8,6 +8,7 @@ import torch
 import pickle
 import dill
 from tqdm import tqdm
+import pysindy as ps
 
 from resources.rnn import BaseRNN, ExtendedEmbedding
 from resources.rnn_utils import DatasetRNN
@@ -357,7 +358,7 @@ class AgentNetwork:
       
       self.new_sess()
 
-  def new_sess(self, participant_id: int = 0, experiment_id: int = 0, additional_embedding_inputs: np.ndarray = torch.zeros(0)):
+  def new_sess(self, participant_id: int = 0, experiment_id: int = 0, additional_embedding_inputs: np.ndarray = torch.zeros(0), **kwargs):
     """Reset the network for the beginning of a new session."""
     if not isinstance(participant_id, torch.Tensor):
       participant_id = torch.tensor(participant_id, dtype=int, device=self._model.device)[None]
@@ -455,7 +456,7 @@ class AgentSpice(AgentNetwork):
     
     self._model.integrate_sindy(sindy_modules)
   
-  def get_modules(self):
+  def get_modules(self) -> Dict[str, Dict[int, ps.SINDy]]:
     return self._model.submodules_sindy
   
   def count_parameters(self, mapping_modules_values: dict = None) -> Dict[int, int]:
@@ -496,7 +497,7 @@ class AgentSpice(AgentNetwork):
   def get_participant_ids(self):
     modules = self.get_modules()
     return list(modules[list(modules.keys())[0]].keys())  
- 
+
 
 ################
 # ENVIRONMENTS #
@@ -980,7 +981,7 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   q_trial = np.zeros((n_trials, agent._n_actions))
   learning_rate_reward = np.zeros((n_trials, agent._n_actions))
   choice_probs = np.zeros((n_trials, agent._n_actions))
-
+  
   # reset agent states according to ID
   agent.new_sess(participant_id=participant_id, experiment_id=experiment_id, additional_embedding_inputs=additional_inputs)
   
