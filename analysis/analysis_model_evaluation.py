@@ -19,25 +19,24 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 train_test_ratio = 0.8
 use_test = False
 
-# dataset = 'eckstein2022'
-# # dataset = 'eckstein2022_age'
-# models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
-# sindy_config = SindyConfig_eckstein2022
-# rnn_class = RLRNN_eckstein2022
-# # rnn_class = RLRNN_meta_eckstein2022
-# additional_inputs = None#['age']
+dataset = 'eckstein2022'
+models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+sindy_config = SindyConfig_eckstein2022
+rnn_class = RLRNN_eckstein2022
+# rnn_class = RLRNN_meta_eckstein2022
+additional_inputs = None#['age']
 
-dataset = 'dezfouli2019'
-models_benchmark = ['ApBr', 'ApBrBch']
-sindy_config = SindyConfig_dezfouli2019
-rnn_class = RLRNN_dezfouli2019
-additional_inputs = []
+# dataset = 'dezfouli2019'
+# models_benchmark = ['ApBr', 'ApBrBch']
+# sindy_config = SindyConfig_dezfouli2019
+# rnn_class = RLRNN_dezfouli2019
+# additional_inputs = []
 
-path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = None#f'params/{dataset}/rnn_{dataset}.pkl'
+path_data = f'data/{dataset}/{dataset}_age.csv'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_lr_0_01_nsteps32_d_0_l1_0_ep2048.pkl'
 path_model_spice = None#f'params/{dataset}/spice_{dataset}_l1_0_005.pkl'
 path_model_baseline = None#f'params/{dataset}_long_lr_0_001/mcmc_{dataset}_ApBr.nc'
-path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}.pkl'
 
 # path_data = 'data/data_128p_0.csv'
