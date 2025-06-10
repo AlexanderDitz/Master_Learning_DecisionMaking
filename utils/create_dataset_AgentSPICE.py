@@ -78,8 +78,8 @@ def main(class_rnn, sindy_config, path_rnn, path_spice, path_data, path_save, n_
 if __name__=='__main__':
     class_rnn = RLRNN_eckstein2022
     sindy_config = SindyConfig_eckstein2022
-    path_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_005.pkl'
-    path_spice = 'params/eckstein2022/spice_eckstein2022_l1_0_005.pkl'
+    path_rnn = 'params/eckstein2022/rnn_eckstein2022_rldm_l1emb_0_001_l2_0_0005.pkl'
+    path_spice = 'params/eckstein2022/spice_eckstein2022_rldm_l1emb_0_001_l2_0_0005.pkl'
     path_data = 'data/eckstein2022/eckstein2022.csv'
     n_trials_per_session = 200
     

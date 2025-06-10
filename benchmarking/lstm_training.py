@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from resources.rnn_utils import DatasetRNN, split_data_along_timedim
+from resources.rnn_utils import DatasetRNN, split_data_along_timedim, split_data_along_sessiondim
 from utils.convert_dataset import convert_dataset
 
 
@@ -146,7 +146,12 @@ def training(dataset_training: DatasetRNN, lstm: RLLSTM, optimizer: torch.optim.
             with torch.no_grad():
                 mask = (dataset_test.xs[..., :1] > -1).to(lstm.device)
                 # prediction
-                ys_pred, state = lstm(torch.concat((dataset_training.xs[..., :lstm.n_actions*2], dataset_test.xs[..., :lstm.n_actions*2]), dim=1).to(lstm.device))
+                
+                if dataset_training.xs.shape[0] == dataset_test.xs.shape[0]:
+                    input_lstm = torch.concat((dataset_training.xs[..., :lstm.n_actions*2], dataset_test.xs[..., :lstm.n_actions*2]), dim=1).to(lstm.device)
+                else:
+                    input_lstm = dataset_test.xs[..., :lstm.n_actions*2].to(lstm.device)
+                ys_pred, state = lstm(input_lstm)
                 
                 # loss computation
                 loss_test = criterion(
@@ -162,8 +167,11 @@ def training(dataset_training: DatasetRNN, lstm: RLLSTM, optimizer: torch.optim.
 
 def main(path_save_model:str, path_data: str, n_actions: int, n_cells: int, n_epochs: int, lr: float, split_ratio: float, device=torch.device('cpu')):
     
-    dataset_training, dataset_test = split_data_along_timedim(convert_dataset(path_data)[0], split_ratio=split_ratio)
-    
+    if isinstance(split_ratio, float):
+        dataset_training, dataset_test = split_data_along_timedim(convert_dataset(path_data)[0], split_ratio=split_ratio)
+    else:
+        dataset_training, dataset_test = split_data_along_sessiondim(convert_dataset(path_data)[0], list_test_sessions=split_ratio)
+        
     lstm = RLLSTM(n_cells=n_cells, n_actions=n_actions).to(device)
     optimizer = torch.optim.Adam(lstm.parameters(), lr=lr)
     
@@ -176,16 +184,16 @@ def main(path_save_model:str, path_data: str, n_actions: int, n_cells: int, n_ep
     
 if __name__=='__main__':
     
-    dataset_name = 'eckstein2022'
-    # dataset_name = 'dezfouli2019'
+    # dataset_name = 'eckstein2022'
+    dataset_name = 'dezfouli2019'
     
     path_model_save = f'params/{dataset_name}/lstm_{dataset_name}.pkl'
     path_data = f'data/{dataset_name}/{dataset_name}.csv'
     n_actions = 2
     n_cells = 32
-    n_epochs = 10000
+    n_epochs = 3000
     lr = 1e-3
-    split_ratio = 0.8
+    split_ratio = [3, 6, 9]
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     main(path_save_model=path_model_save, path_data=path_data, n_actions=n_actions, n_cells=n_cells, n_epochs=n_epochs, lr=lr, split_ratio=split_ratio, device=device)

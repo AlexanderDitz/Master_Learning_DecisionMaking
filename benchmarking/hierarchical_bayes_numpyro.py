@@ -12,7 +12,7 @@ import pickle
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.convert_dataset import convert_dataset
-from resources.rnn_utils import split_data_along_timedim
+from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
 
 
 # @jax.0(static_argnames=['model','hierarchical'])
@@ -52,42 +52,6 @@ def rl_model(model, choice, reward, hierarchical):
     beta_scaling = 15
     
     if hierarchical == 1:
-        # # Priors for group-level parameters
-        # # alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Uniform(low=0.01, high=0.99)) if model[0]==1 else 1
-        # # alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Uniform(low=0.01, high=0.99)) if model[1]==1 else -1
-        # # alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Uniform(low=0.01, high=0.99)) if model[2]==1 else 1
-        # # beta_ch_mean = numpyro.sample("beta_ch_mean", dist.Uniform(low=0.01, high=0.99)) if model[3]==1 else 0
-        # # beta_r_mean = numpyro.sample("beta_r_mean", dist.Uniform(low=0.01, high=9.99)) if model[4]==1 else 1
-        # alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Beta(2, 2)) if model[0]==1 else 1
-        # alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Beta(2, 2)) if model[1]==1 else -1
-        # alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Beta(2, 2)) if model[2]==1 else 1
-        # beta_ch_mean = numpyro.sample("beta_ch_mean", scaled_beta(2, 2, 0, 10)) if model[3]==1 else 0
-        # beta_r_mean = numpyro.sample("beta_r_mean", scaled_beta(2, 2, 0, 10)) if model[4]==1 else 1
-        
-        # # Priors for individual-level variation (hierarchical)
-        # alpha_pos_std = numpyro.sample("alpha_pos_std", dist.HalfNormal(0.3)) if model[0]==1 else 0
-        # alpha_neg_std = numpyro.sample("alpha_neg_std", dist.HalfNormal(0.3)) if model[1]==1 else 0
-        # alpha_ch_std = numpyro.sample("alpha_ch_std", dist.HalfNormal(0.3))  if model[2]==1 else 0
-        # beta_ch_std = numpyro.sample("beta_ch_std", dist.HalfNormal(1)) if model[3]==1 else 0
-        # beta_r_std = numpyro.sample("beta_r_std", dist.HalfNormal(1)) if model[4]==1 else 0
-        # # alpha_pos_std = numpyro.sample("alpha_pos_std", dist.Beta(2, 2)) if model[0]==1 else 0
-        # # alpha_neg_std = numpyro.sample("alpha_neg_std", dist.Beta(2, 2)) if model[1]==1 else 0
-        # # alpha_ch_std = numpyro.sample("alpha_ch_std", dist.Beta(2, 2))  if model[2]==1 else 0
-        # # beta_ch_std = numpyro.sample("beta_ch_std", scaled_beta(2, 2, 0, 10)) if model[3]==1 else 0
-        # # beta_r_std = numpyro.sample("beta_r_std", scaled_beta(2, 2, 0, 10)) if model[4]==1 else 0
-
-        # # Individual-level parameters
-        # alpha_neg = None
-        # with numpyro.plate("participants", choice.shape[1]):
-        #     alpha_pos = numpyro.sample("alpha_pos", dist.TruncatedNormal(alpha_pos_mean, alpha_pos_std, low=0.01, high=0.99))[:, None] if model[0]==1 else 1
-        #     if model[1]==1:
-        #         alpha_neg = numpyro.sample("alpha_neg", dist.TruncatedNormal(alpha_neg_mean, alpha_neg_std, low=0.01, high=0.99))[:, None]
-        #     alpha_ch = numpyro.sample("alpha_ch", dist.TruncatedNormal(alpha_ch_mean, alpha_ch_std, low=0.01, high=0.99))[:, None] if model[2]==1 else 1
-        #     beta_ch = numpyro.sample("beta_ch", dist.TruncatedNormal(beta_ch_mean, beta_ch_std, low=0.01, high=0.99)) if model[3]==1 else 0
-        #     beta_r = numpyro.sample("beta_r", dist.TruncatedNormal(beta_r_mean, beta_r_std, low=0.01, high=9.99)) if model[4]==1 else 1
-            
-        # if model[1]==0:
-        #     alpha_neg = alpha_pos
         
         # Priors for group-level parameters
         alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Beta(1, 1)) if model[0]==1 else 1
@@ -237,10 +201,13 @@ def main(file: str, model: str, num_samples: int, num_warmup: int, num_chains: i
     
     # Get and prepare the data
     # data = pd.read_csv(file)
-    data = convert_dataset(file)[0]
-    data = split_data_along_timedim(dataset=data, split_ratio=train_test_ratio)[0].xs.numpy()
-    choices = data[..., :2]
-    rewards = np.max(data[..., 2:4], axis=-1, keepdims=True) # !!! that's not applicable to experiments with counterfactual feedback !!!
+    dataset = convert_dataset(file)[0]
+    if isinstance(train_test_ratio, float):
+        dataset = split_data_along_timedim(dataset=dataset, split_ratio=train_test_ratio)[0].xs.numpy()
+    else:
+        dataset = split_data_along_sessiondim(dataset=dataset, list_test_sessions=train_test_ratio)[0].xs.numpy()
+    choices = dataset[..., :2]
+    rewards = np.max(dataset[..., 2:4], axis=-1, keepdims=True) # !!! that's not applicable to experiments with counterfactual feedback !!!
     
     # # get all different sessions
     # sessions = data['session'].unique()

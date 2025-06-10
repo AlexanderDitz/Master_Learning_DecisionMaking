@@ -646,3 +646,55 @@ SindyConfig_dezfouli2019 = {
   },
   
 }
+
+
+SindyConfig_dezfouli2019_blocks = {
+  
+  # tracked variables and control signals in the RNN
+  'rnn_modules': ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'x_value_block', 'x_value_trial'],
+  'control_parameters': ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice', 'c_value_block', 'c_value_trial'],
+  
+  # library setup: 
+  # which terms are allowed as control inputs in each SINDy model
+  # key is the SINDy model name, value is a list of allowed control inputs from the list of control signals 
+  'library_setup': {
+      'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice', 'c_value_block', 'c_value_trial'],
+      'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice', 'c_value_block', 'c_value_trial'],
+      'x_value_choice_chosen': ['c_value_reward', 'c_value_block', 'c_value_trial'],
+      'x_value_choice_not_chosen': ['c_value_reward', 'c_value_block', 'c_value_trial'],
+  },
+  
+  # data-filter setup: 
+  # which samples are allowed as training samples in each SINDy model based on the given filter condition (conditions are always equality conditions)
+  # key is the SINDy model name, value is a list with a triplet of values:
+  #   1. str: feature name to be used as a filter
+  #   2. numeric: the numeric filter condition
+  #   3. bool: remove feature from control inputs --> TODO: check if this is necessary or makes things just more complicated
+  # Multiple conditions can also be given as a list of triplets.
+  # Example:
+  #   'x_value_choice_not_chosen': ['c_action', 0, True] means that for the SINDy model 'x_value_choice_not_chosen', only samples where the feature 'c_action' == 0 are used for training the SINDy model. 
+  #   The control parameter 'c_action' is removed afterwards from the list of control signals for training of the model
+  'filter_setup': {
+      'x_learning_rate_reward': ['c_action', 1, True],
+      'x_value_reward_not_chosen': ['c_action', 0, True],
+      'x_value_choice_chosen': ['c_action', 1, True],
+      'x_value_choice_not_chosen': ['c_action', 0, True],
+  },
+  
+  # data pre-processing setup:
+  # define the processing steps for each variable and control signal.
+  # possible processing steps are: 
+  #   1. Trimming: Remove the first 25% of the samples along the time-axis. This is useful if the RNN begins with a variable at 0 but then accumulates first first to a specific default value, i.e. the range changes from (0, p) to (q, q+p). That way the data is cleared of the accumulation process. Trimming will be active for all variables, if it is active for one. 
+  #   2. Offset-Clearing: Clearup any offset by determining the minimal value q of a variable and move the value range from (q, q+p) -> (0, p). This step makes SINDy equations less complex and aligns them more with RL-Theory
+  #   3. Normalization: Scale the value range of a variable to x_max - x_min = 1. Offset-Clearing is recommended to achieve a value range of (0, 1) 
+  # The processing steps are passed in the form of a binary triplet in this order: (Trimming, Offset-Clearing, Normalization) 
+  'dataprocessing_setup': {
+      'x_learning_rate_reward': [0, 0, 0],
+      'x_value_reward_not_chosen': [0, 0, 0],
+      'x_value_choice_chosen': [0, 0, 0],
+      'x_value_choice_not_chosen': [0, 0, 0],
+      'c_value_reward': [0, 0, 0],
+      'c_value_choice': [0, 0, 0],
+  },
+  
+}
