@@ -147,14 +147,19 @@ def main(
       
   n_participants = len(dataset.xs[..., -1].unique())
   
-  if train_test_ratio < 1:
-    dataset_train, dataset_test = rnn_utils.split_data_along_timedim(dataset, train_test_ratio)
-    dataset_train = bandits.DatasetRNN(dataset_train.xs, dataset_train.ys, sequence_length=sequence_length, device=device)
+  if isinstance(train_test_ratio, float):
+    if train_test_ratio < 1:
+      dataset_train, dataset_test = rnn_utils.split_data_along_timedim(dataset, train_test_ratio)
+      dataset_train = bandits.DatasetRNN(dataset_train.xs, dataset_train.ys, sequence_length=sequence_length, device=device)
+    else:
+      dataset_train = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length, device=device)
+      # if dataset_test is None:
+      #   dataset_test = bandits.DatasetRNN(dataset.xs, dataset.ys, device=device)
+  elif isinstance(train_test_ratio, list):
+    dataset_train, dataset_test = rnn_utils.split_data_along_sessiondim(dataset=dataset, list_test_sessions=train_test_ratio)
   else:
-    dataset_train = bandits.DatasetRNN(dataset.xs, dataset.ys, sequence_length=sequence_length, device=device)
-    # if dataset_test is None:
-    #   dataset_test = bandits.DatasetRNN(dataset.xs, dataset.ys, device=device)
-    
+    raise TypeError("train_test_raio must be either a float number or a list of integers containing the session/block ids which should be used as test sessions/blocks")
+
   if data is None and model is None:
     params_path = rnn_utils.parameter_file_naming(
       'params/params', 
@@ -185,8 +190,8 @@ def main(
       n_participants=n_participants,
       ).to(device)
   
-  optimizer_rnn = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
+  optimizer_rnn = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=l2_weight_decay)
+  
   print('Setup of the RNN model complete.')
 
   if checkpoint:

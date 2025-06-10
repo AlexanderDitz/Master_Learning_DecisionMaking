@@ -6,18 +6,16 @@ import numpy as np
 
 
 class GRUModule(nn.Module):
-    def __init__(self, input_size, hidden_size, dropout):
+    def __init__(self, input_size, **kwargs):
         super().__init__()
         
         self.gru_in = nn.GRU(input_size, 1)
-        # self.dropout = nn.Dropout(dropout)
         self.linear_out = nn.Linear(1, 1)
 
     def forward(self, inputs):
         n_actions = inputs.shape[1]
         inputs = inputs.view(inputs.shape[0]*inputs.shape[1], inputs.shape[2]).unsqueeze(0)
         next_state = self.gru_in(inputs[..., 1:], inputs[..., :1].contiguous())[1].view(-1, n_actions, 1)
-        # next_state = self.dropout(next_state)
         next_state = self.linear_out(next_state)
         return next_state
 
@@ -61,8 +59,33 @@ class ExtendedEmbedding(nn.Module):
     def forward(self, dict_id, additional):
         embedding = self.embedding(dict_id)
         return self.linear_out(torch.concat((embedding, additional), dim=-1))
+
+
+class SparseLeakyReLU(nn.LeakyReLU):
     
+    def __init__(self, negative_slope = 0.01, inplace = False, threshold=0.01):
+        """Leaky ReLU which in training-mode behaves like the standard LeakyReLU-module.
+        In eval-mode it compares the activation value against a threshold and sets it to 0 if it is below.
+
+        Args:
+            negative_slope (float, optional): _description_. Defaults to 0.01.
+            inplace (bool, optional): _description_. Defaults to False.
+            threshold (float, optional): _description_. Defaults to 0.01.
+        """
+        super().__init__(negative_slope, inplace)
+        self.threshold = threshold
     
+    def forward(self, input):
+        activation = super().forward(input)
+        if self.training:
+            return activation
+        else:
+            if activation < self.threshold:
+                return torch.zeros_like(activation)
+            else:
+                activation
+                
+
 class BaseRNN(nn.Module):
     def __init__(
         self, 
@@ -536,8 +559,8 @@ class RLRNN_eckstein2022(BaseRNN):
             
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU())# if embedding_size > 0 else torch.nn.Parameter(torch.tensor(1.0))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(negative_slope=0.001))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(negative_slope=0.001))
         
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
@@ -570,7 +593,8 @@ class RLRNN_eckstein2022(BaseRNN):
         # rewards_not_chosen = ((1-actions) * rewards).sum(dim=-1, keepdim=True).repeat(1, 1, self._n_actions)
         
         # Here we compute now the participant embeddings for each entry in the batch
-        participant_embedding = self.dropout(self.participant_embedding(participant_id[:, 0].int()))
+        # leaky relu also in rnn training hard coded for l1-reg of embedding activations -> take care when replacing
+        participant_embedding = self.dropout(torch.nn.functional.leaky_relu(self.participant_embedding(participant_id[:, 0].int()), negative_slope=0.001))
         
         # get scaling factors
         scaling_factors = {}

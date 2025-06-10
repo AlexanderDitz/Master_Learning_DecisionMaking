@@ -533,10 +533,10 @@ SindyConfig_eckstein2022 = {
   'dataprocessing_setup': {
       'x_learning_rate_reward': [0, 0, 0],
       'x_value_reward_not_chosen': [0, 0, 0],
-      'x_value_choice_chosen': [1, 1, 0],
-      'x_value_choice_not_chosen': [1, 1, 0],
+      'x_value_choice_chosen': [0, 0, 0],
+      'x_value_choice_not_chosen': [0, 0, 0],
       'c_value_reward': [0, 0, 0],
-      'c_value_choice': [1, 1, 0],
+      'c_value_choice': [0, 0, 0],
   },
   
 }
@@ -599,17 +599,17 @@ SindyConfig_eckstein2022_trials = {
 SindyConfig_dezfouli2019 = {
   
   # tracked variables and control signals in the RNN
-  'rnn_modules': ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'x_value_trial'],
-  'control_parameters': ['c_action', 'c_reward_chosen', 'c_block', 'c_value_reward', 'c_value_choice', 'c_value_trial'],
+  'rnn_modules': ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen'],
+  'control_parameters': ['c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
   
   # library setup: 
   # which terms are allowed as control inputs in each SINDy model
   # key is the SINDy model name, value is a list of allowed control inputs from the list of control signals 
   'library_setup': {
-      'x_learning_rate_reward': ['c_reward_chosen', 'c_block', 'c_value_trial', 'c_value_reward', 'c_value_choice'],
-      'x_value_reward_not_chosen': ['c_reward_chosen', 'c_block', 'c_value_trial', 'c_value_choice'],
-      'x_value_choice_chosen': ['c_block', 'c_value_trial', 'c_value_reward'],
-      'x_value_choice_not_chosen': ['c_block', 'c_value_trial', 'c_value_reward'],
+      'x_learning_rate_reward': ['c_reward_chosen', 'c_value_reward', 'c_value_choice'],
+      'x_value_reward_not_chosen': ['c_reward_chosen', 'c_value_choice'],
+      'x_value_choice_chosen': ['c_value_reward'],
+      'x_value_choice_not_chosen': ['c_value_reward'],
   },
   
   # data-filter setup: 
@@ -639,10 +639,10 @@ SindyConfig_dezfouli2019 = {
   'dataprocessing_setup': {
       'x_learning_rate_reward': [0, 0, 0],
       'x_value_reward_not_chosen': [0, 0, 0],
-      'x_value_choice_chosen': [1, 1, 0],
-      'x_value_choice_not_chosen': [1, 1, 0],
+      'x_value_choice_chosen': [0, 0, 0],
+      'x_value_choice_not_chosen': [0, 0, 0],
       'c_value_reward': [0, 0, 0],
-      'c_value_choice': [1, 1, 0],
+      'c_value_choice': [0, 0, 0],
   },
   
 }

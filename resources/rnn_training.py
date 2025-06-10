@@ -159,39 +159,47 @@ def batch_train(
         
         if torch.is_grad_enabled():
             
-            # L1 weight decay to enforce sparsification in the network (except for participant embedding)
-            l1_reg = l1_weight_decay * torch.stack([
-                param.abs().sum()
-                for name, param in model.named_parameters()
-                # if "embedding" not in name
-                # if "embedding" in name
-                ]).mean()
-            
-            # Regularization of the embedding space
-            if l2_weight_decay > 0:
-                if hasattr(model, 'participant_embedding') and isinstance(model.participant_embedding, nn.Sequential) and isinstance(model.participant_embedding[0], CustomEmbedding):
-                    # gradient penalty between two participants
-                    # sample two random distributions of participant indices as one-hot-encoded tensors
-                    e_i = torch.randint(low=0, high=model.n_participants, size=(xs.shape[0],), dtype=torch.int64, device=xs_step.device)
-                    e_j = torch.randint(low=0, high=model.n_participants, size=(xs.shape[0],), dtype=torch.int64, device=xs_step.device)
-                    embedding_reg = gradient_penalty(model.participant_embedding, e_i, e_j, factor=l2_weight_decay)
-                elif hasattr(model, 'participant_embedding') and ((isinstance(model.participant_embedding, nn.Sequential) and isinstance(model.participant_embedding[0], nn.Embedding)) or isinstance(model.participant_embedding, nn.Embedding)):
-                    # L2 weight decay on participant embedding to enforce smoother gradients between participants and prevent overfitting
-                    if model.embedding_size > 1:
-                        embedding_reg = l2_weight_decay * torch.stack([
-                            param.pow(2).sum()
-                            for name, param in model.named_parameters()
-                            if "embedding" in name
-                            # if "embedding" not in name
-                            ]).mean()
-                    else:
-                        embedding_reg = 0
-                else:
-                    embedding_reg = 0
+            # alternative l1-reg -> penalize additionally the activations of the embedding
+            if hasattr(model, 'participant_embedding'):
+                id_array = torch.arange(0, model.n_participants, dtype=torch.int32).view(1, -1)
+                embedding = torch.nn.functional.leaky_relu(model.participant_embedding(id_array), negative_slope=0.001)
+                # compute l1 regularization on activations
+                l1_reg = l1_weight_decay * embedding.abs().mean()
             else:
-                embedding_reg = 0
+                # original: l1 weight decay to enforce sparsification in the network (except for participant embedding)
+                l1_reg = l1_weight_decay * torch.stack([
+                    param.abs().sum()
+                    for name, param in model.named_parameters()
+                    # if "embedding" not in name
+                    # if "embedding" in name
+                    ]).mean()
                 
-            loss = loss_step + l1_reg + embedding_reg
+                
+            # Regularization of the embedding space
+            # if l2_weight_decay > 0:
+            #     if hasattr(model, 'participant_embedding') and isinstance(model.participant_embedding, nn.Sequential) and isinstance(model.participant_embedding[0], CustomEmbedding):
+            #         # gradient penalty between two participants
+            #         # sample two random distributions of participant indices as one-hot-encoded tensors
+            #         e_i = torch.randint(low=0, high=model.n_participants, size=(xs.shape[0],), dtype=torch.int64, device=xs_step.device)
+            #         e_j = torch.randint(low=0, high=model.n_participants, size=(xs.shape[0],), dtype=torch.int64, device=xs_step.device)
+            #         embedding_reg = gradient_penalty(model.participant_embedding, e_i, e_j, factor=l2_weight_decay)
+            #     elif hasattr(model, 'participant_embedding') and ((isinstance(model.participant_embedding, nn.Sequential) and isinstance(model.participant_embedding[0], nn.Embedding)) or isinstance(model.participant_embedding, nn.Embedding)):
+            #         # L2 weight decay on participant embedding to enforce smoother gradients between participants and prevent overfitting
+            #         if model.embedding_size > 1:
+            #             embedding_reg = l2_weight_decay * torch.stack([
+            #                 param.pow(2).sum()
+            #                 for name, param in model.named_parameters()
+            #                 if "embedding" in name
+            #                 # if "embedding" not in name
+            #                 ]).mean()
+            #         else:
+            #             embedding_reg = 0
+            #     else:
+            #         embedding_reg = 0
+            # else:
+            #     embedding_reg = 0
+                
+            loss = loss_step + l1_reg# + embedding_reg
             
             # backpropagation
             optimizer.zero_grad()
@@ -253,17 +261,31 @@ def fit_model(
         dataloader_test = DataLoader(dataset_test, batch_size=len(dataset_test))
     
     # set up learning rate scheduler
-    warmup_steps = 256 if epochs > 256 else 1 #int(epochs * 0.125/16)
+    warmup_steps = 1024
+    warmup_steps = warmup_steps if epochs > warmup_steps else 1 #int(epochs * 0.125/16)
     if scheduler and optimizer is not None:
         # Define the LambdaLR scheduler for warm-up
+        # def warmup_lr_lambda(current_step):
+        #     if current_step < warmup_steps / 0.8:
+        #         return min(1e-1, float(current_step) / float(max(1, warmup_steps))) / (optimizer.param_groups[0]['lr']) / 100
+        #     else:
+        #         return 1 - float(current_step) / float(max(1, warmup_steps)) / (optimizer.param_groups[0]['lr']) / 100
+        #     return 1.0  # No change after warm-up phase
+        default_lr = optimizer.param_groups[0]['lr'] + 0
         def warmup_lr_lambda(current_step):
-            if current_step < warmup_steps:
-                return min(1e-1, float(current_step) / float(max(1, warmup_steps))) * 100
-            return 1.0  # No change after warm-up phase
+            scale = 1e-1 / default_lr
+            if current_step < warmup_steps * 0.8:
+                return 0.1 * scale  # Scaling factor during the first 80% of warmup
+            elif current_step < warmup_steps:
+                # Linearly anneal towards 1.0 in the last 20% of warmup steps
+                progress = (current_step - warmup_steps * 0.8) / (warmup_steps * 0.2)
+                return (0.1 + progress * (1.0 - 0.1)) * scale
+            else:
+                return 1.0  # Default learning rate scaling after warmup
 
         # Create the scheduler with the Lambda function
         scheduler_warmup = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
-        
+                
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=warmup_steps if warmup_steps > 0 else 64, T_mult=2)
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.1, patience=10, threshold=0, cooldown=64, min_lr=1e-6)
         # scheduler = ReduceOnPlateauWithRestarts(optimizer=optimizer, min_lr=1e-6, factor=0.1, patience=8)

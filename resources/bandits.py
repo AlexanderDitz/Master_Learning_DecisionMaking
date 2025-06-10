@@ -490,7 +490,7 @@ class AgentSpice(AgentNetwork):
       if betas is not None:
         # include beta parameters if non-zero
         for value in betas:
-          if betas[value] != 0:
+          if np.abs(betas[value]) > 1e-2:
             n_parameters[participant_id] += 1
     return n_parameters
   
