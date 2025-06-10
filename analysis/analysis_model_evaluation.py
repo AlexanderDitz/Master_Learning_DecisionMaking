@@ -13,24 +13,24 @@ from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
 from benchmarking.hierarchical_bayes_numpyro import rl_model
 from benchmarking.lstm_training import setup_agent_lstm, RLLSTM
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_rearranged
-from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials
+from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_rearranged, RLRNN_dezfouli2019_blocks
+from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials, SindyConfig_dezfouli2019_blocks
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
 
 
-train_test_ratio = 0.8
-use_test = False
+use_test = True
 
 # -------------------------------------------------------------------------------
 # AGENT CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-dataset = 'eckstein2022'
-models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
-sindy_config = SindyConfig_eckstein2022
-rnn_class = RLRNN_eckstein2022
-additional_inputs = None
+# dataset = 'eckstein2022'
+# models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+# train_test_ratio = 0.8
+# sindy_config = SindyConfig_eckstein2022
+# rnn_class = RLRNN_eckstein2022
+# additional_inputs = None
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
@@ -43,13 +43,21 @@ additional_inputs = None
 # rnn_class = RLRNN_dezfouli2019
 # additional_inputs = []
 
+# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
+dataset = 'dezfouli2019'
+train_test_ratio = [3, 6, 9]
+models_benchmark = ['ApBr', 'ApBrBch']
+sindy_config = SindyConfig_dezfouli2019_blocks
+rnn_class = RLRNN_dezfouli2019_blocks
+additional_inputs = []
+
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
-path_data = f'data/{dataset}/{dataset}_age.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
+path_data = f'data/{dataset}/{dataset}.csv'
+path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
 path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}.pkl'
+path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
@@ -194,7 +202,7 @@ for index_data in tqdm(range(len(dataset_test))):
         
         # get number of actual trials
         n_trials = len(probs_baseline)
-        data_ys = data_test[index_data, :n_trials]
+        data_ys = data_test[index_data, :n_trials].cpu().numpy()
         
         if isinstance(train_test_ratio, float):
             n_trials_test = int(n_trials*(1-train_test_ratio))
@@ -262,7 +270,8 @@ for index_data in tqdm(range(len(dataset_test))):
             scores[4] += scores_spice
         
     except Exception as e:  
-        print(e)
+        # print(e)
+        raise e
         failed_attempts += 1
 
 # ------------------------------------------------------------
