@@ -39,7 +39,7 @@ def module_pruning(agent_spice: AgentSpice, dataset: DatasetRNN, participant_ids
         additional_embedding_inputs = dataset.xs[mask_participant_id, 0, agent_spice._n_actions*2:-3]
         agent_spice.new_sess(participant_id=pid, additional_embedding_inputs=additional_embedding_inputs)
         keys_betas = agent_spice.get_betas().keys()
-        if not any([agent_spice.get_betas()[key] == 0 for key in keys_betas]):
+        if not any([np.abs(agent_spice.get_betas()[key]) < 1e-2 for key in keys_betas]):
             continue
         
         # Calculate normalized log likelihood for SPICE and RNN

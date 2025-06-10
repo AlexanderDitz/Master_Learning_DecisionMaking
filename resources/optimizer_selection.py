@@ -24,6 +24,7 @@ def optimize_for_participant(
     n_sessions_off_policy: int,
     n_trials_optuna: int = 50,
     timeout: int = 600,  # ? 10 minutes timeout
+    threshold: float = 0.01,
     verbose: bool = False,
 ):
     """
@@ -97,6 +98,10 @@ def optimize_for_participant(
         # error = torch.mean((logits_rnn - logits_spice)**2).item()
         if error == np.nan:
             error = 1e3
+            
+        # Check if we've hit our threshold
+        if len(trial.study.trials) > 1 and trial.study.best_value <= threshold:
+            trial.study.stop()
 
         return error
 
