@@ -45,8 +45,8 @@ _, loss = pipeline_rnn.main(
     
     # general training parameters
     checkpoint=False,
-    epochs=1024, # <- 2^16
-    scheduler=False,
+    epochs=32768, # <- 2^16
+    scheduler=True,
     learning_rate=1e-2,
     
     # hand-picked params

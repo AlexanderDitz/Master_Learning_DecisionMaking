@@ -161,7 +161,7 @@ def batch_train(
             
             # alternative l1-reg -> penalize additionally the activations of the embedding
             if hasattr(model, 'participant_embedding'):
-                id_array = torch.arange(0, model.n_participants, dtype=torch.int32).view(1, -1)
+                id_array = torch.arange(0, model.n_participants, dtype=torch.int32, device=model.device).view(1, -1)
                 embedding = torch.nn.functional.leaky_relu(model.participant_embedding(id_array), negative_slope=0.001)
                 # compute l1 regularization on activations
                 l1_reg = l1_weight_decay * embedding.abs().mean()
