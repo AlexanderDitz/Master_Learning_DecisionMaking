@@ -218,7 +218,7 @@ def split_data_along_sessiondim(dataset: DatasetRNN, split_ratio: float = None, 
     """
     
     dim = 1
-    xs, ys = dataset.xs, dataset.ys
+    xs, ys = dataset.xs.cpu(), dataset.ys.cpu()
     
     # get participant ids
     participants_ids = xs[:, 0, -1].unique()

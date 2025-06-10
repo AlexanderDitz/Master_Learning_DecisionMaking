@@ -68,8 +68,8 @@ def main(
   
   # print cuda devices available
   print(f'Cuda available: {torch.cuda.is_available()}')
-  # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  device = torch.device('cpu')
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  # device = torch.device('cpu')
   
   if not os.path.exists('params'):
     os.makedirs('params')
@@ -156,10 +156,10 @@ def main(
       # if dataset_test is None:
       #   dataset_test = bandits.DatasetRNN(dataset.xs, dataset.ys, device=device)
   elif isinstance(train_test_ratio, list):
-    dataset_train, dataset_test = rnn_utils.split_data_along_sessiondim(dataset=dataset, list_test_sessions=train_test_ratio)
+    dataset_train, dataset_test = rnn_utils.split_data_along_sessiondim(dataset=dataset, list_test_sessions=train_test_ratio, device=device)
   else:
     raise TypeError("train_test_raio must be either a float number or a list of integers containing the session/block ids which should be used as test sessions/blocks")
-
+  
   if data is None and model is None:
     params_path = rnn_utils.parameter_file_naming(
       'params/params', 
