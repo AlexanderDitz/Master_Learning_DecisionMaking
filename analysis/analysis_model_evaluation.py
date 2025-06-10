@@ -18,7 +18,7 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
 
 
-use_test = True
+use_test = False
 
 # -------------------------------------------------------------------------------
 # AGENT CONFIGURATIONS
@@ -36,24 +36,24 @@ use_test = True
 # additional_inputs = ['age']
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-# dataset = 'dezfouli2019'
-# train_test_ratio = [3, 6, 9]
-# models_benchmark = ['ApBr', 'ApBrBch']
-# sindy_config = SindyConfig_dezfouli2019
-# rnn_class = RLRNN_dezfouli2019
-# additional_inputs = []
-
-# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
 models_benchmark = ['ApBr', 'ApBrBch']
-sindy_config = SindyConfig_dezfouli2019_blocks
-rnn_class = RLRNN_dezfouli2019_blocks
+sindy_config = SindyConfig_dezfouli2019
+rnn_class = RLRNN_dezfouli2019
 additional_inputs = []
+
+# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
+# dataset = 'dezfouli2019'
+# train_test_ratio = [3, 6, 9]
+# models_benchmark = ['ApBr', 'ApBrBch']
+# sindy_config = SindyConfig_dezfouli2019_blocks
+# rnn_class = RLRNN_dezfouli2019_blocks
+# additional_inputs = []
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
 path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0001_ep4096.pkl'
 path_model_spice = None#f'params/{dataset}/spice_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
 path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
