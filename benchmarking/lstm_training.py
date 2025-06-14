@@ -187,13 +187,14 @@ if __name__=='__main__':
     # dataset_name = 'eckstein2022'
     dataset_name = 'dezfouli2019'
     
-    path_model_save = f'params/{dataset_name}/lstm_{dataset_name}.pkl'
+    path_model_save = f'params/{dataset_name}/lstm_{dataset_name}_training_0_5.pkl'
     path_data = f'data/{dataset_name}/{dataset_name}.csv'
     n_actions = 2
     n_cells = 32
     n_epochs = 3000
     lr = 1e-3
-    split_ratio = [3, 6, 9]
+    # split_ratio = [3, 6, 9]
+    split_ratio = [1, 3, 4, 6, 8, 10]
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     main(path_save_model=path_model_save, path_data=path_data, n_actions=n_actions, n_cells=n_cells, n_epochs=n_epochs, lr=lr, split_ratio=split_ratio, device=device)

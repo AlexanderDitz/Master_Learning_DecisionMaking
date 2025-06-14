@@ -1,13 +1,15 @@
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.linear_model import LinearRegression, Ridge, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 import torch
+from copy import deepcopy
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -15,6 +17,13 @@ from resources.bandits import AgentNetwork, AgentSpice
 from utils.setup_agents import setup_agent_rnn, setup_agent_spice
 from resources.rnn import RLRNN_eckstein2022, RLRNN_dezfouli2019
 from resources.sindy_utils import SindyConfig_eckstein2022, SindyConfig_dezfouli2019
+
+
+PARTICIPANT_EMB = 0
+SINDY_COEFS = 1
+
+# CHANGE THIS VALUE TO SWITCH FROM PARTICIPANT EMBEDDING TO SINDY COEFS
+embedding_type = SINDY_COEFS
 
 
 path_data = 'data/eckstein2022/eckstein2022_age.csv'
@@ -26,7 +35,7 @@ sindy_config = SindyConfig_eckstein2022
 
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
-# path_rnn = 'params/dezfouli2019/rnn_dezfouli2019_rldm_l1emb_0_001_l2_0_0001_ep4096.pkl'
+# path_rnn = 'params/dezfouli2019/rnn_dezfouli2019_rldm_l1emb_0_001_l2_0_0001.pkl'
 # # not trained yet: path_spice = 'params/dezfouli2019/spice_dezfouli2019_rldm_l1emb_0_001_l2_0_0001.pkl'
 # demo_cols = ['diag']
 # rnn_class = RLRNN_dezfouli2019
@@ -36,23 +45,38 @@ sindy_config = SindyConfig_eckstein2022
 col_participant_id = 'session'
 core_cols = [col_participant_id, 'choice', 'reward']
 
-PARTICIPANT_EMB = 0
-SINDY_COEFS = 1
+mapping_col_regressor = {
+    'age': RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42),
+    'diag': RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42),
+}
 
-# CHANGE THIS VALUE TO SWITCH FROM PARTICIPANT EMBEDDING TO SINDY COEFS
-embedding_type = SINDY_COEFS
+def determine_target_type(y, binary_threshold=2, categorical_threshold=10):
+    """Determine if target is binary, categorical, or continuous"""
+    unique_vals = len(np.unique(y[~np.isnan(y)]))
+    
+    if unique_vals <= binary_threshold:
+        return 'binary'
+    elif unique_vals <= categorical_threshold:
+        return 'categorical'
+    else:
+        return 'continuous'
 
+def is_classifier_model(model):
+    """Check if model is a classifier"""
+    classifier_types = (RandomForestClassifier, LogisticRegression)
+    return isinstance(model, classifier_types)
 
+def is_regressor_model(model):
+    """Check if model is a regressor"""
+    regressor_types = (RandomForestRegressor, Ridge, LinearRegression)
+    return isinstance(model, regressor_types)
 
 def calculate_behavioral_metrics(df):
-    """
-    Calculate behavioral metrics for each participant from bandit data
-    """
+    """Calculate behavioral metrics for each participant from bandit data"""
     behavioral_metrics = []
     
     for participant_id in df[col_participant_id].unique():
         p_data = df[df[col_participant_id] == participant_id].copy()
-        # p_data = p_data.sort_values(['experiment_id', 'block']).reset_index(drop=True)
         
         # Basic performance metrics
         avg_reward = p_data['reward'].mean()
@@ -86,7 +110,6 @@ def calculate_behavioral_metrics(df):
             choice_entropy = 0  # All choices were the same
         
         # Learning-related metrics
-        # Simple learning proxy: improvement over time
         first_half_reward = p_data.iloc[:len(p_data)//2]['reward'].mean()
         second_half_reward = p_data.iloc[len(p_data)//2:]['reward'].mean()
         learning_improvement = second_half_reward - first_half_reward
@@ -110,10 +133,7 @@ def calculate_behavioral_metrics(df):
     return pd.DataFrame(behavioral_metrics)
 
 def extract_participant_demographics(df, demo_cols):
-    """
-    Extract demographic/meta information for each participant
-    """
-    
+    """Extract demographic/meta information for each participant"""
     if not demo_cols:
         print("No demographic columns found")
         return pd.DataFrame({col_participant_id: df[col_participant_id].unique()})
@@ -132,17 +152,13 @@ def extract_participant_demographics(df, demo_cols):
     return demographics
 
 def get_embeddings(agent_rnn: AgentNetwork):
-    """
-    Create dummy participant embeddings for testing
-    """
-    
+    """Extract participant embeddings from trained RNN"""
     participant_ids = torch.arange(agent_rnn._model.n_participants, dtype=torch.int32)
     embeddings = agent_rnn._model.participant_embedding(participant_ids).detach().numpy()
-    
     return embeddings
 
 def get_coefficients(agent_spice: AgentSpice):
-    
+    """Extract SINDy coefficients from trained SPICE model"""
     coefficients = None
     coefficient_names = []
     for pid in range(agent_spice._model.n_participants):
@@ -154,7 +170,7 @@ def get_coefficients(agent_spice: AgentSpice):
         if coefficients is None:
             n_coefs = 0
             for beta in betas:
-                coefficient_names.append(beta)
+                coefficient_names.append('beta ' + beta)
             for module in modules:
                 n_coefs += max(modules[module][pid].coefficients().shape)
                 coefficient_names += [module + ' ' + feature for feature in modules[module][pid].get_feature_names()]
@@ -171,15 +187,13 @@ def get_coefficients(agent_spice: AgentSpice):
     return coefficients, coefficient_names
 
 def perform_embedding_regression(embeddings, behavioral_df, demographic_df, alpha=1.0):
-    """
-    Perform linear regression of embeddings onto behavioral and demographic variables
-    """
+    """Perform regression of embeddings onto behavioral and demographic variables"""
     # Merge behavioral and demographic data
     full_data = behavioral_df.merge(demographic_df, on=col_participant_id, how='inner')
     
     # Ensure embeddings match the participants we have data for
     participant_ids = full_data[col_participant_id].values.astype(int)
-    embedding_subset = embeddings[participant_ids]  # Assuming participant_id matches index
+    embedding_subset = embeddings[participant_ids]
     
     # Standardize embeddings
     scaler_X = StandardScaler()
@@ -211,96 +225,150 @@ def perform_embedding_regression(embeddings, behavioral_df, demographic_df, alph
             print(f"Skipping {target} due to no variance")
             continue
         
-        # Standardize target if continuous
-        if len(np.unique(y_valid)) > 10:  # Assume continuous if >10 unique values
-            scaler_y = StandardScaler()
-            y_scaled = scaler_y.fit_transform(y_valid.reshape(-1, 1)).flatten()
+        # Determine target type
+        target_type = determine_target_type(y_valid)
+        
+        # Choose model
+        if target in mapping_col_regressor:
+            model = deepcopy(mapping_col_regressor[target])
+            print(f"Using custom model for {target}: {type(model).__name__}")
         else:
-            y_scaled = y_valid
+            model = Ridge(alpha=alpha)
+            print(f"Using default Ridge regression for {target}")
         
-        # Fit Ridge regression
-        model = Ridge(alpha=alpha)
-        model.fit(X_valid, y_scaled)
+        # Prepare target variable based on model type
+        if is_classifier_model(model):
+            # For classifiers, use original target values (assuming they're already encoded properly)
+            y_processed = y_valid.astype(int)
+            scoring_metric = 'accuracy'
+        else:
+            # For regressors, check if we need to standardize
+            if isinstance(model, (Ridge, LinearRegression)):
+                # Standardize for linear models
+                if target_type == 'continuous':
+                    scaler_y = StandardScaler()
+                    y_processed = scaler_y.fit_transform(y_valid.reshape(-1, 1)).flatten()
+                else:
+                    y_processed = y_valid
+            else:
+                # Don't standardize for tree-based models
+                y_processed = y_valid
+            scoring_metric = 'r2'
         
-        # Calculate metrics
-        y_pred = model.predict(X_valid)
-        r2 = r2_score(y_scaled, y_pred)
-        
-        # Cross-validation R²
-        cv_scores = cross_val_score(model, X_valid, y_scaled, cv=5, scoring='r2')
-        cv_r2_mean = cv_scores.mean()
-        cv_r2_std = cv_scores.std()
-        
-        # Statistical significance test
-        # Compare to null model (intercept only)
-        null_model = Ridge(alpha=alpha)
-        null_model.fit(np.ones((len(X_valid), 1)), y_scaled)
-        null_pred = null_model.predict(np.ones((len(X_valid), 1)))
-        null_r2 = r2_score(y_scaled, null_pred)
-        
-        # F-test for overall significance
-        n_samples, n_features = X_valid.shape
-        f_stat = ((r2 - null_r2) / n_features) / ((1 - r2) / (n_samples - n_features - 1))
-        p_value = 1 - stats.f.cdf(f_stat, n_features, n_samples - n_features - 1)
-        
-        results[target] = {
-            'model': model,
-            'r2': r2,
-            'cv_r2_mean': cv_r2_mean,
-            'cv_r2_std': cv_r2_std,
-            'coefficients': model.coef_,
-            'intercept': model.intercept_,
-            'n_samples': len(X_valid),
-            'f_statistic': f_stat,
-            'p_value': p_value
-        }
+        try:
+            # Fit model
+            model.fit(X_valid, y_processed)
+            
+            # Calculate metrics
+            y_pred = model.predict(X_valid)
+            
+            if is_classifier_model(model):
+                primary_score = accuracy_score(y_processed, y_pred)
+                cv_scores = cross_val_score(model, X_valid, y_processed, cv=5, scoring='accuracy')
+            else:
+                primary_score = r2_score(y_processed, y_pred)
+                cv_scores = cross_val_score(model, X_valid, y_processed, cv=5, scoring='r2')
+            
+            cv_score_mean = cv_scores.mean()
+            cv_score_std = cv_scores.std()
+            
+            # Statistical significance test
+            n_samples, n_features = X_valid.shape
+            if is_regressor_model(model):
+                # F-test for regression
+                null_r2 = 0  # Null model R²
+                f_stat = (primary_score / n_features) / ((1 - primary_score) / (n_samples - n_features - 1))
+                p_value = 1 - stats.f.cdf(f_stat, n_features, n_samples - n_features - 1)
+            else:
+                # Chi-square approximation for classification
+                chi_stat = primary_score * n_samples
+                p_value = 1 - stats.chi2.cdf(chi_stat, n_features)
+            
+            # Store results
+            result_dict = {
+                'model': model,
+                'model_type': type(model).__name__,
+                'target_type': target_type,
+                'primary_score': primary_score,
+                'cv_score_mean': cv_score_mean,
+                'cv_score_std': cv_score_std,
+                'scoring_metric': scoring_metric,
+                'n_samples': len(X_valid),
+                'f_statistic': f_stat if 'f_stat' in locals() else None,
+                'p_value': p_value
+            }
+            
+            # Add coefficients or feature importances
+            if hasattr(model, 'coef_'):
+                result_dict['coefficients'] = model.coef_
+                result_dict['intercept'] = getattr(model, 'intercept_', None)
+            elif hasattr(model, 'feature_importances_'):
+                result_dict['feature_importances'] = model.feature_importances_
+            
+            results[target] = result_dict
+            
+        except Exception as e:
+            print(f"Error fitting model for {target}: {e}")
+            continue
     
     return results, scaler_X
 
 def plot_regression_results(results):
-    """
-    Visualize regression results
-    """
+    """Visualize regression results"""
     # Create summary dataframe
     summary_data = []
     for target, result in results.items():
         summary_data.append({
             'target': target,
-            'r2': result['r2'],
-            'cv_r2_mean': result['cv_r2_mean'],
-            'cv_r2_std': result['cv_r2_std'],
+            'model_type': result['model_type'],
+            'target_type': result['target_type'],
+            'score': result['primary_score'],
+            'cv_score_mean': result['cv_score_mean'],
+            'cv_score_std': result['cv_score_std'],
+            'scoring_metric': result['scoring_metric'],
             'p_value': result['p_value'],
-            'significant': result['p_value'] < 0.05
+            'significant': result['p_value'] < 0.05 if result['p_value'] is not None else False
         })
     
     summary_df = pd.DataFrame(summary_data)
     
-    # Plot R² values
+    # Plot results
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
     
-    # R² comparison
+    # Score comparison
     x_pos = np.arange(len(summary_df))
-    axes[0].bar(x_pos - 0.2, summary_df['r2'], 0.4, label='Train R²', alpha=0.7)
-    axes[0].errorbar(x_pos + 0.2, summary_df['cv_r2_mean'], 
-                     yerr=summary_df['cv_r2_std'], fmt='o', 
-                     label='CV R² (mean ± std)', capsize=5)
+    bars1 = axes[0].bar(x_pos - 0.2, summary_df['score'], 0.4, 
+                        label='Train Score', alpha=0.7)
+    axes[0].errorbar(x_pos + 0.2, summary_df['cv_score_mean'], 
+                     yerr=summary_df['cv_score_std'], fmt='o', 
+                     label='CV Score (mean ± std)', capsize=5)
+    
     axes[0].set_xlabel('Target Variable')
-    axes[0].set_ylabel('R²')
-    axes[0].set_title('Embedding Regression Performance')
+    axes[0].set_ylabel('Score')
+    axes[0].set_title('Model Performance')
     axes[0].set_xticks(x_pos)
-    axes[0].set_xticklabels(summary_df['target'], rotation=45, ha='right')
+    axes[0].set_xticklabels([f"{row['target']}\n({row['model_type']})\n{row['scoring_metric']}" 
+                            for _, row in summary_df.iterrows()], 
+                          rotation=45, ha='right')
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
     
+    # Add score values on bars
+    for i, (bar, score) in enumerate(zip(bars1, summary_df['score'])):
+        axes[0].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                     f'{score:.3f}', ha='center', va='bottom', fontsize=8)
+    
     # Significance
     colors = ['red' if sig else 'gray' for sig in summary_df['significant']]
-    axes[1].bar(x_pos, -np.log10(summary_df['p_value']), color=colors, alpha=0.7)
+    bars2 = axes[1].bar(x_pos, -np.log10(summary_df['p_value'].fillna(1)), 
+                        color=colors, alpha=0.7)
     axes[1].axhline(-np.log10(0.05), color='red', linestyle='--', label='p = 0.05')
     axes[1].set_xlabel('Target Variable')
     axes[1].set_ylabel('-log₁₀(p-value)')
     axes[1].set_title('Statistical Significance')
     axes[1].set_xticks(x_pos)
-    axes[1].set_xticklabels(summary_df['target'], rotation=45, ha='right')
+    axes[1].set_xticklabels([f"{row['target']}" for _, row in summary_df.iterrows()], 
+                           rotation=45, ha='right')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     
@@ -310,28 +378,44 @@ def plot_regression_results(results):
     return summary_df
 
 def analyze_coefficient_patterns(results, n_top=3, embedding_names=None):
-    """
-    Analyze which embedding dimensions are most important across targets
-    """
-    print("Top embedding dimensions by target:")
-    print("=" * 50)
+    """Analyze which embedding dimensions are most important across targets"""
+    print("Top embedding dimensions/features by target:")
+    print("=" * 60)
     
     for target, result in results.items():
-        coeffs = result['coefficients']
-        top_indices = np.argsort(np.abs(coeffs))[-n_top:][::-1]
-        
         print(f"\n{target}:")
-        print(f"  R² = {result['r2']:.3f}, p = {result['p_value']:.3f}")
-        for i, idx in enumerate(top_indices):
-            if not embedding_names:
-                print(f"  Dim {idx}: {coeffs[idx]:+.3f}")
+        print(f"  {result['scoring_metric']} = {result['primary_score']:.3f}, p = {result['p_value']:.3f}")
+        print(f"  Model: {result['model_type']}")
+        
+        if 'coefficients' in result:
+            # Linear model coefficients
+            coeffs = result['coefficients']
+            if coeffs.ndim > 1:  # Handle multi-class case
+                coeffs = np.abs(coeffs).mean(axis=0)
+            top_indices = np.argsort(np.abs(coeffs))[-n_top:][::-1]
+            
+            print(f"  Top coefficients:")
+            for i, idx in enumerate(top_indices):
+                if embedding_names and idx < len(embedding_names):
+                    print(f"    {embedding_names[idx]}: {coeffs[idx]:+.3f}")
+                else:
+                    print(f"    Dim {idx}: {coeffs[idx]:+.3f}")
+                    
+        elif 'feature_importances' in result:
+            # Tree-based model feature importances
+            importances = result['feature_importances']
+            top_indices = np.argsort(importances)[-n_top:][::-1]
+            
+            print(f"  Top feature importances:")
+            for i, idx in enumerate(top_indices):
+                if embedding_names and idx < len(embedding_names):
+                    print(f"    {embedding_names[idx]}: {importances[idx]:.3f}")
+                else:
+                    print(f"    Dim {idx}: {importances[idx]:.3f}")
 
-# Example usage
 def main(embedding_type: int = PARTICIPANT_EMB):
-    """
-    Main analysis pipeline
-    """
-    # Load your data (replace with actual file path)
+    """Main analysis pipeline"""
+    # Load your data
     df = pd.read_csv(path_data)
     
     # map participant ids onto arange
@@ -350,7 +434,7 @@ def main(embedding_type: int = PARTICIPANT_EMB):
     demographic_df = extract_participant_demographics(df, demo_cols=demo_cols)
     print("Demographic variables:", list(demographic_df.columns))
     
-    # Create dummy embeddings
+    # Get embeddings or coefficients
     if embedding_type == PARTICIPANT_EMB:
         agent_rnn = setup_agent_rnn(
             class_rnn=rnn_class, 
@@ -359,6 +443,7 @@ def main(embedding_type: int = PARTICIPANT_EMB):
         )
         embeddings = get_embeddings(agent_rnn=agent_rnn)
         embedding_names = None
+        print(f"Using participant embeddings, shape: {embeddings.shape}")
     else:
         agent_spice = setup_agent_spice(
             class_rnn=rnn_class,
@@ -373,6 +458,8 @@ def main(embedding_type: int = PARTICIPANT_EMB):
             sindy_library_polynomial_degree=1,
         )
         embeddings, embedding_names = get_coefficients(agent_spice=agent_spice)
+        print(f"Using SINDy coefficients, shape: {embeddings.shape}")
+        print(f"Coefficient names: {len(embedding_names)} features")
     
     # Perform regression analysis
     print("\nPerforming embedding regression analysis...")
@@ -384,7 +471,7 @@ def main(embedding_type: int = PARTICIPANT_EMB):
     
     # Display results
     summary_df = plot_regression_results(results)
-    analyze_coefficient_patterns(results)
+    analyze_coefficient_patterns(results, embedding_names=embedding_names)
     
     # Print summary table
     print("\n" + "="*80)

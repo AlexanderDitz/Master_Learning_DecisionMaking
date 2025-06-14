@@ -18,7 +18,7 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
 
 
-use_test = False
+use_test = True
 
 # -------------------------------------------------------------------------------
 # AGENT CONFIGURATIONS
@@ -36,28 +36,29 @@ use_test = False
 # additional_inputs = ['age']
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
+# dataset = 'dezfouli2019'
+# train_test_ratio = [3, 6, 9]
+# models_benchmark = ['ApBr', 'ApBrBch']
+# sindy_config = SindyConfig_dezfouli2019
+# rnn_class = RLRNN_dezfouli2019
+# additional_inputs = []
+
+# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
-models_benchmark = ['ApBr', 'ApBrBch']
+models_benchmark = ['ApAnBrBcfAchBch']#['ApBr', 'ApBrBch', 'ApAnBrBcfAchBch']
 sindy_config = SindyConfig_dezfouli2019
 rnn_class = RLRNN_dezfouli2019
 additional_inputs = []
 
-# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
-# dataset = 'dezfouli2019'
-# train_test_ratio = [3, 6, 9]
-# models_benchmark = ['ApBr', 'ApBrBch']
-# sindy_config = SindyConfig_dezfouli2019_blocks
-# rnn_class = RLRNN_dezfouli2019_blocks
-# additional_inputs = []
-
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
 path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0001_ep4096.pkl'
-path_model_spice = None#f'params/{dataset}/spice_{dataset}_rldm_l1emb_0_001_l2_0_0001.pkl'
+# path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_training_0_5.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
-path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}.pkl'
+path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}_training_0_5.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
@@ -158,10 +159,8 @@ n_parameters_spice = 0
 # split data into according to train_test_ratio
 if isinstance(train_test_ratio, float):
     dataset_train, dataset_test = split_data_along_timedim(dataset, split_ratio=train_test_ratio)
-    if not use_test:
-        dataset_test = dataset_train
     data_input = dataset.xs
-    data_test = dataset_test.xs[..., :agent_baseline[0]._n_actions]
+    data_test = dataset.xs[..., :agent_baseline[0]._n_actions]
     # n_trials_test = dataset_test.xs.shape[1]
     
 elif isinstance(train_test_ratio, list) or isinstance(train_test_ratio, tuple):
@@ -185,8 +184,8 @@ scores = np.zeros((5+len(models_benchmark), 3))
 failed_attempts = 0
 considered_trials = 0
 
-scores_participant = np.zeros((len(scores), len(dataset)))
-best_benchmarks_participant, considered_trials_participant = np.array(['' for _ in range(len(dataset))]), np.zeros(len(dataset))
+metric_participant = np.zeros((len(scores), len(dataset_test)))
+best_benchmarks_participant, considered_trials_participant = np.array(['' for _ in range(len(dataset_test))]), np.zeros(len(dataset_test))
 
 for index_data in tqdm(range(len(dataset_test))):
     try:
@@ -217,7 +216,7 @@ for index_data in tqdm(range(len(dataset_test))):
             index_end = n_trials
         
         scores_baseline = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_baseline[index_start:index_end], n_parameters=n_parameters_baseline))
-        scores_participant[0, index_data] += scores_baseline[0]
+        metric_participant[0, index_data] += scores_baseline[0]
         
         # get scores of all mcmc benchmark models but keep only the best one for each session
         if path_model_benchmark:
@@ -228,20 +227,20 @@ for index_data in tqdm(range(len(dataset_test))):
             index_best_benchmark = np.argmin(scores_benchmark, axis=0)[1] # index 0 -> NLL is indicating metric
             n_parameters_benchmark += mapping_n_parameters_benchmark[models_benchmark[index_best_benchmark]]
             best_benchmarks_participant[index_data] += models_benchmark[index_best_benchmark]
-            scores_participant[1, index_data] += scores_benchmark[index_best_benchmark, 0]
-            scores_participant[5:, index_data] += scores_benchmark[:, 0]
+            metric_participant[1, index_data] += scores_benchmark[index_best_benchmark, 0]
+            metric_participant[5:, index_data] += scores_benchmark[:, 0]
         
         # Benchmark LSTM
         if path_model_benchmark_lstm:
             probs_lstm = get_update_dynamics(experiment=data_input[index_data], agent=agent_lstm)[1]
             scores_lstm = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_lstm[index_start:index_end], n_parameters=n_parameters_lstm))
-            scores_participant[2, index_data] += scores_lstm[0]
+            metric_participant[2, index_data] += scores_lstm[0]
             
         # SPICE-RNN
         if path_model_rnn is not None:
             probs_rnn = get_update_dynamics(experiment=data_input[index_data], agent=agent_rnn)[1]
             scores_rnn = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_rnn[index_start:index_end], n_parameters=n_parameters_rnn))
-            scores_participant[3, index_data] = scores_rnn[0]
+            metric_participant[3, index_data] = scores_rnn[0]
             
         # SPICE
         if path_model_spice is not None:
@@ -252,7 +251,7 @@ for index_data in tqdm(range(len(dataset_test))):
             probs_spice = get_update_dynamics(experiment=data_input[index_data], agent=agent_spice)[1]
             scores_spice = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_spice[index_start:index_end], n_parameters=n_params_spice))
             n_parameters_spice += n_params_spice
-            scores_participant[4, index_data] = scores_spice[0]
+            metric_participant[4, index_data] = scores_spice[0]
         
         considered_trials_participant[index_data] += index_end - index_start
         considered_trials += index_end - index_start
@@ -291,6 +290,10 @@ avg_trial_likelihood = np.exp(- scores[:, 0])
 # avg_trial_likelihood = np.exp(- scores_participant.T / (considered_trials_participant.reshape(-1, 1) * agent_baseline[0]._n_actions))
 # scores[:, 0] = scores[:, 0] / len(dataset)
 
+metric_participant_std = (metric_participant/considered_trials_participant).std(axis=1)
+avg_trial_likelihood_participant = np.exp(- metric_participant / considered_trials_participant)
+avg_trial_likelihood_participant_std = avg_trial_likelihood_participant.std(axis=1)
+
 # pd.DataFrame(data=np.concatenate((np.array(best_benchmarks_participant).reshape(-1, 1), avg_trial_likelihood), axis=1), columns=['benchmark model', 'baseline','benchmark', 'lstm', 'rnn', 'spice']+models_benchmark).to_csv('best_scores_benchmark.csv')
 
 # compute average number of parameters
@@ -303,7 +306,7 @@ n_parameters = np.array([
     n_parameters_spice/(len(dataset)-failed_attempts),
     ]+n_parameters_benchmark_single_models)
 
-scores = np.concatenate((avg_trial_likelihood.reshape(-1, 1), scores, n_parameters.reshape(-1, 1)), axis=1)
+scores = np.concatenate((avg_trial_likelihood.reshape(-1, 1), avg_trial_likelihood_participant_std.reshape(-1, 1), scores[:, :1], metric_participant_std.reshape(-1, 1), scores[:, 1:], n_parameters.reshape(-1, 1)), axis=1)
 
 
 # ------------------------------------------------------------
@@ -315,6 +318,6 @@ print(f'Failed attempts: {failed_attempts}')
 df = pd.DataFrame(
     data=scores,
     index=['Baseline', 'Benchmark', 'LSTM', 'RNN', 'SPICE']+models_benchmark,
-    columns = ('Trial Lik.', 'NLL', 'BIC', 'AIC', 'n_parameters'),
+    columns = ('Trial Lik.', '(std)', 'NLL', '(std)', 'BIC', 'AIC', 'n_parameters'),
     )
 print(df)

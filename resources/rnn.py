@@ -691,7 +691,7 @@ class RLRNN_eckstein2022(BaseRNN):
         logits = self.post_forward_pass(logits, batch_first)
                 
         return logits, self.get_state()
-    
+        
 
 class RLRNN_eckstein2022_rearranged(BaseRNN):
     

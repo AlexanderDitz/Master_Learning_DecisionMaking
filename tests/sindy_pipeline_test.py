@@ -16,13 +16,13 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 # class_rnn = RLRNN
 # sindy_config = SindyConfig
 
-# path_data = 'data/eckstein2022/eckstein2022_age.csv'
-# path_model = 'params/eckstein2022/rnn_eckstein2022_rldm_l1emb_0_001_l2_0_0001.pkl'
-# sindy_config = SindyConfig_eckstein2022
-# class_rnn = RLRNN_eckstein2022
-# additional_inputs = None
-# # class_rnn = RLRNN_meta_eckstein2022
-# # additional_inputs = ['age']
+path_data = 'data/eckstein2022/eckstein2022_age.csv'
+path_model = 'params/eckstein2022/rnn_eckstein2022_rldm_l1emb_0_001_l2_0_0001.pkl'
+sindy_config = SindyConfig_eckstein2022
+class_rnn = RLRNN_eckstein2022
+additional_inputs = None
+# class_rnn = RLRNN_meta_eckstein2022
+# additional_inputs = ['age']
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_rldm_l1emb_0_001_l2_0_0001.pkl'
@@ -30,11 +30,11 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 # sindy_config = SindyConfig_dezfouli2019
 # additional_inputs = None
 
-path_data = 'data/dezfouli2019/dezfouli2019.csv'
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
-class_rnn = RLRNN_dezfouli2019_blocks
-sindy_config = SindyConfig_dezfouli2019_blocks
-additional_inputs = None
+# path_data = 'data/dezfouli2019/dezfouli2019.csv'
+# path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
+# class_rnn = RLRNN_dezfouli2019_blocks
+# sindy_config = SindyConfig_dezfouli2019_blocks
+# additional_inputs = None
 
 # -------------------------------------------------------------------------------
 # SPICE PIPELINE
@@ -49,7 +49,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     save = False,
     
     # general recovery parameters
-    participant_id=0,
+    participant_id=1,
     filter_bad_participants=False,
     use_optuna=False,
     pruning=False,

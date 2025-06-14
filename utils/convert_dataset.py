@@ -107,6 +107,18 @@ def convert_dataset(
         for not_found in additional_input_not_found:
             additional_inputs.remove(not_found)
     
+    # convert non-numerical items in additional inputs
+    if additional_inputs:
+        for index, additional in enumerate(additional_inputs):
+            if isinstance(df[additional].values[0], str) and not df[additional].values[0].isdigit():
+                # Map unique participant IDs to numeric values
+                id_map = {pid: idx for idx, pid in enumerate(df[additional].unique())} #this line
+                # Replace participant IDs with numeric values
+                df[additional] = df[additional].map(id_map)    
+                
+                print(f"Values in column {additional} in dataset {file} are not numerical. Converted values are:")
+                print(id_map)
+            
     n_ids = 0
     if df_participant_id is not None:
         n_ids += 1
