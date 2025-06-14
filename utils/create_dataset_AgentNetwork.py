@@ -69,7 +69,7 @@ def main(path_rnn, class_rnn, sindy_config, path_save, n_trials_per_session):
     
 
 if __name__=='__main__':
-    path_rnn = 'params/eckstein2022/rnn_eckstein2022_l1_0_005.pkl'
+    path_rnn = 'params/eckstein2022/rnn_eckstein2022_rldm_l1emb_0_001_l2_0_0005.pkl'
     path_data = 'data/eckstein2022/eckstein2022.csv'
     class_rnn = RLRNN_eckstein2022
     sindy_config = SindyConfig_eckstein2022

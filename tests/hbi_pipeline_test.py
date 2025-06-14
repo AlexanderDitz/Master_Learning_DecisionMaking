@@ -13,7 +13,7 @@ from benchmarking.hierarchical_bayes_numpyro import main
 # train_test_ratio = 1.0
 
 # models = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
-# data = 'data/eckstein2022/eckstein2022_age.csv'
+# data = 'data/eckstein2022/eckstein2022.csv'
 # output_file = 'params/eckstein2022_long_lr_0_001/mcmc_eckstein2022.nc'
 # train_test_ratio = 0.8
 

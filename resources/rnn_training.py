@@ -160,19 +160,19 @@ def batch_train(
         if torch.is_grad_enabled():
             
             # alternative l1-reg -> penalize additionally the activations of the embedding
-            if hasattr(model, 'participant_embedding'):
-                id_array = torch.arange(0, model.n_participants, dtype=torch.int32, device=model.device).view(1, -1)
-                embedding = torch.nn.functional.leaky_relu(model.participant_embedding(id_array), negative_slope=0.001)
-                # compute l1 regularization on activations
-                l1_reg = l1_weight_decay * embedding.abs().mean()
-            else:
-                # original: l1 weight decay to enforce sparsification in the network (except for participant embedding)
-                l1_reg = l1_weight_decay * torch.stack([
-                    param.abs().sum()
-                    for name, param in model.named_parameters()
-                    # if "embedding" not in name
-                    # if "embedding" in name
-                    ]).mean()
+            # if hasattr(model, 'participant_embedding'):
+            #     id_array = torch.arange(0, model.n_participants, dtype=torch.int32, device=model.device).view(1, -1)
+            #     embedding = torch.nn.functional.leaky_relu(model.participant_embedding(id_array), negative_slope=0.001)
+            #     # compute l1 regularization on activations
+            #     l1_reg = l1_weight_decay * embedding.abs().mean()
+            # else:
+            #     # original: l1 weight decay to enforce sparsification in the network (except for participant embedding)
+            #     l1_reg = l1_weight_decay * torch.stack([
+            #         param.abs().sum()
+            #         for name, param in model.named_parameters()
+            #         # if "embedding" not in name
+            #         # if "embedding" in name
+            #         ]).mean()
                 
                 
             # Regularization of the embedding space
@@ -199,7 +199,7 @@ def batch_train(
             # else:
             #     embedding_reg = 0
                 
-            loss = loss_step + l1_reg# + embedding_reg
+            loss = loss_step# + l1_reg# + embedding_reg
             
             # backpropagation
             optimizer.zero_grad()

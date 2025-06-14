@@ -10,25 +10,25 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_dezfouli2019_blocks, 
 # SPICE CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
-# path_model = 'params/eckstein2022/rnn_eckstein2022_rldm_l1emb_0_001_l2_0_0005.pkl'
-# path_data = 'data/eckstein2022/eckstein2022_age.csv'
-# train_test_ratio = 0.8
-# class_rnn = RLRNN_eckstein2022
-# additional_inputs = None
-# # class_rnn = RLRNN_meta_eckstein2022
-# # additional_inputs = ['age']
+path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0001.pkl'
+path_data = 'data/eckstein2022/eckstein2022_age.csv'
+train_test_ratio = 0.8
+class_rnn = RLRNN_eckstein2022
+additional_inputs = None
+# class_rnn = RLRNN_meta_eckstein2022
+# additional_inputs = ['age']
 
 # class_rnn = RLRNN_dezfouli2019
-# train_test_ratio = [3, 6, 9]  # list of test sessions
-# path_model = 'params/dezfouli2019/rnn_dezfouli2019_rldm_l1emb_0_001_l2_0_0001.pkl'
+# train_test_ratio = [1, 3, 4, 6, 8, 10]   # list of test sessions
+# path_model = 'params/dezfouli2019/rnn_dezfouli2019.pkl'
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # additional_inputs = None
 
-class_rnn = RLRNN_dezfouli2019_blocks
-train_test_ratio = [3, 6, 9]  # list of test sessions
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
-path_data = 'data/dezfouli2019/dezfouli2019.csv'
-additional_inputs = None
+# class_rnn = RLRNN_dezfouli2019_blocks
+# train_test_ratio = [1, 3, 4, 6, 8, 10]  # list of test sessions
+# path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
+# path_data = 'data/dezfouli2019/dezfouli2019.csv'
+# additional_inputs = None
 
 # -------------------------------------------------------------------------------
 # SPICE PIPELINE
@@ -37,7 +37,7 @@ additional_inputs = None
 _, loss = pipeline_rnn.main(
     
     # sparsification parameter
-    l1_weight_decay=0.001,
+    l1_weight_decay=0.,
     # generalization parameters
     l2_weight_decay=0.0001,
     dropout=0.25,
@@ -45,7 +45,7 @@ _, loss = pipeline_rnn.main(
     
     # general training parameters
     checkpoint=False,
-    epochs=32768, # <- 2^16
+    epochs=4096, # <- 2^16
     scheduler=True,
     learning_rate=1e-2,
     
