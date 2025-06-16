@@ -18,8 +18,6 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
 
 
-use_test = True
-
 # -------------------------------------------------------------------------------
 # AGENT CONFIGURATIONS
 # -------------------------------------------------------------------------------
@@ -52,13 +50,15 @@ rnn_class = RLRNN_dezfouli2019
 additional_inputs = []
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
+use_test = True
+
 path_data = f'data/{dataset}/{dataset}.csv'
 # path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_training_0_5.pkl'
-path_model_spice = None#f'params/{dataset}/spice_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0.pkl'
+path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
-path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}_training_0_5.pkl'
+path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}_training_0_5.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
