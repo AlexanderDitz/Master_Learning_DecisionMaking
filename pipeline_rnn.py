@@ -95,7 +95,8 @@ def main(
       confirmation_bias=confirmation_bias, 
       beta_choice=beta_choice, 
       alpha_choice=alpha_choice,
-      alpha_counterfactual=alpha_counterfactual, 
+      alpha_counterfactual_reward=alpha_counterfactual,
+      alpha_counterfactual_penalty=alpha_counterfactual, 
       parameter_variance=parameter_variance,
       )
     if reward_prediction_error is not None:

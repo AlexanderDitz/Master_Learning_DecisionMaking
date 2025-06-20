@@ -10,17 +10,18 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_dezfouli2019_blocks, 
 # SPICE CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
-path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0001.pkl'
-path_data = 'data/eckstein2022/eckstein2022_age.csv'
+# path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0005.pkl'
+path_model = 'params/dummy_rnn.pkl'
+path_data = None#'data/eckstein2022/eckstein2022.csv'
 train_test_ratio = 0.8
 class_rnn = RLRNN_eckstein2022
 additional_inputs = None
-# class_rnn = RLRNN_meta_eckstein2022
-# additional_inputs = ['age']
+# # class_rnn = RLRNN_meta_eckstein2022
+# # additional_inputs = ['age']
 
 # class_rnn = RLRNN_dezfouli2019
-# train_test_ratio = [1, 3, 4, 6, 8, 10]   # list of test sessions
-# path_model = 'params/dezfouli2019/rnn_dezfouli2019.pkl'
+# train_test_ratio = [3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
+# path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_0001.pkl'
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # additional_inputs = None
 
@@ -39,14 +40,14 @@ _, loss = pipeline_rnn.main(
     # sparsification parameter
     l1_weight_decay=0.,
     # generalization parameters
-    l2_weight_decay=0.0001,
+    l2_weight_decay=0.0005,
     dropout=0.25,
     train_test_ratio=train_test_ratio,
     
     # general training parameters
     checkpoint=False,
-    epochs=4096, # <- 2^16
-    scheduler=True,
+    epochs=128, # <- 2^16
+    scheduler=False,
     learning_rate=1e-2,
     
     # hand-picked params
@@ -65,12 +66,12 @@ _, loss = pipeline_rnn.main(
     n_sessions=128,
     n_trials=200,
     sigma=0.2,
-    beta_reward=1.,
+    beta_reward=3.,
     alpha_reward=0.25,
-    alpha_penalty=0.25,
-    forget_rate=0.3,
+    alpha_penalty=0.5,
+    forget_rate=0.,
     confirmation_bias=0.,
-    beta_choice=1.,
+    beta_choice=0.,
     alpha_choice=1.,
     counterfactual=False,
     alpha_counterfactual=0.,

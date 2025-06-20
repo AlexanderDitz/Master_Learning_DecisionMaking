@@ -166,13 +166,13 @@ def batch_train(
             #     # compute l1 regularization on activations
             #     l1_reg = l1_weight_decay * embedding.abs().mean()
             # else:
-            #     # original: l1 weight decay to enforce sparsification in the network (except for participant embedding)
-            #     l1_reg = l1_weight_decay * torch.stack([
-            #         param.abs().sum()
-            #         for name, param in model.named_parameters()
-            #         # if "embedding" not in name
-            #         # if "embedding" in name
-            #         ]).mean()
+            # original: l1 weight decay to enforce sparsification in the network (except for participant embedding)
+            # l1_reg = l1_weight_decay * torch.stack([
+            #     torch.pow(param, 2).mean()
+            #     for name, param in model.named_parameters()
+            #     # if "embedding" not in name
+            #     # if "embedding" in name
+            #     ])
                 
                 
             # Regularization of the embedding space

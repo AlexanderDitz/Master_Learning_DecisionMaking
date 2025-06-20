@@ -2,7 +2,8 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from benchmarking.hierarchical_bayes_numpyro import main
+# from benchmarking.hierarchical_bayes_numpyro import main
+from benchmarking.hierarchical_bayes_dezfouli2019 import main
 
 # import jax
 # jax.config.update('jax_disable_jit', True)
