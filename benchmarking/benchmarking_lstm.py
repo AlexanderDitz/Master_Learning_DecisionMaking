@@ -193,8 +193,8 @@ if __name__=='__main__':
     n_cells = 32
     n_epochs = 3000
     lr = 1e-3
-    # split_ratio = [3, 6, 9]
-    split_ratio = [1, 3, 4, 6, 8, 10]
+    split_ratio = [3, 6, 9]
+    # split_ratio = [1, 3, 4, 6, 8, 10]
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     main(path_save_model=path_model_save, path_data=path_data, n_actions=n_actions, n_cells=n_cells, n_epochs=n_epochs, lr=lr, split_ratio=split_ratio, device=device)

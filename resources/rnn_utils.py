@@ -269,3 +269,45 @@ def split_data_along_sessiondim(dataset: DatasetRNN, split_ratio: float = None, 
     
     
     return DatasetRNN(train_xs, train_ys, device=device), DatasetRNN(test_xs, test_ys, device=device)
+
+
+def reshape_data_along_participantdim(dataset: DatasetRNN, device: torch.device = torch.device('cpu')):
+    """Reshape the data along the participant dim.
+    
+    Args:
+        dataset (DatasetRNN): current dataset of shape (participants*sessions*, trial, features)
+        device (torch.device, optional): Defaults to torch.device('cpu').
+
+    Returns:
+        DatasetRNN: restructured dataset with shape (participant, session, trial, features)
+    """
+    
+    xs, ys = dataset.xs.cpu(), dataset.ys.cpu()
+    
+    # get participant ids
+    participants_ids = xs[:, 0, -1].unique()
+    
+    # setup new variables
+    xs_new, ys_new = [], []
+    n_sessions_max = 0
+    for pid in participants_ids:
+        # collect participant-level sessions
+        mask_ids = xs[:, 0, -1] == pid
+        xs_new.append(xs[mask_ids])
+        ys_new.append(ys[mask_ids])
+        # correct number of sessions for each participant if maximum number of session changed
+        if len(xs[mask_ids]) > n_sessions_max:
+            n_sessions_max = max(len(xs[mask_ids]), n_sessions_max)
+            for xs_i, ys_i in zip(xs_new, ys_new):
+                if xs_i.shape[0] < n_sessions_max:
+                    pad_sessions_xs = torch.zeros((n_sessions_max-xs_i.shape[0], *xs_i.shape[1:]), device=xs_i.device)
+                    # set ID dimensions as full arrays without -1
+                    pad_sessions_xs[..., :-3] += -1
+                    # setting only participant ID makes sense because experiment and session IDs do not affect the following computations
+                    pad_sessions_xs[..., -1] += xs_i[0, 0, -1]
+                    xs_i = torch.concat((xs_i, pad_sessions_xs))
+                    pad_sessions_ys = torch.zeros((n_sessions_max-ys_i.shape[0], *ys_i.shape[1:]), device=ys_i.device) - 1
+                    ys_i = torch.concat((ys_i, pad_sessions_ys))
+    
+    # setup new dataset with shape (participant, session, trial, features)
+    return DatasetRNN(torch.stack(xs_new), torch.stack(ys_new), device=device)

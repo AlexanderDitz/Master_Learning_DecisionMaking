@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.fit_sindy import fit_sindy_pipeline
 from resources.bandits import AgentSpice, AgentNetwork, get_update_dynamics
 from resources.sindy_utils import DatasetRNN
-from resources.model_evaluation import log_likelihood
+from resources.model_evaluation import log_likelihood, bayesian_information_criterion
 
 
 def optimize_for_participant(
@@ -87,15 +87,14 @@ def optimize_for_participant(
             spice_modules[rnn_module][participant_id] = sindy_modules[rnn_module]
         
         agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions)
-        
+                
         # compute error
         probs_spice = get_update_dynamics(experiment=data.xs[0], agent=agent_spice)[1]
-        lik_spice = np.exp(log_likelihood(data.xs[0, :probs_spice.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
-        error = metric_rnn - lik_spice
-        # with torch.no_grad():
-        #     logits_rnn = agent_rnn._model(data.xs, batch_first=True)[0].flatten()
-        #     logits_spice = agent_spice._model(data.xs, batch_first=True)[0].flatten()
-        # error = torch.mean((logits_rnn - logits_spice)**2).item()
+        # lik_spice = np.exp(log_likelihood(data.xs[0, :probs_spice.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
+        # error = metric_rnn - lik_spice
+        
+        error = bayesian_information_criterion(data.xs[0, :probs_spice.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice, n_parameters=agent_spice.count_parameters()[int(data.xs[0, 0, - 1].item())])
+        
         if error == np.nan:
             error = 1e3
             

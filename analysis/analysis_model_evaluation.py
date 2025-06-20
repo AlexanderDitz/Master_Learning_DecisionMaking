@@ -7,15 +7,20 @@ from tqdm import tqdm
 from copy import copy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# standard methods and classes used for every model evaluation
 from resources.model_evaluation import get_scores
-from utils.setup_agents import setup_agent_rnn, setup_agent_spice, setup_agent_mcmc
-from utils.convert_dataset import convert_dataset
 from resources.bandits import get_update_dynamics, AgentQ
-from benchmarking.hierarchical_bayes_numpyro import rl_model
-from benchmarking.lstm_training import setup_agent_lstm, RLLSTM
+from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
+from utils.setup_agents import setup_agent_rnn, setup_agent_spice
+from utils.convert_dataset import convert_dataset
+
+# dataset specific SPICE models
 from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_rearranged, RLRNN_dezfouli2019_blocks
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials, SindyConfig_dezfouli2019_blocks
-from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
+
+# dataset specific benchmarking models
+from benchmarking.benchmarking_lstm import setup_agent_lstm, RLLSTM
+from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc, gql_model
 
 
 # -------------------------------------------------------------------------------
@@ -34,30 +39,30 @@ from resources.rnn_utils import split_data_along_timedim, split_data_along_sessi
 # additional_inputs = ['age']
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-# dataset = 'dezfouli2019'
-# train_test_ratio = [3, 6, 9]
-# models_benchmark = ['ApBr', 'ApBrBch']
-# sindy_config = SindyConfig_dezfouli2019
-# rnn_class = RLRNN_dezfouli2019
-# additional_inputs = []
-
-# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
-models_benchmark = ['ApAnBrBcfAchBch']#['ApBr', 'ApBrBch', 'ApAnBrBcfAchBch']
+models_benchmark = ['gql_d2']
 sindy_config = SindyConfig_dezfouli2019
 rnn_class = RLRNN_dezfouli2019
 additional_inputs = []
+
+# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
+# dataset = 'dezfouli2019'
+# train_test_ratio = [3, 6, 9]
+# models_benchmark = ['ApAnBrBcfAchBch']#['ApBr', 'ApBrBch', 'ApAnBrBcfAchBch']
+# sindy_config = SindyConfig_dezfouli2019
+# rnn_class = RLRNN_dezfouli2019
+# additional_inputs = []
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
 use_test = True
 
 path_data = f'data/{dataset}/{dataset}.csv'
 # path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0.pkl'
+path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_0005.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_no_l1_l2_0_0005.pkl'
 path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
-path_model_benchmark = None#f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}_training_0_5.pkl'
 
 # -------------------------------------------------------------------------------
@@ -67,7 +72,7 @@ path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}_training_0_5.
 dataset = convert_dataset(path_data, additional_inputs=additional_inputs)[0]
 # use these participant_ids if not defined later
 participant_ids = dataset.xs[:, 0, -1].unique().cpu().numpy()
-    
+
 # ------------------------------------------------------------
 # Setup of agents
 # ------------------------------------------------------------
@@ -92,11 +97,6 @@ if path_model_benchmark:
     agent_benchmark = {}
     for model in models_benchmark:
         agent_benchmark[model] = setup_agent_mcmc(path_model=path_model_benchmark.replace('MODEL', model))
-    mapping_n_parameters_benchmark = {model: sum([letter.isupper() for letter in model]) for model in models_benchmark}
-    for model in mapping_n_parameters_benchmark:
-        # reduce for one parameter if Bcf is in model name because that one is either 1 or 0 and not fitted
-        if 'Bcf' in model:
-            mapping_n_parameters_benchmark[model] -= 1
 else:
     models_benchmark = []
 n_parameters_benchmark = 0
@@ -222,8 +222,9 @@ for index_data in tqdm(range(len(dataset_test))):
         if path_model_benchmark:
             scores_benchmark = np.zeros((len(models_benchmark), 3))
             for index_model, model in enumerate(models_benchmark):
-                probs_benchmark = get_update_dynamics(experiment=data_input[index_data], agent=agent_benchmark[model][index_data])[1]
-                scores_benchmark[index_model] += np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_benchmark[index_start:index_end], n_parameters=mapping_n_parameters_benchmark[model]))
+                n_parameters_model = agent_benchmark[model][index_data][1]
+                probs_benchmark = get_update_dynamics(experiment=data_input[index_data], agent=agent_benchmark[model][index_data][0])[1]
+                scores_benchmark[index_model] += np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_benchmark[index_start:index_end], n_parameters=n_parameters_model))
             index_best_benchmark = np.argmin(scores_benchmark, axis=0)[1] # index 0 -> NLL is indicating metric
             n_parameters_benchmark += mapping_n_parameters_benchmark[models_benchmark[index_best_benchmark]]
             best_benchmarks_participant[index_data] += models_benchmark[index_best_benchmark]

@@ -32,7 +32,7 @@ plt.rcParams['svg.fonttype'] = 'none'
 ###################################
 
 
-def _check_in_0_1_range(x, name):
+def check_in_0_1_range(x, name):
   if not (0 <= x <= 1):
     raise ValueError(
         f'Value of {name} must be in [0, 1] range. Found value of {x}.')
@@ -42,8 +42,126 @@ def _check_in_0_1_range(x, name):
 # GENERATIVE FUNCTIONS FOR AGENTS #
 ###################################
 
+class Agent:
+  """An agent that runs simple Q-learning for the two-armed bandit task.
 
-class AgentQ:
+  Attributes:
+    alpha: The agent's learning rate
+    beta: The agent's softmax temperature
+    q: The agent's current estimate of the reward probability on each arm
+  """
+
+  def __init__(
+      self,
+      n_actions: int = 2,
+      beta_reward: float = 3.,
+      alpha_reward: float = 0.2,
+      parameter_variance: Union[Dict[str, float], float] = 0.,
+      deterministic: bool = True,
+      ):
+    """Update the agent after one step of the task.
+    
+    Args:
+      alpha (float): Baseline learning rate between 0 and 1.
+      beta (float): softmax inverse noise temperature. Regulates the noise in the decision-selection.
+      n_actions: number of actions (default=2)
+      forget_rate (float): rate at which q values decay toward the initial values (default=0)
+      perseverance_bias (float): rate at which q values move toward previous action (default=0)
+      alpha_penalty (float): separate learning rate for negative outcomes
+      confirmation_bias (float): higher learning rate for believe-confirming outcomes and lower learning rate otherwise
+      parameter_variance (float): sets a variance around the model parameters' mean values to sample from a normal distribution e.g. at each new session. 0: no variance, -1: std = mean
+    """
+    
+    self._list_params = ['beta_reward', 'alpha_reward']
+    
+    self._mean_beta_reward = beta_reward
+    self._mean_alpha_reward = alpha_reward
+    
+    self._beta_reward = beta_reward
+    self._alpha_reward = alpha_reward
+    
+    self._n_actions = n_actions
+    self._q_init = 0.5
+    self._parameter_variance = self.check_parameter_variance(parameter_variance)
+    self._deterministic = deterministic
+    
+    check_in_0_1_range(alpha_reward, 'alpha')
+    
+  def check_parameter_variance(self, parameter_variance):
+    if isinstance(parameter_variance, float):
+      par_var_dict = {}
+      for key in self._list_params:
+        par_var_dict[key] = parameter_variance
+      parameter_variance = par_var_dict
+    elif isinstance(parameter_variance, dict):
+      # check that all keys in parameter_variance are valid
+      not_valid_keys = []
+      for key in parameter_variance:
+        if not key in self._list_params:
+          not_valid_keys.append(key)
+      if len(not_valid_keys) > 0:
+        raise ValueError(f'Some keys in parameter_variance are not valid ({not_valid_keys}). Valid keys are {self._list_params}')
+      # check that all parameters are available - set to 0 if a parameter is not available
+      for key in self._list_params:
+        if not key in parameter_variance:
+          parameter_variance[key] = 0.
+    return parameter_variance
+  
+  def new_sess(self, **kwargs):
+    """Reset the agent for the beginning of a new session."""
+    
+    self._state = {
+      'x_value_reward': np.full(self._n_actions, self._q_init),
+      'x_value_choice': np.zeros(self._n_actions),
+      'x_learning_rate_reward': np.zeros(self._n_actions),
+    }
+      
+  def get_choice_probs(self) -> np.ndarray:
+    """Compute the choice probabilities as softmax over q."""
+    decision_variable = np.exp(self.q)
+    choice_probs = decision_variable / np.sum(decision_variable)
+    return choice_probs
+
+  def get_choice(self):
+    """Sample choice."""
+    choice_probs = self.get_choice_probs()
+    if self._deterministic:
+      return np.argmax(choice_probs)
+    else:
+      return np.random.choice(self._n_actions, p=choice_probs)
+
+  def update(self, choice: int, reward: np.ndarray, *args, **kwargs):
+    """Update the agent after one step of the task.
+
+    Args:
+      choice: The choice made by the agent. 0 or 1
+      reward: The reward received by the agent. 0 or 1
+    """
+    
+    # adjust learning rates for every received reward
+    alpha = np.zeros_like(reward)
+    rpe = np.zeros_like(reward)
+    for action in range(self._n_actions):
+      if action == choice:
+        current_reward = reward[action] if np.min(reward) > -1 else reward[choice]
+        alpha[action] = self._alpha_reward
+        
+        # Reward-prediction-error
+        rpe[action] = current_reward - self._state['x_value_reward'][action]
+      
+    # (Counterfactual) Reward update
+    reward_update = alpha * rpe
+    
+    # Update memory state
+    self._state['x_value_reward'][choice] += reward_update[choice]
+    self._state['x_learning_rate_reward'] = alpha
+
+  @property
+  def q(self):
+    return self._state['x_value_reward']*self._beta_reward
+
+
+class AgentQ(Agent):
   """An agent that runs simple Q-learning for the y-maze tasks.
 
   Attributes:
@@ -80,6 +198,8 @@ class AgentQ:
       parameter_variance (float): sets a variance around the model parameters' mean values to sample from a normal distribution e.g. at each new session. 0: no variance, -1: std = mean
     """
     
+    super().__init__(n_actions=n_actions, parameter_variance=parameter_variance)
+    
     self._list_params = ['beta_reward', 'alpha_reward', 'alpha_penalty', 'alpha_counterfactual', 'beta_choice', 'alpha_choice', 'confirmation_bias', 'forget_rate']
     
     self._mean_beta_reward = beta_reward
@@ -108,36 +228,14 @@ class AgentQ:
     
     self.new_sess()
 
-    _check_in_0_1_range(alpha_reward, 'alpha')
+    check_in_0_1_range(alpha_reward, 'alpha')
     if alpha_penalty >= 0:
-      _check_in_0_1_range(alpha_penalty, 'alpha_penalty')
-    _check_in_0_1_range(alpha_counterfactual_reward, 'alpha_countefactual_reward')
-    _check_in_0_1_range(alpha_counterfactual_penalty, 'alpha_countefactual_penalty')
-    _check_in_0_1_range(alpha_choice, 'alpha_choice')
-    _check_in_0_1_range(forget_rate, 'forget_rate')
-    
-    self._reward_prediction_error = lambda q, reward: reward-q
-    
-  def check_parameter_variance(self, parameter_variance):
-    if isinstance(parameter_variance, float):
-      par_var_dict = {}
-      for key in self._list_params:
-        par_var_dict[key] = parameter_variance
-      parameter_variance = par_var_dict
-    elif isinstance(parameter_variance, dict):
-      # check that all keys in parameter_variance are valid
-      not_valid_keys = []
-      for key in parameter_variance:
-        if not key in self._list_params:
-          not_valid_keys.append(key)
-      if len(not_valid_keys) > 0:
-        raise ValueError(f'Some keys in parameter_variance are not valid ({not_valid_keys}). Valid keys are {self._list_params}')
-      # check that all parameters are available - set to 0 if a parameter is not available
-      for key in self._list_params:
-        if not key in parameter_variance:
-          parameter_variance[key] = 0.
-    return parameter_variance
-  
+      check_in_0_1_range(alpha_penalty, 'alpha_penalty')
+    check_in_0_1_range(alpha_counterfactual_reward, 'alpha_countefactual_reward')
+    check_in_0_1_range(alpha_counterfactual_penalty, 'alpha_countefactual_penalty')
+    check_in_0_1_range(alpha_choice, 'alpha_choice')
+    check_in_0_1_range(forget_rate, 'forget_rate')
+      
   def new_sess(self, sample_parameters=False, **kwargs):
     """Reset the agent for the beginning of a new session."""
     # self._q = np.full(self._n_actions, self._q_init)
@@ -170,18 +268,6 @@ class AgentQ:
         max_learning_rate = self._alpha_reward + self._confirmation_bias*0.25 <= 1 and self._alpha_penalty + self._confirmation_bias*0.25 <= 1
         min_learning_rate = self._alpha_reward + self._confirmation_bias*-0.25 >= 0 and self._alpha_penalty + self._confirmation_bias*-0.25 >= 0 
         sanity = max_learning_rate and min_learning_rate
-      
-  def get_choice_probs(self) -> np.ndarray:
-    """Compute the choice probabilities as softmax over q."""
-    decision_variable = np.exp(self.q)
-    choice_probs = decision_variable / np.sum(decision_variable)
-    return choice_probs
-
-  def get_choice(self) -> int:
-    """Sample a choice, given the agent's current internal state."""
-    choice_probs = self.get_choice_probs()
-    choice = np.random.choice(self._n_actions, p=choice_probs)
-    return choice
 
   def update(self, choice: int, reward: np.ndarray, *args, **kwargs):
     """Update the agent after one step of the task.
@@ -213,24 +299,10 @@ class AgentQ:
       current_reward = reward[action] if np.min(reward) > -1 else reward[choice]
       alpha[action] = alpha_r if current_reward > 0.5 else alpha_p
       
-      # if action == choice:
-      # add confirmation bias to learning rate
-      # Rollwage et al (2020): https://www.nature.com/articles/s41467-020-16278-6.pdf
-      # if self._confirmation_bias:  
-      # when any input to a cognitive mechanism is differentiable --> cognitive mechanism must be differentiable as well!
-      # differentiable confirmation bias:
-      # alpha[action] += self._confirmation_bias * ((self._q[action]-self._q_init) * (new_reward[action] - 0.5))
-      
-      # Positivity bias (https://www.sciencedirect.com/science/article/pii/S1364661322000894#bb0010)
-      # Explanation for confirmation bias: reduce the learning rate relative to the current belief by weighting with a factor relative to the learning rate
-      alpha[action] -= alpha[action] * self._confirmation_bias * self._state['x_value_reward'][action]
-      
-      # Just for testing: diminish learning rate with increasing choice value
-      # alpha[action] = np.clip(alpha[action] - self._state['x_value_choice'][action] * 0.25, 0.1, 1.0)
-      
       # Reward-prediction-error
-      rpe[action] = self._reward_prediction_error(self._state['x_value_reward'][action], current_reward if action==choice else 1-current_reward)
-          
+      r = current_reward if action==choice else 1-current_reward
+      rpe[action] = r - self._state['x_value_reward'][action]
+      
     # (Counterfactual) Reward update
     reward_update = alpha * rpe
     
@@ -249,9 +321,6 @@ class AgentQ:
   @property
   def q(self):
     return self._state['x_value_reward']*self._beta_reward + self._state['x_value_choice']*self._beta_choice
-  
-  def set_reward_prediction_error(self, update_rule: Callable):
-    self._reward_prediction_error = update_rule
 
 
 class AgentQ_SampleZeros(AgentQ):
@@ -325,7 +394,7 @@ class AgentQ_SampleZeros(AgentQ):
         self._alpha_penalty = alpha_mean
 
 
-class AgentNetwork:
+class AgentNetwork(Agent):
   """A class that allows running a pretrained RNN as an agent.
 
   Attributes:
@@ -346,11 +415,11 @@ class AgentNetwork:
           n_actions: number of permitted actions (default = 2)
       """
       
+      super().__init__(n_actions=n_actions)
+      
       assert isinstance(model_rnn, BaseRNN), "The passed model is not an instance of BaseRNN."
               
       self._deterministic = deterministic
-      self._q_init = 0.5
-      self._n_actions = n_actions
 
       self._model = model_rnn
       self._model = self._model.to(device)
@@ -390,22 +459,6 @@ class AgentNetwork:
           ]),
         axis=0)
     return logits
-  
-  def get_choice_probs(self) -> np.ndarray:
-    """Predict the choice probabilities as a softmax over output logits."""
-    # import warnings
-    # warnings.filterwarnings("error", category=RuntimeWarning)
-    decision_variable = self.get_logit()
-    choice_probs = np.exp(decision_variable) / np.sum(np.exp(decision_variable))
-    return choice_probs
-
-  def get_choice(self):
-    """Sample choice."""
-    choice_probs = self.get_choice_probs()
-    if self._deterministic:
-      return np.argmax(choice_probs)
-    else:
-      return np.random.choice(self._n_actions, p=choice_probs)
 
   def update(self, choice: float, reward: float, block: int = 0, additional_inputs: np.ndarray = torch.zeros(0), **kwargs):
     choice = torch.eye(self._n_actions)[int(choice)]
@@ -452,7 +505,7 @@ class AgentSpice(AgentNetwork):
     deterministic: bool = True,
   ):
     
-    super(AgentSpice, self).__init__(model_rnn=deepcopy(model_rnn), n_actions=n_actions, deterministic=deterministic)
+    super().__init__(model_rnn=deepcopy(model_rnn), n_actions=n_actions, deterministic=deterministic)
     
     self._model.integrate_sindy(sindy_modules)
   
@@ -820,9 +873,6 @@ class BanditSession(NamedTuple):
   
   def __getitem__(self, val):
     return self._replace(choices=self.choices.__getitem__(val), rewards=self.rewards.__getitem__(val), session=self.session.__getitem__(val), reward_probabilities=self.reward_probabilities.__getitem__(val), q=self.q.__getitem__(val), n_trials=self.choices.__getitem__(val).shape[0])
-  
-Agent = Union[AgentQ, AgentNetwork, AgentSpice]
-# Environment = Union[EnvironmentBanditsFlips, EnvironmentBanditsDrift, EnvironmentBanditsSwitch]
 
 
 ###############
@@ -974,24 +1024,24 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   else:
     raise TypeError("experiment is of not of class numpy.ndarray or torch.Tensor")
   
-  # initialize storages
-  q = np.zeros((n_trials, agent._n_actions))
-  q_reward = np.zeros((n_trials, agent._n_actions))
-  q_choice = np.zeros((n_trials, agent._n_actions))
-  q_trial = np.zeros((n_trials, agent._n_actions))
-  learning_rate_reward = np.zeros((n_trials, agent._n_actions))
-  choice_probs = np.zeros((n_trials, agent._n_actions))
-  
   # reset agent states according to ID
   agent.new_sess(participant_id=participant_id, experiment_id=experiment_id, additional_embedding_inputs=additional_inputs)
+  
+  # initialize storages
+  q = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
+  q_reward = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
+  q_choice = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
+  q_trial = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
+  learning_rate_reward = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
+  choice_probs = np.zeros((n_trials, agent._n_actions))
   
   for trial in range(n_trials):
     # track all states
     q[trial] = agent.q
-    q_reward[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
-    q_choice[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros(agent._n_actions)
-    q_trial[trial] = agent._state['x_value_trial'] if 'x_value_trial' in agent._state else np.zeros(agent._n_actions)
-    learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
+    q_reward[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros_like(agent._state['x_value_reward'])
+    q_choice[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros_like(agent._state['x_value_reward'])
+    q_trial[trial] = agent._state['x_value_trial'] if 'x_value_trial' in agent._state else np.zeros_like(agent._state['x_value_reward'])
+    learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros_like(agent._state['x_value_reward'])
     
     choice_probs[trial] = agent.get_choice_probs()
     
@@ -1002,7 +1052,7 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
       additional_inputs=additional_inputs,
       )
   
-  return (q, q_reward, q_choice, learning_rate_reward, q_trial), choice_probs, agent
+  return (q[..., :1], q_reward[..., :1], q_choice[..., :1], learning_rate_reward[..., :1], q_trial[..., :1]), choice_probs, agent
 
 
 ###############

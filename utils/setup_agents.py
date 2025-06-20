@@ -13,7 +13,6 @@ from resources.bandits import AgentSpice, AgentNetwork, AgentQ
 from resources.sindy_training import fit_spice
 from resources.sindy_utils import load_spice
 from utils.convert_dataset import convert_dataset
-from benchmarking.hierarchical_bayes_numpyro import rl_model
 
 
 def setup_rnn(
@@ -125,70 +124,3 @@ def setup_agent_spice(
         agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions)
         
     return agent_spice
-
-
-def setup_agent_mcmc(
-    path_model: str,
-) -> List[AgentQ]:
-    
-    # setup mcmc agent
-    with open(path_model, 'rb') as file:
-        mcmc = pickle.load(file)
-    
-    n_sessions = mcmc.get_samples()[list(mcmc.get_samples().keys())[0]].shape[-1]
-    
-    model_name = path_model.split('_')[-1].split('.')[0]
-    
-    agents = []
-    
-    for session in range(n_sessions):
-        parameters = {
-            'alpha_pos': 1,
-            'alpha_neg': -1,
-            'alpha_cf_pos': 0,
-            'alpha_cf_neg': 0,
-            'alpha_ch': 1,
-            'beta_ch': 0,
-            'beta_r': 1,
-        }
-        
-        for param in parameters:
-            if param in mcmc.get_samples():
-                samples = mcmc.get_samples()[param]
-                if len(samples.shape) == 2:
-                    samples = samples[:, session]
-                parameters[param] = np.mean(samples, axis=0)
-        
-        if np.mean(parameters['alpha_neg']) == -1:
-            parameters['alpha_neg'] = parameters['alpha_pos']
-        
-        if np.mean(parameters['alpha_cf_pos']) == 0 and 'Bcf' in model_name:
-            parameters['alpha_cf_pos'] = parameters['alpha_pos']
-        
-        if np.mean(parameters['alpha_cf_neg']) == 0 and 'Acfp' in model_name:
-            parameters['alpha_cf_neg'] = parameters['alpha_cf_pos']
-        elif np.mean(parameters['alpha_cf_neg']) == 0 and 'Bcf' in model_name:
-            parameters['alpha_cf_neg'] = parameters['alpha_neg']
-            
-        agents.append(AgentQ(
-            alpha_reward=parameters['alpha_pos'],
-            alpha_penalty=parameters['alpha_neg'],
-            alpha_counterfactual_reward=parameters['alpha_cf_pos']*(1 if 'Bcf' in model_name else 0),
-            alpha_counterfactual_penalty=parameters['alpha_cf_neg']*(1 if 'Bcf' in model_name else 0),
-            alpha_choice=parameters['alpha_ch'],
-            beta_reward=parameters['beta_r']*15, # same scaling as in mcmc model
-            beta_choice=parameters['beta_ch']*15, # same scaling as in mcmc model
-        ))
-    
-    return agents
-        
-    
-    
-
-
-if __name__ == '__main__':
-    
-    setup_agent_spice(
-        path_rnn = 'params/benchmarking/sugawara2021_143_4.pkl',
-        path_data = 'data/sugawara2021_143_processed.csv',
-    )

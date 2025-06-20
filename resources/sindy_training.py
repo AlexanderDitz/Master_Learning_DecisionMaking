@@ -184,12 +184,13 @@ def fit_spice(
         for rnn_module in rnn_modules:
             spice_modules_id[rnn_module][pid] = sindy_modules_id[rnn_module]
         agent_spice_id = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules_id, n_actions=agent_rnn._n_actions)
-        probs_rnn = get_update_dynamics(agent=agent_rnn, experiment=data_pid.xs[0])[1]
-        probs_spice = get_update_dynamics(agent=agent_spice_id, experiment=data_pid.xs[0])[1]
-        lik_rnn = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_rnn) / probs_rnn.size)
-        lik_spice_before_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
         
         if use_optuna:
+            probs_rnn = get_update_dynamics(agent=agent_rnn, experiment=data_pid.xs[0])[1]
+            probs_spice = get_update_dynamics(agent=agent_spice_id, experiment=data_pid.xs[0])[1]
+            lik_rnn = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_rnn) / probs_rnn.size)
+            lik_spice_before_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
+            
             if lik_rnn - lik_spice_before_optuna > optuna_threshold or np.isnan(lik_spice_before_optuna):
                 print(f"Likelihoods before optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE =  {np.round(lik_spice_before_optuna, 5)}; Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)}")
                 likelihoods_rnn.append(np.round(lik_rnn, 5))
@@ -322,6 +323,10 @@ def fit_spice(
                 print(f"Likelihoods after optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE =  {np.round(lik_spice_before_optuna, 5)} -> {np.round(lik_spice_after_optuna, 5)}, Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)} -> {np.round(lik_rnn-lik_spice_after_optuna, 5)}")
                 
                 if lik_spice_after_optuna > lik_spice_before_optuna or np.isnan(lik_spice_before_optuna):
+                    sindy_modules_id = sindy_modules_optuna
+                else:
+                    # TODO: Remove this again.
+                    print("WARNING: Using optuna spice-model in any case!")
                     sindy_modules_id = sindy_modules_optuna
                 
         for rnn_module in rnn_modules:

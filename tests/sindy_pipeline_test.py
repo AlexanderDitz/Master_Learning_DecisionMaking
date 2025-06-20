@@ -16,19 +16,19 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 # class_rnn = RLRNN
 # sindy_config = SindyConfig
 
-# path_data = 'data/eckstein2022/eckstein2022.csv'
-# path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0001.pkl'
-# sindy_config = SindyConfig_eckstein2022
-# class_rnn = RLRNN_eckstein2022
-# additional_inputs = None
+path_data = 'data/eckstein2022/eckstein2022.csv'
+path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0005.pkl'
+sindy_config = SindyConfig_eckstein2022
+class_rnn = RLRNN_eckstein2022
+additional_inputs = None
 # class_rnn = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
 
-path_data = 'data/dezfouli2019/dezfouli2019.csv'
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0.pkl'
-class_rnn = RLRNN_dezfouli2019
-sindy_config = SindyConfig_dezfouli2019
-additional_inputs = None
+# path_data = 'data/dezfouli2019/dezfouli2019.csv'
+# path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0.pkl'
+# class_rnn = RLRNN_dezfouli2019
+# sindy_config = SindyConfig_dezfouli2019
+# additional_inputs = None
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
@@ -57,13 +57,13 @@ agent_spice, features, loss = pipeline_sindy.main(
     # sindy parameters
     # optimizer_type="SR3_weighted_l1",
     train_test_ratio=0.8,
-    polynomial_degree=1,
+    polynomial_degree=2,
     optimizer_alpha=0.1,
     optimizer_threshold=0.05,
     n_trials_off_policy=1000,
     n_sessions_off_policy=1,
     n_trials_same_action_off_policy=5,
-    optuna_threshold=0.05,
+    optuna_threshold=0.001,
     optuna_trials_first_state=50,
     optuna_trials_second_state=0,
     verbose=False,
