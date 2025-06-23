@@ -19,8 +19,7 @@ from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_m
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials, SindyConfig_dezfouli2019_blocks
 
 # dataset specific benchmarking models
-from benchmarking.benchmarking_lstm import setup_agent_lstm, RLLSTM
-from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc, gql_model
+from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019_participants, benchmarking_lstm
 
 
 # -------------------------------------------------------------------------------
@@ -34,6 +33,8 @@ from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc, gql_model
 # sindy_config = SindyConfig_eckstein2022
 # rnn_class = RLRNN_eckstein2022
 # additional_inputs = None
+# setup_agent_mcmc = benchmarking_eckstein2022.setup_agent_mcmc
+# rl_model = benchmarking_eckstein2022.rl_model
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
@@ -41,10 +42,12 @@ from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc, gql_model
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
-models_benchmark = ['gql_d2']
+models_benchmark = ['gql_multi_session_d2']
 sindy_config = SindyConfig_dezfouli2019
 rnn_class = RLRNN_dezfouli2019
 additional_inputs = []
+setup_agent_mcmc = benchmarking_dezfouli2019_participants.setup_agent_mcmc
+gql_model = benchmarking_dezfouli2019_participants.gql_model
 
 # ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 # dataset = 'dezfouli2019'
@@ -103,7 +106,7 @@ n_parameters_benchmark = 0
 
 if path_model_benchmark_lstm:
     print("Setting up benchmark LSTM agent...")
-    agent_lstm = setup_agent_lstm(path_model=path_model_benchmark_lstm)
+    agent_lstm = benchmarking_lstm.setup_agent_lstm(path_model=path_model_benchmark_lstm)
     n_parameters_lstm = sum(p.numel() for p in agent_lstm._model.parameters() if p.requires_grad)
 else:
     n_parameters_lstm = 0
@@ -190,7 +193,7 @@ best_benchmarks_participant, considered_trials_participant = np.array(['' for _ 
 for index_data in tqdm(range(len(dataset_test))):
     try:
         # use whole session to include warm-up phase; make sure to exclude warm-up phase when computing metrics
-        pid = dataset_test.xs[index_data, 0, -1].item()
+        pid = dataset_test.xs[index_data, 0, -1].int().item()
         
         if not pid in participant_ids:
             print(f"Skipping participant {index_data} because they could not be found in the SPICE participants. Probably due to prior filtering of badly fitted participants.")
@@ -222,11 +225,11 @@ for index_data in tqdm(range(len(dataset_test))):
         if path_model_benchmark:
             scores_benchmark = np.zeros((len(models_benchmark), 3))
             for index_model, model in enumerate(models_benchmark):
-                n_parameters_model = agent_benchmark[model][index_data][1]
-                probs_benchmark = get_update_dynamics(experiment=data_input[index_data], agent=agent_benchmark[model][index_data][0])[1]
+                n_parameters_model = agent_benchmark[model][1][pid]
+                probs_benchmark = get_update_dynamics(experiment=data_input[index_data], agent=agent_benchmark[model][0][pid])[1]
                 scores_benchmark[index_model] += np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_benchmark[index_start:index_end], n_parameters=n_parameters_model))
             index_best_benchmark = np.argmin(scores_benchmark, axis=0)[1] # index 0 -> NLL is indicating metric
-            n_parameters_benchmark += mapping_n_parameters_benchmark[models_benchmark[index_best_benchmark]]
+            n_parameters_benchmark += agent_benchmark[models_benchmark[index_best_benchmark]][1][0]
             best_benchmarks_participant[index_data] += models_benchmark[index_best_benchmark]
             metric_participant[1, index_data] += scores_benchmark[index_best_benchmark, 0]
             metric_participant[5:, index_data] += scores_benchmark[:, 0]
@@ -298,13 +301,13 @@ avg_trial_likelihood_participant_std = avg_trial_likelihood_participant.std(axis
 # pd.DataFrame(data=np.concatenate((np.array(best_benchmarks_participant).reshape(-1, 1), avg_trial_likelihood), axis=1), columns=['benchmark model', 'baseline','benchmark', 'lstm', 'rnn', 'spice']+models_benchmark).to_csv('best_scores_benchmark.csv')
 
 # compute average number of parameters
-n_parameters_benchmark_single_models = [mapping_n_parameters_benchmark[model] for model in models_benchmark] if path_model_benchmark else []
+n_parameters_benchmark_single_models = [agent_benchmark[model][1][0] for model in models_benchmark] if path_model_benchmark else []
 n_parameters = np.array([
     n_parameters_baseline,
-    n_parameters_benchmark/(len(dataset)-failed_attempts) if path_model_benchmark else 0, 
+    n_parameters_benchmark/(len(dataset_test)-failed_attempts) if path_model_benchmark else 0, 
     n_parameters_lstm,
     n_parameters_rnn, 
-    n_parameters_spice/(len(dataset)-failed_attempts),
+    n_parameters_spice/(len(dataset_test)-failed_attempts),
     ]+n_parameters_benchmark_single_models)
 
 scores = np.concatenate((avg_trial_likelihood.reshape(-1, 1), avg_trial_likelihood_participant_std.reshape(-1, 1), scores[:, :1], metric_participant_std.reshape(-1, 1), scores[:, 1:], n_parameters.reshape(-1, 1)), axis=1)

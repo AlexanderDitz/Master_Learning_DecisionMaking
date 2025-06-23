@@ -1,33 +1,30 @@
 import sys
 import os
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from resources.bandits import AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset, get_update_dynamics
+from resources.bandits import Agent, AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset, get_update_dynamics
 from utils.plotting import plot_session
+from benchmarking import benchmarking_dezfouli2019_participants
 
-agent1 = AgentQ(
+
+agent1 = Agent(
     beta_reward=1.,
     alpha_reward=0.5,
-    alpha_penalty=0.5,
-    forget_rate=0.,
-    confirmation_bias=0.,
-    beta_choice=0.,
-    alpha_choice=0.,
-    alpha_counterfactual=0.,
     )
 
-agent2 = AgentQ(
-    beta_reward=1.,
-    alpha_reward=0.5,
-    alpha_penalty=0.5,
-    forget_rate=0.,
-    confirmation_bias=0.,
-    beta_choice=1.,
-    alpha_choice=.5,
-    alpha_counterfactual=0.,
-    )
+agent2 = benchmarking_dezfouli2019_participants.Agent_dezfouli2019(
+    n_actions=2,
+    d=2,
+    phi=np.array([0.145, 0.815]),
+    chi=np.array([0.635, 0.389]),
+    beta=np.array([4.258, -1.002]),
+    kappa=np.array([3.268, -0.974]),
+    C=np.array([[-14.256, 4.243],[17.998, -6.335]]),
+    deterministic=False,
+)
 
 # env = EnvironmentBanditsSwitch(0.05, reward_prob_high=1.0, reward_prob_low=0.5)
 env = BanditsDrift(0.2)

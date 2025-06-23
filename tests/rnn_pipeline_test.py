@@ -11,19 +11,18 @@ from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_dezfouli2019_blocks, 
 # -------------------------------------------------------------------------------
 
 # path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0005.pkl'
-path_model = 'params/dummy_rnn.pkl'
-path_data = None#'data/eckstein2022/eckstein2022.csv'
-train_test_ratio = 0.8
-class_rnn = RLRNN_eckstein2022
-additional_inputs = None
+# path_data = 'data/eckstein2022/eckstein2022.csv'
+# train_test_ratio = 0.8
+# class_rnn = RLRNN_eckstein2022
+# additional_inputs = None
 # # class_rnn = RLRNN_meta_eckstein2022
 # # additional_inputs = ['age']
 
-# class_rnn = RLRNN_dezfouli2019
-# train_test_ratio = [3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
-# path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_0001.pkl'
-# path_data = 'data/dezfouli2019/dezfouli2019.csv'
-# additional_inputs = None
+class_rnn = RLRNN_dezfouli2019
+train_test_ratio = None#[3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
+path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_crossval_baseline.pkl'
+path_data = 'data/dezfouli2019/dezfouli2019_simulated_gql_multi_session_d1.csv'
+additional_inputs = None
 
 # class_rnn = RLRNN_dezfouli2019_blocks
 # train_test_ratio = [1, 3, 4, 6, 8, 10]  # list of test sessions
@@ -46,8 +45,8 @@ _, loss = pipeline_rnn.main(
     
     # general training parameters
     checkpoint=False,
-    epochs=128, # <- 2^16
-    scheduler=False,
+    epochs=8192, # <- 2^16
+    scheduler=True,
     learning_rate=1e-2,
     
     # hand-picked params

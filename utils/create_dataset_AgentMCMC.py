@@ -9,84 +9,91 @@ from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import create_dataset, get_update_dynamics, AgentQ, BanditsDrift, BanditsFlip_eckstein2022
 from resources.rnn_utils import DatasetRNN
-from utils.setup_agents import setup_agent_mcmc
 from utils.convert_dataset import convert_dataset
-from benchmarking.hierarchical_bayes_numpyro import rl_model
+
+# dataset specific benchmarking models
+from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019_participants, benchmarking_lstm
+
+# ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
+# dataset = 'eckstein2022'
+# model_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+# setup_agent_mcmc = benchmarking_eckstein2022.setup_agent_mcmc
+# rl_model = benchmarking_eckstein2022.rl_model
+# bandits_environment = BanditsFlip_eckstein2022
+
+# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
+dataset = 'dezfouli2019'
+model = 'gql_multi_session_d1'
+setup_agent_mcmc = benchmarking_dezfouli2019_participants.setup_agent_mcmc
+gql_model = benchmarking_dezfouli2019_participants.gql_model
+bandits_environment = BanditsDrift
+
+n_trials_per_session = 200
+
+path_data = f'data/{dataset}/{dataset}.csv'
+path_model = f'params/{dataset}/mcmc_{dataset}_{model}.nc'
+path_save = f'data/{dataset}/{dataset}_simulated_{model}_PARAMSFROMPAPER.csv'
 
 
-def main(path_model, path_data, path_save, n_trials_per_session):
-    dataset = convert_dataset(file=path_data)[0]
-    n_sessions = len(dataset)
+# --------------------- PIPELINE -------------------------------------
 
-    xs = torch.zeros((n_sessions, n_trials_per_session, dataset.xs.shape[-1]))
-    ys = torch.zeros((n_sessions, n_trials_per_session, dataset.ys.shape[-1]))
+dataset = convert_dataset(file=path_data)[0]
+participant_ids = dataset.xs[:, 0, -1].unique().int().numpy()
+
+xs = torch.zeros((len(participant_ids), n_trials_per_session, dataset.xs.shape[-1]))
+ys = torch.zeros((len(participant_ids), n_trials_per_session, dataset.ys.shape[-1]))
+
+# agent = setup_agent_mcmc(path_model, deterministic=False)
+
+agent = [[benchmarking_dezfouli2019_participants.Agent_dezfouli2019(
+    n_actions=2,
+    d=2,
+    phi=np.array([0.145, 0.815]),
+    chi=np.array([0.635, 0.389]),
+    beta=np.array([4.258, -1.002]),
+    kappa=np.array([3.268, -0.974]),
+    C=np.array([[-14.256, 4.243],[17.998, -6.335]]),
+    deterministic=False,
+) for _ in range(len(participant_ids))]]
+
+for participant_id in tqdm(participant_ids):
+    environment = bandits_environment(sigma=0.2)
+    dataset = create_dataset(
+                agent=agent[0][participant_id],
+                environment=environment,
+                n_trials=n_trials_per_session,
+                n_sessions=1,
+                verbose=False,
+                )[0]
     
-    agent = setup_agent_mcmc(path_model)
+    dataset.xs[..., -1] += participant_id
     
-    for session in tqdm(range(n_sessions)):
-        # environment = BanditsDrift(sigma=0.2)
-        environment = BanditsFlip_eckstein2022()
-        dataset = create_dataset(
-                    agent=agent[session],
-                    environment=environment,
-                    n_trials=n_trials_per_session,
-                    n_sessions=1,
-                    verbose=False,
-                    )[0]
-        
-        dataset.xs[..., -1] = torch.full_like(dataset.xs[..., -1], session)
-        
-        xs[session, :, :dataset.xs.shape[-1]-1] = dataset.xs[0, :, :-1]
-        xs[session, :, -1] = dataset.xs[0, :, -1]
-        ys[session] = dataset.ys[0]
+    xs[participant_id, :, :dataset.xs.shape[-1]-1] = dataset.xs[0, :, :-1]
+    xs[participant_id, :, -1] = dataset.xs[0, :, -1]
+    ys[participant_id] = dataset.ys[0]
 
-    dataset = DatasetRNN(xs, ys)
+dataset = DatasetRNN(xs, ys)
 
-    # dataset columns
-    # general dataset columns
-    session, choice, reward = [], [], []
-    choice_prob_0, choice_prob_1, action_value_0, action_value_1, reward_value_0, reward_value_1, choice_value_0, choice_value_1 = [], [], [], [], [], [], [], []
+# dataset columns
+# general dataset columns
+session, choice, reward = [], [], []
+
+print('Saving values...')
+for participant_id in tqdm(participant_ids):    
+    # get update dynamics
+    experiment = dataset.xs[participant_id].cpu().numpy()
+    qs, choice_probs, _ = get_update_dynamics(experiment, agent[0][participant_id])
     
-    print('getting latent values...')
-    for i in tqdm(range(len(dataset))):    
-        # get update dynamics
-        experiment = dataset.xs[i].cpu().numpy()
-        qs, choice_probs, _ = get_update_dynamics(experiment, agent[i])
-        
-        # append behavioral data
-        session += list(experiment[:, -1])
-        choice += list(np.argmax(experiment[:, :agent[i]._n_actions], axis=-1))
-        reward += list(np.max(experiment[:, agent[i]._n_actions:agent[i]._n_actions*2], axis=-1))
-        
-        # append update dynamics
-        choice_prob_0 += list(choice_probs[:, 0])
-        choice_prob_1 += list(choice_probs[:, 1])
-        action_value_0 += list(qs[0][:, 0])
-        action_value_1 += list(qs[0][:, 1])
-        reward_value_0 += list(qs[1][:, 0])
-        reward_value_1 += list(qs[1][:, 1])
-        choice_value_0 += list(qs[2][:, 0])
-        choice_value_1 += list(qs[2][:, 1])
-        
-    columns = ['session', 'choice', 'reward', 'choice_prob_0', 'choice_prob_1', 'action_value_0', 'action_value_1', 'reward_value_0', 'reward_value_1', 'choice_value_0', 'choice_value_1']
-    data = np.stack((np.array(session), np.array(choice), np.array(reward), np.array(choice_prob_0), np.array(choice_prob_1), np.array(action_value_0), np.array(action_value_1), np.array(reward_value_0), np.array(reward_value_1), np.array(choice_value_0), np.array(choice_value_1)), axis=-1)
-    df = pd.DataFrame(data=data, columns=columns)
-
-    # data_save = path_data.replace('.', '_'+model+'.')
-    df.to_csv(path_save, index=False)
-
-    print(f'Data saved to {path_save}')
+    # append behavioral data
+    session += list(experiment[:, -1])
+    choice += list(np.argmax(experiment[:, :agent[0][participant_id]._n_actions], axis=-1))
+    reward += list(np.max(experiment[:, agent[0][participant_id]._n_actions:agent[0][participant_id]._n_actions*2], axis=-1))
     
+columns = ['session', 'choice', 'reward']
+data = np.stack((np.array(session), np.array(choice), np.array(reward)), axis=-1)
+df = pd.DataFrame(data=data, columns=columns)
 
-if __name__=='__main__':
-    model = 'ApAnBrAcfpAcfnBcfBch'
-    path_model = f'params/eckstein2022/mcmc_eckstein2022_{model}.nc'
-    path_data = 'data/eckstein2022/eckstein2022.csv'
-    n_trials_per_session = 200
-    
-    main(
-        path_model=path_model,
-        path_data=path_data,
-        path_save=path_data.replace('.', '_simulated_'+model+'.'),
-        n_trials_per_session=n_trials_per_session,
-        )
+# data_save = path_data.replace('.', '_'+model+'.')
+df.to_csv(path_save, index=False)
+
+print(f'Data saved to {path_save}')
