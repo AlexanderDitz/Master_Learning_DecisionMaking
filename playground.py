@@ -19,11 +19,12 @@ from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc, gql_model
 
 # Your existing code
-path_data = 'data/dezfouli2019/dezfouli2019_simulated_gql_multi_session_d2.csv'
-path_model = 'params/dezfouli2019/mcmc_dezfouli2019_gql_multi_session_d2.nc'
+path_data = 'data/eckstein2022/eckstein2022.csv'
+path_model = 'params/dezfouli2019/mcmc_dezfouli2019_baseline.nc'
 # path_rnn = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0.pkl'
 
 agent_mcmc = setup_agent_mcmc(path_model)
-experiment = convert_dataset(path_data)[0].xs[0]
-fig, axs = plot_session(agents={'benchmark': agent_mcmc[0][0]}, experiment=experiment)
+dataset = convert_dataset(path_data, )[0]
+
+fig, axs = plot_session(agents={'benchmark': agent_mcmc[0][0]}, experiment=dataset.xs[0])
 plt.show()

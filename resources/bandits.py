@@ -159,7 +159,24 @@ class Agent:
 
   @property
   def q(self):
-    return self._state['x_value_reward']*self._beta_reward
+    return (self._state['x_value_reward']*self._beta_reward).reshape(self._n_actions)
+  
+  @property
+  def q_reward(self):
+    return (self._state['x_value_reward']*self._beta_reward).reshape(self._n_actions)
+  
+  @property
+  def q_choice(self):
+    return np.zeros(self._n_actions)
+  
+  @property
+  def q_trial(self):
+    return np.zeros(self._n_actions)
+  
+  @property
+  def learning_rate_reward(self):
+    return np.zeros(self._n_actions)
+  
 
 
 class AgentQ(Agent):
@@ -321,7 +338,15 @@ class AgentQ(Agent):
 
   @property
   def q(self):
-    return self._state['x_value_reward']*self._beta_reward + self._state['x_value_choice']*self._beta_choice
+    return (self._state['x_value_reward']*self._beta_reward + self._state['x_value_choice']*self._beta_choice).reshape(self._n_actions)
+  
+  @property
+  def q_reward(self):
+    return (self._state['x_value_reward']*self._beta_reward).reshape(self._n_actions)
+  
+  @property
+  def q_choice(self):
+    return (self._state['x_value_reward']*self._beta_choice).reshape(self._n_actions)
 
 
 class AgentQ_SampleZeros(AgentQ):
@@ -1015,7 +1040,7 @@ def create_dataset(
   return dataset, experiment_list, parameter_list
 
 
-def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Union[AgentQ, AgentNetwork, AgentSpice]):
+def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Agent):
   """Compute Q-Values of a specific agent for a specific experiment sequence with given actions and rewards.
 
   Args:
@@ -1047,20 +1072,25 @@ def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Unio
   agent.new_sess(participant_id=participant_id, experiment_id=experiment_id, additional_embedding_inputs=additional_inputs)
   
   # initialize storages
-  q = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
-  q_reward = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
-  q_choice = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
-  q_trial = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
-  learning_rate_reward = np.zeros((n_trials, *agent._state['x_value_reward'].shape))
+  q = np.zeros((n_trials, agent._n_actions))
+  q_reward = np.zeros((n_trials, agent._n_actions))
+  q_choice = np.zeros((n_trials, agent._n_actions))
+  q_trial = np.zeros((n_trials, agent._n_actions))
+  learning_rate_reward = np.zeros((n_trials, agent._n_actions))
   choice_probs = np.zeros((n_trials, agent._n_actions))
   
   for trial in range(n_trials):
     # track all states
     q[trial] = agent.q
-    q_reward[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros_like(agent._state['x_value_reward'])
-    q_choice[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros_like(agent._state['x_value_reward'])
-    q_trial[trial] = agent._state['x_value_trial'] if 'x_value_trial' in agent._state else np.zeros_like(agent._state['x_value_reward'])
-    learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros_like(agent._state['x_value_reward'])
+    q_reward[trial] = agent.q_reward
+    q_choice[trial] = agent.q_choice
+    q_trial[trial] = agent.q_trial
+    learning_rate_reward[trial] = agent.learning_rate_reward
+    
+    # q_reward[trial] = agent._state['x_value_reward'] if 'x_value_reward' in agent._state else np.zeros(agent._n_actions)
+    # q_choice[trial] = agent._state['x_value_choice'] if 'x_value_choice' in agent._state else np.zeros(agent._n_actions)
+    # q_trial[trial] = agent._state['x_value_trial'] if 'x_value_trial' in agent._state else np.zeros(agent._n_actions)
+    # learning_rate_reward[trial] = agent._state['x_learning_rate_reward'] if 'x_learning_rate_reward' in agent._state else np.zeros(agent._n_actions)
     
     choice_probs[trial] = agent.get_choice_probs()
     

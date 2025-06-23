@@ -4,14 +4,14 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
-import benchmarking.benchmarking_dezfouli2019 as benchmarking_dezfouli2019, benchmarking_eckstein2022
+import benchmarking_dezfouli2019, benchmarking_eckstein2022
 
 # path_model = 'params/eckstein2022/mcmc_eckstein2022_ApBrAcfpBcfBch.nc' 
 # rl_model = benchmarking_eckstein2022.rl_model'
 
-path_model = 'params/dezfouli2019/confusion_matrix/mcmc_dezfouli2019_gql_multi_session_d2_rnn.nc'
+path_model = 'params/dezfouli2019/mcmc_dezfouli2019_baseline.nc'
 gql_model = benchmarking_dezfouli2019.gql_model
-params = ['phi', 'chi', 'beta', 'kappa']
+params = ['phi', 'beta']
 
 # setup mcmc agent
 with open(path_model, 'rb') as file:
@@ -32,5 +32,5 @@ print(param_container)
 # Save to a CSV file
 summary.to_csv("summary.csv")
 
-# az.plot_trace(idata)
-# plt.show()
+az.plot_trace(idata)
+plt.show()
