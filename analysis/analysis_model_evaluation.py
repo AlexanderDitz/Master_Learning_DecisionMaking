@@ -19,7 +19,7 @@ from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_m
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials, SindyConfig_dezfouli2019_blocks
 
 # dataset specific benchmarking models
-from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019_participants, benchmarking_lstm
+from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
 
 
 # -------------------------------------------------------------------------------
@@ -46,8 +46,8 @@ models_benchmark = ['gql_multi_session_d2']
 sindy_config = SindyConfig_dezfouli2019
 rnn_class = RLRNN_dezfouli2019
 additional_inputs = []
-setup_agent_mcmc = benchmarking_dezfouli2019_participants.setup_agent_mcmc
-gql_model = benchmarking_dezfouli2019_participants.gql_model
+setup_agent_mcmc = benchmarking_dezfouli2019.setup_agent_mcmc
+gql_model = benchmarking_dezfouli2019.gql_model
 
 # ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 # dataset = 'dezfouli2019'

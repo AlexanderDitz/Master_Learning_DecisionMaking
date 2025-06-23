@@ -12,7 +12,7 @@ from resources.rnn_utils import DatasetRNN
 from utils.convert_dataset import convert_dataset
 
 # dataset specific benchmarking models
-from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019_participants, benchmarking_lstm
+from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
 # dataset = 'eckstein2022'
@@ -24,8 +24,8 @@ from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019_pa
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
 dataset = 'dezfouli2019'
 model = 'gql_multi_session_d1'
-setup_agent_mcmc = benchmarking_dezfouli2019_participants.setup_agent_mcmc
-gql_model = benchmarking_dezfouli2019_participants.gql_model
+setup_agent_mcmc = benchmarking_dezfouli2019.setup_agent_mcmc
+gql_model = benchmarking_dezfouli2019.gql_model
 bandits_environment = BanditsDrift
 
 n_trials_per_session = 200
@@ -45,7 +45,7 @@ ys = torch.zeros((len(participant_ids), n_trials_per_session, dataset.ys.shape[-
 
 # agent = setup_agent_mcmc(path_model, deterministic=False)
 
-agent = [[benchmarking_dezfouli2019_participants.Agent_dezfouli2019(
+agent = [[benchmarking_dezfouli2019.Agent_dezfouli2019(
     n_actions=2,
     d=2,
     phi=np.array([0.145, 0.815]),

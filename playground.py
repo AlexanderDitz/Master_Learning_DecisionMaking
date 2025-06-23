@@ -16,7 +16,7 @@ from utils.setup_agents import setup_agent_rnn, setup_agent_spice
 from utils.plotting import plot_session
 from utils.convert_dataset import convert_dataset
 from benchmarking.benchmarking_lstm import setup_agent_lstm
-from benchmarking.benchmarking_dezfouli2019_participants import setup_agent_mcmc, gql_model
+from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc, gql_model
 
 # Your existing code
 path_data = 'data/dezfouli2019/dezfouli2019_simulated_gql_multi_session_d2.csv'

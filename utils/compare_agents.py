@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.bandits import Agent, AgentQ, BanditsDrift, BanditsSwitch, plot_session, create_dataset, get_update_dynamics
 from utils.plotting import plot_session
-from benchmarking import benchmarking_dezfouli2019_participants
+from benchmarking import benchmarking_dezfouli2019
 
 
 agent1 = Agent(
@@ -15,7 +15,7 @@ agent1 = Agent(
     alpha_reward=0.5,
     )
 
-agent2 = benchmarking_dezfouli2019_participants.Agent_dezfouli2019(
+agent2 = benchmarking_dezfouli2019.Agent_dezfouli2019(
     n_actions=2,
     d=2,
     phi=np.array([0.145, 0.815]),
