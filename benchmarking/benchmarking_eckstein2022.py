@@ -339,13 +339,15 @@ def rl_model(model, choice, reward):
     r_values = jnp.full((choice.shape[1], 2), 0.5)
     c_values = jnp.zeros((choice.shape[1], 2))
     xs = jnp.concatenate((choice[:-1], reward[:-1]), axis=-1)
-    
-    ys = jnp.zeros((choice.shape[0]-1, r_values.shape[0]))
     carry = (r_values, c_values)
-    for i in range(len(choice)-1):
-        carry, y = update(carry, xs[i])
-        ys = ys.at[i].set(y)
+    
+    # ys = jnp.zeros((choice.shape[0]-1, r_values.shape[0]))
+    # for i in range(len(choice)-1):
+    #     carry, y = update(carry, xs[i])
+    #     ys = ys.at[i].set(y)
 
+    final_carry, ys = jax.lax.scan(update, carry, xs)
+    
     # Likelihood
     next_choice_0 = choice[1:, :, 0]
     valid_mask = (next_choice_0 >= 0) & (next_choice_0 <= 1)
