@@ -125,6 +125,7 @@ class Agent_dezfouli2019(Agent):
         beta: Union[float, np.ndarray] = None,
         kappa: Union[float, np.ndarray] = None,
         C: np.ndarray = None,
+        deterministic: bool = True,
     ):
         
         self._n_actions = n_actions
@@ -132,8 +133,8 @@ class Agent_dezfouli2019(Agent):
         self._q_init = 0.5
         self._h_init = 0.0
         
-        super().__init__(n_actions=n_actions)
-          
+        super().__init__(n_actions=n_actions, deterministic=deterministic)
+        
         # Default parameters if not provided
         if phi is None:
             phi = np.full(d, 0.1)
@@ -174,6 +175,7 @@ class Agent_dezfouli2019(Agent):
         # Initialize Q-values and choice histories
         self._state['x_value_reward'] = jnp.full((self._n_actions, self._d), self._q_init)
         self._state['x_value_choice'] = jnp.full((self._n_actions, self._d), self._h_init)
+        self._state['x_learning_rate_reward'] = jnp.full((self._n_actions, self._d), 0)
 
     def update(self, choice: int, reward: np.ndarray, *args, **kwargs):
         """Update the agent after one step using shared update logic."""
@@ -196,6 +198,7 @@ class Agent_dezfouli2019(Agent):
         # Update state
         self._state['x_value_reward'] = q_values_new
         self._state['x_value_choice'] = h_values_new
+        self._state['x_learning_rate_reward'] = self._params['phi']
 
     @property
     def q(self):
@@ -212,7 +215,7 @@ class Agent_dezfouli2019(Agent):
         return q_weighted + h_weighted + interaction
 
 
-def setup_agent_mcmc(path_model: str) -> Tuple[List[Agent_dezfouli2019], np.ndarray]:
+def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[Agent_dezfouli2019], np.ndarray]:
     """Setup MCMC agents using participant-level parameters."""
     
     with open(path_model, 'rb') as file:
@@ -238,7 +241,7 @@ def setup_agent_mcmc(path_model: str) -> Tuple[List[Agent_dezfouli2019], np.ndar
         for param in parameters:
             if param in mcmc.get_samples():
                 parameters[param] = mcmc.get_samples()[param][..., participant].mean(axis=0)
-            elif param == 'C':
+            elif param == 'C' and 'C_vec' in mcmc.get_samples():
                 parameters['C'] = mcmc.get_samples()['C_vec'][..., participant].reshape(-1, d, d).mean(axis=0)    
         
         agents.append(Agent_dezfouli2019(
@@ -248,15 +251,18 @@ def setup_agent_mcmc(path_model: str) -> Tuple[List[Agent_dezfouli2019], np.ndar
             beta=parameters['beta'],
             kappa=parameters['kappa'],
             C=parameters['C'],
+            deterministic=deterministic,
         ))
     
-    return agents
+    n_parameters = np.full(len(agents), len(parameters)*d)
+    return agents, n_parameters
 
 
 def gql_model(choice, reward, d=2):
     """
     A GQL model with participant-level parameters shared across sessions.
     Each participant has one set of parameters used across all their sessions.
+    Group-level parameters now sample one parameter per dimension d.
     
     Args:
         choice: Shape (time, n_sessions, 2) - all sessions concatenated
@@ -265,50 +271,65 @@ def gql_model(choice, reward, d=2):
         d: Number of different values/histories per action
     """
     
-    # Hierarchical priors for learning rates (phi)
-    phi_mean = numpyro.sample("phi_mean", dist.Beta(1, 1))
-    phi_kappa = numpyro.sample("phi_kappa", dist.HalfNormal(1.0))
+    # Hierarchical priors for learning rates (phi) - one per dimension
+    with numpyro.plate("d_phi_group", d):
+        phi_mean = numpyro.sample("phi_mean", dist.Beta(1, 1))
+        phi_kappa = numpyro.sample("phi_kappa", dist.HalfNormal(1.0))
     
-    # Hierarchical priors for choice learning rates (chi)
-    chi_mean = numpyro.sample("chi_mean", dist.Beta(1, 1))
-    chi_kappa = numpyro.sample("chi_kappa", dist.HalfNormal(1.0))
+    # Hierarchical priors for choice learning rates (chi) - one per dimension
+    with numpyro.plate("d_chi_group", d):
+        chi_mean = numpyro.sample("chi_mean", dist.Beta(1, 1))
+        chi_kappa = numpyro.sample("chi_kappa", dist.HalfNormal(1.0))
     
-    # Hierarchical priors for Q-value weights (beta)
-    beta_mean = numpyro.sample("beta_mean", dist.Normal(0, 1))
-    beta_sigma = numpyro.sample("beta_sigma", dist.HalfNormal(1.0))
+    # Hierarchical priors for Q-value weights (beta) - one per dimension
+    with numpyro.plate("d_beta_group", d):
+        beta_mean = numpyro.sample("beta_mean", dist.Normal(0, 1))
+        beta_sigma = numpyro.sample("beta_sigma", dist.HalfNormal(1.0))
     
-    # Hierarchical priors for choice weights (kappa)
-    kappa_mean = numpyro.sample("kappa_mean", dist.Normal(0, 1))
-    kappa_sigma = numpyro.sample("kappa_sigma", dist.HalfNormal(3.0))
+    # Hierarchical priors for choice weights (kappa) - one per dimension
+    with numpyro.plate("d_kappa_group", d):
+        kappa_mean = numpyro.sample("kappa_mean", dist.Normal(0, 1))
+        kappa_sigma = numpyro.sample("kappa_sigma", dist.HalfNormal(3.0))
     
-    # Hierarchical priors for interaction matrix (C)
-    C_mean = numpyro.sample("C_mean", dist.Normal(0, 1))
-    C_sigma = numpyro.sample("C_sigma", dist.HalfNormal(3.0))
+    # Hierarchical priors for interaction matrix (C) - one per element in d x d matrix
+    with numpyro.plate("d_C_group", d * d):
+        C_mean = numpyro.sample("C_mean", dist.Normal(0, 1))
+        C_sigma = numpyro.sample("C_sigma", dist.HalfNormal(3.0))
     
     # Participant-level parameters
     n_participants = choice.shape[1]
-    with numpyro.plate("participants", n_participants):
-        with numpyro.plate("d_phi", d):
-            phi_raw = numpyro.sample("phi", dist.Beta(phi_mean * phi_kappa, (1 - phi_mean) * phi_kappa))
-        phi = phi_raw.T  # Shape: (n_participants, d)
-        
-        with numpyro.plate("d_chi", d):
-            chi_raw = numpyro.sample("chi", dist.Beta(chi_mean * chi_kappa, (1 - chi_mean) * chi_kappa))
-        chi = chi_raw.T
-        
-        with numpyro.plate("d_beta", d):
-            beta_raw = numpyro.sample("beta", dist.Normal(beta_mean, beta_sigma))
-        beta = beta_raw.T
-        
-        with numpyro.plate("d_kappa", d):
-            kappa_raw = numpyro.sample("kappa", dist.Normal(kappa_mean, kappa_sigma)) * 15
-        kappa = kappa_raw.T
-        
-        # Interaction matrix
-        with numpyro.plate("d_C", d * d):
-            C_vec_raw = numpyro.sample("C_vec", dist.Normal(C_mean, C_sigma))
-        C_vec = C_vec_raw.T
-        C = C_vec.reshape((n_participants, d, d))
+    
+    # Sample participant-level parameters using dimension-specific group parameters
+    with numpyro.plate("d_phi", d):
+        with numpyro.plate("participants_phi", n_participants):
+            phi = numpyro.sample("phi", dist.Beta(
+                phi_mean * phi_kappa, 
+                (1 - phi_mean) * phi_kappa
+            ))
+    
+    with numpyro.plate("d_chi", d):
+        with numpyro.plate("participants_chi", n_participants):
+            chi = numpyro.sample("chi", dist.Beta(
+                chi_mean * chi_kappa, 
+                (1 - chi_mean) * chi_kappa
+            ))
+    # chi = jnp.zeros_like(phi)
+    
+    with numpyro.plate("d_beta", d):
+        with numpyro.plate("participants_beta", n_participants):
+            beta = numpyro.sample("beta", dist.Normal(beta_mean, beta_sigma))
+    
+    with numpyro.plate("d_kappa", d):
+        with numpyro.plate("participants_kappa", n_participants):
+            kappa = numpyro.sample("kappa", dist.Normal(kappa_mean, kappa_sigma)) * 15
+    # kappa = jnp.zeros_like(phi)
+    
+    # Interaction matrix - use dimension-specific group parameters
+    with numpyro.plate("d_C", d * d):
+        with numpyro.plate("participants_C", n_participants):
+            C_vec = numpyro.sample("C_vec", dist.Normal(C_mean, C_sigma))
+    C = C_vec.reshape((n_participants, d, d))
+    # C = jnp.zeros((n_participants, d, d))
     
     # Map participant parameters to sessions
     n_sessions = choice.shape[2]
@@ -363,9 +384,10 @@ def gql_model(choice, reward, d=2):
                     numpyro.sample("obs", dist.Bernoulli(probs=ys), obs=next_choice_0)
 
 
-def fit_mcmc(file: str, num_samples: int, num_warmup: int, num_chains: int, output_dir: str, checkpoint: bool, train_test_ratio: list = [3, 6, 9], d: int = 2):
+
+def fit_mcmc(file: str, num_samples: int, num_warmup: int, num_chains: int, output_file: str, checkpoint: bool, train_test_ratio: list = [3, 6, 9], d: int = 2):
     # Set output file
-    output_file = os.path.join(output_dir, f'mcmc_dezfouli2019_gql_multi_session_d{d}.nc')
+    # output_file = os.path.join(output_dir, f'mcmc_dezfouli2019_gql_multi_session_d{d}.nc')
     
     # Get and prepare the data
     dataset = convert_dataset(file)[0]
@@ -416,15 +438,17 @@ if __name__=='__main__':
     parser.add_argument('--num_samples', type=int, default=10, help='Number of MCMC samples')
     parser.add_argument('--num_warmup', type=int, default=5, help='Number of warmup samples (additional)')
     parser.add_argument('--num_chains', type=int, default=1, help='Number of chains')
-    parser.add_argument('--output_dir', type=str, default='benchmarking/params', help='Output directory')
+    parser.add_argument('--output_file', type=str, default='benchmarking/params/mcmc_dezfouli2019_gql.nc', help='Output directory')
     parser.add_argument('--checkpoint', action='store_true', help='Whether to load the specified output file as a checkpoint')
     parser.add_argument('--d', type=int, default=2, help='Number of different values/histories per action')
+    parser.add_argument('--train_test_ratio', type=str, default="3,6,9", help='Number of different values/histories per action')
+    
 
     args = parser.parse_args()
 
     # jax.config.update('jax_disable_jit', True)
     
-    mcmc = fit_mcmc(args.file, args.num_samples, args.num_warmup, args.num_chains, args.output_dir, args.checkpoint, d=args.d)
+    mcmc = fit_mcmc(args.file, args.num_samples, args.num_warmup, args.num_chains, args.output_file, args.checkpoint, d=args.d, train_test_ratio=None)
 
     # Example usage with participant-level agents
     # agents, participant_mapping = setup_agent_mcmc(os.path.join(args.output_dir, f'mcmc_dezfouli2019_gql_multi_session_d{args.d}.nc'))

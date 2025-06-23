@@ -168,8 +168,8 @@ def convert_dataset(
             choices=group[1][df_choice].values,
             rewards=rewards,
             session=np.full((*rewards.shape[:-1], 1), index_group),
-            reward_probabilities=np.zeros_like(choice)+0.5,
-            q=np.zeros_like(choice)+0.5,
+            # reward_probabilities=np.zeros_like(choice)+0.5,
+            # q=np.zeros_like(choice)+0.5,
             n_trials=len(choice)
         )
         

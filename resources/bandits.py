@@ -111,16 +111,16 @@ class Agent:
     """Reset the agent for the beginning of a new session."""
     
     self._state = {
-      'x_value_reward': np.full(self._n_actions, self._q_init),
-      'x_value_choice': np.zeros(self._n_actions),
-      'x_learning_rate_reward': np.zeros(self._n_actions),
+      'x_value_reward': np.full((self._n_actions, 1), self._q_init),
+      'x_value_choice': np.zeros((self._n_actions, 1)),
+      'x_learning_rate_reward': np.zeros((self._n_actions, 1)),
     }
-      
+    
   def get_choice_probs(self) -> np.ndarray:
     """Compute the choice probabilities as softmax over q."""
     decision_variable = np.exp(self.q)
     choice_probs = decision_variable / np.sum(decision_variable)
-    return choice_probs
+    return choice_probs.reshape(self._n_actions)
 
   def get_choice(self):
     """Sample choice."""
@@ -139,8 +139,8 @@ class Agent:
     """
     
     # adjust learning rates for every received reward
-    alpha = np.zeros_like(reward)
-    rpe = np.zeros_like(reward)
+    alpha = np.zeros_like(self._state['x_learning_rate_reward'])
+    rpe = np.zeros_like(self._state['x_learning_rate_reward'])
     for action in range(self._n_actions):
       if action == choice:
         current_reward = reward[action] if np.min(reward) > -1 else reward[choice]
@@ -153,8 +153,9 @@ class Agent:
     reward_update = alpha * rpe
     
     # Update memory state
-    self._state['x_value_reward'][choice] += reward_update[choice]
+    self._state['x_value_reward'] += reward_update
     self._state['x_learning_rate_reward'] = alpha
+    
 
   @property
   def q(self):
@@ -559,7 +560,7 @@ class AgentSpice(AgentNetwork):
 
 class Bandits:
   
-  def __init__(self):
+  def __init__(self, *args, **kwargs):
     pass
   
   def step(self, choice):
@@ -578,6 +579,7 @@ class BanditsFlip(Bandits):
       reward_prob_high: float = 0.8,
       reward_prob_low: float = 0.2,
       counterfactual: bool = False,
+      **kwargs,
   ):
     
     super(BanditsFlip, self).__init__()
@@ -721,6 +723,7 @@ class BanditsDrift(Bandits):
       sigma: float,
       n_actions: int = 2,
       counterfactual: bool = False,
+      **kwargs,
       ):
     """Initialize the environment."""
     
@@ -791,6 +794,7 @@ class BanditsFlip_eckstein2022(Bandits):
       reward_prob_high: float = 0.75,
       reward_prob_low: float = 0.,
       counterfactual: bool = False,
+      **kwargs
   ):
     
     super(BanditsFlip_eckstein2022, self).__init__()
@@ -864,15 +868,29 @@ class BanditSession(NamedTuple):
   choices: np.ndarray
   rewards: np.ndarray
   session: np.ndarray
-  reward_probabilities: np.ndarray
-  q: np.ndarray
+  # reward_probabilities: np.ndarray
+  # q: np.ndarray
   n_trials: int
   
   def set_session(self, session: int):
-    return self(choices=self.choices, rewards=self.rewards, session=np.full_like(self.session, session), reward_probabilities=self.reward_probabilities, q=self.q, n_trials=self.n_trials)
+    return self(
+      choices=self.choices, 
+      rewards=self.rewards, 
+      session=np.full_like(self.session, session), 
+      # reward_probabilities=self.reward_probabilities, 
+      # q=self.q, 
+      n_trials=self.n_trials,
+      )
   
   def __getitem__(self, val):
-    return self._replace(choices=self.choices.__getitem__(val), rewards=self.rewards.__getitem__(val), session=self.session.__getitem__(val), reward_probabilities=self.reward_probabilities.__getitem__(val), q=self.q.__getitem__(val), n_trials=self.choices.__getitem__(val).shape[0])
+    return self._replace(
+      choices=self.choices.__getitem__(val), 
+      rewards=self.rewards.__getitem__(val), 
+      session=self.session.__getitem__(val), 
+      # reward_probabilities=self.reward_probabilities.__getitem__(val), 
+      # q=self.q.__getitem__(val), 
+      n_trials=self.choices.__getitem__(val).shape[0],
+      )
 
 
 ###############
@@ -897,15 +915,15 @@ def run_experiment(
     experiment: A BanditSession holding choices and rewards from the session
   """
   
-  choices = np.zeros(n_trials+1) - 1
-  rewards = np.zeros((n_trials+1, environment.n_actions)) - 1
-  qs = np.zeros((n_trials+1, environment.n_actions)) - 1
-  reward_probs = np.zeros((n_trials+1, environment.n_actions)) - 1
+  choices = np.zeros((n_trials+1)) - 1
+  rewards = np.zeros((n_trials+1, agent._n_actions)) - 1
+  # qs = np.zeros((n_trials+1, agent._n_actions, agent._state['x_value_reward'].shape[-1])) - 1
+  # reward_probs = np.zeros((n_trials+1, agent._n_actions)) - 1
 
   for trial in range(n_trials+1):
     # Log environment reward probabilities and Q-Values
-    reward_probs[trial] = environment.reward_probs
-    qs[trial] = agent.q
+    # reward_probs[trial] = environment.reward_probs
+    # qs[trial] = agent.q
     # First - agent makes a choice
     choice = agent.get_choice()
     # Second - environment computes a reward
@@ -921,8 +939,9 @@ def run_experiment(
                              choices=choices[:-1].astype(int),
                              rewards=rewards[:-1],
                              session=np.full(rewards[:-1].shape[0], session_id).astype(int),
-                             reward_probabilities=reward_probs[:-1],
-                             q=qs[:-1])
+                            #  reward_probabilities=reward_probs[:-1],
+                            #  q=qs[:-1],
+                             )
   return experiment, choices.astype(int), rewards
 
 
