@@ -484,14 +484,18 @@ if __name__=='__main__':
     parser.add_argument('--output_file', type=str, default='benchmarking/params/mcmc_dezfouli2019_gql.nc', help='Output directory')
     parser.add_argument('--checkpoint', action='store_true', help='Whether to load the specified output file as a checkpoint')
     parser.add_argument('--d', type=int, default=2, help='Number of different values/histories per action')
-    parser.add_argument('--train_test_ratio', type=str, default="3,6,9", help='Number of different values/histories per action')
+    parser.add_argument('--train_test_ratio', type=str, default="3,6,9", help='Sessions which are going to be excluded from training data for each participant. Comma-separated integers')
     
 
     args = parser.parse_args()
 
     # jax.config.update('jax_disable_jit', True)
     
-    mcmc = fit_mcmc(args.file, args.model, args.num_samples, args.num_warmup, args.num_chains, args.output_file, args.checkpoint, d=args.d, train_test_ratio=None)
+    if args.train_test_ratio != "None":
+        train_test_ratio = [int(session_id) for session_id in args.train_test_ratio.split(",")]
+    else:
+        train_test_ratio = None
+    mcmc = fit_mcmc(args.file, args.model, args.num_samples, args.num_warmup, args.num_chains, args.output_file, args.checkpoint, d=train_test_ratio)
 
     # Example usage with participant-level agents
     # agents, participant_mapping = setup_agent_mcmc(os.path.join(args.output_dir, f'mcmc_dezfouli2019_gql_multi_session_d{args.d}.nc'))
