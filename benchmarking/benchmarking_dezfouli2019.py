@@ -393,12 +393,14 @@ def gql_model(model, choice, reward, d=2):
     h_values = jnp.zeros((n_participants, n_sessions, 2, d))
     
     xs = jnp.concatenate((choice[:-1], reward[:-1]), axis=-1)
-    
-    ys = jnp.zeros((choice.shape[0]-1, n_participants, n_sessions))
     carry = (q_values, h_values)
-    for i in range(len(choice)-1):
-        carry, y = update(carry, xs[i])
-        ys = ys.at[i].set(y)
+    
+    # ys = jnp.zeros((choice.shape[0]-1, n_participants, n_sessions))
+    # for i in range(len(choice)-1):
+    #     carry, y = update(carry, xs[i])
+    #     ys = ys.at[i].set(y)
+        
+    final_carry, ys = jax.lax.scan(update, carry, xs)
 
     # Likelihood
     next_choice_0 = choice[1:, ..., 0]
@@ -434,7 +436,7 @@ def fit_mcmc(file: str, model: str, num_samples: int, num_warmup: int, num_chain
     # Get and prepare the data
     dataset = convert_dataset(file)[0]
     dataset = reshape_data_along_participantdim(split_data_along_sessiondim(dataset=dataset, list_test_sessions=train_test_ratio)[0])
-        
+
     # Extract choices and rewards from the reshaped dataset
     xs = dataset.xs
     choices = xs[..., :2]  # First 2 features are choices
@@ -489,13 +491,25 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
+    # NOTE: JAX-DEBUGGING -> DEACTIVATE IF NOT NEEDED!!!! 
     # jax.config.update('jax_disable_jit', True)
     
     if args.train_test_ratio != "None":
-        train_test_ratio = [int(session_id) for session_id in args.train_test_ratio.split(",")]
+        args.train_test_ratio = [int(session_id) for session_id in args.train_test_ratio.split(",")]
     else:
-        train_test_ratio = None
-    mcmc = fit_mcmc(args.file, args.model, args.num_samples, args.num_warmup, args.num_chains, args.output_file, args.checkpoint, d=train_test_ratio)
+        args.train_test_ratio = None
+        
+    mcmc = fit_mcmc(
+        file=args.file, 
+        model=args.model, 
+        num_samples=args.num_samples, 
+        num_warmup=args.num_warmup, 
+        num_chains=args.num_chains, 
+        output_file=args.output_file, 
+        checkpoint=args.checkpoint, 
+        d=args.d,
+        train_test_ratio=args.train_test_ratio,
+        )
 
     # Example usage with participant-level agents
     # agents, participant_mapping = setup_agent_mcmc(os.path.join(args.output_dir, f'mcmc_dezfouli2019_gql_multi_session_d{args.d}.nc'))
