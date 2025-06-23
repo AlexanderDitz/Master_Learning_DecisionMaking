@@ -137,13 +137,13 @@ class Agent_dezfouli2019(Agent):
         
         # Default parameters if not provided
         if phi is None:
-            phi = np.full(d, 0.1)
+            phi = np.full(d, 1.0)
         if chi is None:
-            chi = np.full(d, 0.1)
+            chi = np.full(d, 1.0)
         if beta is None:
             beta = np.full(d, 1.0)
         if kappa is None:
-            kappa = np.full(d, 0.1)
+            kappa = np.full(d, 0.)
         if C is None:
             C = np.zeros((d, d))
         
@@ -211,9 +211,20 @@ class Agent_dezfouli2019(Agent):
         h_weighted = jnp.sum(kappa * self._state['x_value_choice'], axis=-1)
         
         # Add interaction terms
-        interaction = jnp.einsum('ad,de,ae->a', self._state['x_value_choice'], C, self._state['x_value_reward'])
+        interaction = jnp.einsum('...ad,...de,...ae->...a', self._state['x_value_choice'], C, self._state['x_value_reward'])
         return q_weighted + h_weighted + interaction
+    
+    @property
+    def q_reward(self):
+        return jnp.sum(self._params['beta'] * self._state['x_value_reward'], axis=-1)
 
+    @property
+    def q_choice(self):
+        return jnp.sum(self._params['kappa'] * self._state['x_value_choice'], axis=-1)
+    
+    @property
+    def learning_rate_reward(self):
+        return self._params['phi']
 
 def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[Agent_dezfouli2019], np.ndarray]:
     """Setup MCMC agents using participant-level parameters."""
@@ -221,8 +232,8 @@ def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[
     with open(path_model, 'rb') as file:
         mcmc = pickle.load(file)
     
-    n_participants = mcmc.get_samples()['beta'].shape[-1]
-    d = mcmc.get_samples()['beta'].shape[-2]
+    n_participants = mcmc.get_samples()['beta'].shape[-2]
+    d = mcmc.get_samples()['beta'].shape[-1]
     
     agents = []
     
@@ -230,20 +241,23 @@ def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[
         
         # Default parameters
         parameters = {
-            'phi': np.full(d, 0.1),
-            'chi': np.full(d, 0.1),
+            'phi': np.full(d, 1.0),
+            'chi': np.full(d, 1.0),
             'beta': np.full(d, 1.0),
-            'kappa': np.full(d, 0.1),
+            'kappa': np.full(d, 0.),
             'C': np.zeros((d, d)),
         }
         
         # Extract parameters from MCMC samples (these are now participant-level)
+        n_parameters = 0
         for param in parameters:
             if param in mcmc.get_samples():
-                parameters[param] = mcmc.get_samples()[param][..., participant].mean(axis=0)
+                parameters[param] = mcmc.get_samples()[param][:, participant].mean(axis=0)
+                n_parameters += d
             elif param == 'C' and 'C_vec' in mcmc.get_samples():
-                parameters['C'] = mcmc.get_samples()['C_vec'][..., participant].reshape(-1, d, d).mean(axis=0)    
-        
+                parameters['C'] = mcmc.get_samples()['C_vec'][:, participant].reshape(-1, d, d).mean(axis=0)    
+                n_parameters += d*d
+                
         agents.append(Agent_dezfouli2019(
             d=d,
             phi=parameters['phi'],
@@ -254,7 +268,7 @@ def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[
             deterministic=deterministic,
         ))
     
-    n_parameters = np.full(len(agents), len(parameters)*d)
+    n_parameters = np.full(len(agents), n_parameters)
     return agents, n_parameters
 
 
@@ -270,7 +284,7 @@ def gql_model(model, choice, reward, d=2):
         participant_mapping: Shape (n_sessions,) - maps each session to participant index
         d: Number of different values/histories per action
     """
-    
+            
     # Hierarchical priors for learning rates (phi) - one per dimension
     if model[0] == 1:
         with numpyro.plate("d_phi_group", d):

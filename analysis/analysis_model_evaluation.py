@@ -42,7 +42,7 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, b
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
-models_benchmark = ['gql_multi_session_d2']
+models_benchmark = ['baseline']
 sindy_config = SindyConfig_dezfouli2019
 rnn_class = RLRNN_dezfouli2019
 additional_inputs = []

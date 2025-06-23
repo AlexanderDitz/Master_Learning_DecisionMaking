@@ -23,7 +23,7 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, b
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
 dataset = 'dezfouli2019'
-model = 'gql_multi_session_d1'
+model = 'baseline'
 setup_agent_mcmc = benchmarking_dezfouli2019.setup_agent_mcmc
 gql_model = benchmarking_dezfouli2019.gql_model
 bandits_environment = BanditsDrift
@@ -32,7 +32,7 @@ n_trials_per_session = 200
 
 path_data = f'data/{dataset}/{dataset}.csv'
 path_model = f'params/{dataset}/mcmc_{dataset}_{model}.nc'
-path_save = f'data/{dataset}/{dataset}_simulated_{model}_PARAMSFROMPAPER.csv'
+path_save = f'data/{dataset}/{dataset}_simulated_{model}.csv'
 
 
 # --------------------- PIPELINE -------------------------------------
@@ -43,18 +43,7 @@ participant_ids = dataset.xs[:, 0, -1].unique().int().numpy()
 xs = torch.zeros((len(participant_ids), n_trials_per_session, dataset.xs.shape[-1]))
 ys = torch.zeros((len(participant_ids), n_trials_per_session, dataset.ys.shape[-1]))
 
-# agent = setup_agent_mcmc(path_model, deterministic=False)
-
-agent = [[benchmarking_dezfouli2019.Agent_dezfouli2019(
-    n_actions=2,
-    d=2,
-    phi=np.array([0.145, 0.815]),
-    chi=np.array([0.635, 0.389]),
-    beta=np.array([4.258, -1.002]),
-    kappa=np.array([3.268, -0.974]),
-    C=np.array([[-14.256, 4.243],[17.998, -6.335]]),
-    deterministic=False,
-) for _ in range(len(participant_ids))]]
+agent = setup_agent_mcmc(path_model, deterministic=False)
 
 for participant_id in tqdm(participant_ids):
     environment = bandits_environment(sigma=0.2)
@@ -79,15 +68,10 @@ dataset = DatasetRNN(xs, ys)
 session, choice, reward = [], [], []
 
 print('Saving values...')
-for participant_id in tqdm(participant_ids):    
-    # get update dynamics
-    experiment = dataset.xs[participant_id].cpu().numpy()
-    qs, choice_probs, _ = get_update_dynamics(experiment, agent[0][participant_id])
-    
-    # append behavioral data
-    session += list(experiment[:, -1])
-    choice += list(np.argmax(experiment[:, :agent[0][participant_id]._n_actions], axis=-1))
-    reward += list(np.max(experiment[:, agent[0][participant_id]._n_actions:agent[0][participant_id]._n_actions*2], axis=-1))
+for index_data in tqdm(range(len(dataset))):
+    session += list(dataset.xs[index_data, :, -1].detach().cpu().numpy())
+    choice += list(np.argmax(dataset.xs[index_data, :, :agent[0][0]._n_actions].detach().cpu().numpy(), axis=-1))
+    reward += list(np.max(dataset.xs[index_data, :, agent[0][0]._n_actions:agent[0][0]._n_actions*2].detach().cpu().numpy(), axis=-1))
     
 columns = ['session', 'choice', 'reward']
 data = np.stack((np.array(session), np.array(choice), np.array(reward)), axis=-1)
