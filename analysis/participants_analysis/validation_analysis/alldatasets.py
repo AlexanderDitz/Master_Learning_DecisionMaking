@@ -127,12 +127,16 @@ def calculate_behavioral_metrics(df, dataset_name):
     
     return pd.DataFrame(behavior_metrics)
 
-# Define file paths
+
+
+#change to benchmark!!!!!!
 file_paths = {
-    'ApBr': "/Users/martynaplomecka/closedloop_rl/data/eckstein2022/eckstein2022_simulated_ApBr.csv",
-    'RNN': "/Users/martynaplomecka/closedloop_rl/data/eckstein2022/eckstein2022_simulated_rnn.csv",
-    'SPICE': "/Users/martynaplomecka/closedloop_rl/data/eckstein2022/eckstein2022_simulated_spice.csv",
-    'True': "/Users/martynaplomecka/closedloop_rl/data/eckstein2022/eckstein2022.csv"
+    'ApBr': "/Users/martynaplomecka/closedloop_rl/params/benchmarking/eckstein2022_simulated_ApBr.csv",
+    'RNN': "/Users/martynaplomecka/closedloop_rl/params/benchmarking/eckstein2022_simulated_rnn_new.csv",
+    'SPICE': "/Users/martynaplomecka/closedloop_rl/params/benchmarking/eckstein2022_simulated_spice_new.csv",
+    'True': "/Users/martynaplomecka/closedloop_rl/params/benchmarking/eckstein2022_age.csv",
+    'Benchmark': "/Users/martynaplomecka/closedloop_rl/params/benchmarking/eckstein2022_simulated_benchmark.csv"
+
 }
 
 all_behavioral_data = []
@@ -144,7 +148,6 @@ for dataset_name, file_path in file_paths.items():
         print(f"Loaded {len(df)} rows")
         print(f"Columns: {list(df.columns)}")
         
-        # Calculate behavioral metrics
         behavioral_df = calculate_behavioral_metrics(df, dataset_name)
         all_behavioral_data.append(behavioral_df)
         
@@ -159,7 +162,7 @@ for dataset_name, file_path in file_paths.items():
 
 if all_behavioral_data:
     combined_df = pd.concat(all_behavioral_data, ignore_index=True)
-    combined_df.to_csv("behavioral_metrics_all_simulated.csv", index=False)
+    combined_df.to_csv("new_behavioral_metrics_all_simulated.csv", index=False)
 
 else:
     print("error.")
