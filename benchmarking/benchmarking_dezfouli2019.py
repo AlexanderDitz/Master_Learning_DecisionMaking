@@ -268,7 +268,6 @@ def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[
             deterministic=deterministic,
         ))
     
-    n_parameters = np.full(len(agents), n_parameters)
     return agents, n_parameters
 
 

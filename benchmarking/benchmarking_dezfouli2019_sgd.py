@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 from copy import deepcopy
 import pickle
+from typing import List
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn_utils import DatasetRNN, split_data_along_timedim, split_data_along_sessiondim, reshape_data_along_participantdim
@@ -18,6 +19,7 @@ class Dezfouli2019GQL(torch.nn.Module):
     init_values = {
         'x_value_reward': 0.5,  # Initialize Q-values to 0.5
         'x_value_choice': 0.0,  # Initialize choice histories to 0
+        'x_learning_rate_reward': 0.0,  # dummy place-holder
     }
     
     def __init__(self, model: str, n_actions: int = 2, dimensions: int = 2):
@@ -56,6 +58,8 @@ class Dezfouli2019GQL(torch.nn.Module):
             self.C = torch.nn.Parameter(torch.zeros(self.d, self.d))
         else:
             self.register_buffer('C', torch.zeros(self.d, self.d))
+            
+        self.device = torch.device('cpu')
     
     def get_phi(self):
         """Get phi parameter values."""
@@ -94,23 +98,13 @@ class Dezfouli2019GQL(torch.nn.Module):
         """Initialize the hidden state for each session."""
         state = {}
         for key in self.init_values:
-            if key == 'x_value_reward':
-                # Initialize Q-values: (batch_size, n_actions, d)
-                state[key] = torch.full(
-                    size=[batch_size, self.n_actions, self.d], 
-                    fill_value=self.init_values[key], 
-                    dtype=torch.float32, 
-                    device=self.device
-                )
-            elif key == 'x_value_choice':
-                # Initialize choice histories: (batch_size, n_actions, d)
-                state[key] = torch.full(
-                    size=[batch_size, self.n_actions, self.d], 
-                    fill_value=self.init_values[key], 
-                    dtype=torch.float32, 
-                    device=self.device
-                )
-        
+            # Initialize Q-values: (batch_size, n_actions, d)
+            state[key] = torch.full(
+                size=[batch_size, self.n_actions, self.d], 
+                fill_value=self.init_values[key], 
+                dtype=torch.float32, 
+            )
+            
         self.set_state(state)
         return self.get_state()
     
@@ -181,7 +175,7 @@ class Dezfouli2019GQL(torch.nn.Module):
         h_weighted = torch.sum(kappa_expanded * h_values, dim=-1)  # (batch_size, n_actions)
         
         # Interaction terms: H^T * C * Q for each action
-        interaction = torch.zeros(batch_size, self.n_actions, device=q_values.device)
+        interaction = torch.zeros(batch_size, self.n_actions)
         for a in range(self.n_actions):
             # h_a^T @ C @ q_a for each batch element
             h_a = h_values[:, a, :]  # (batch_size, d)
@@ -221,32 +215,22 @@ class Dezfouli2019GQL(torch.nn.Module):
             logits = logits.swapaxes(0, 1)
         
         return logits, self.get_state()  # Return all but last timestep
-    
-    def to(self, device):
-        super().to(device)
-        self.device = device
-        return self
 
 
-def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, epochs=1, lr=0.01, dataset_test: DatasetRNN = None):
+def training(model_config: str, n_actions: int, dimensions: int,  dataset_training: DatasetRNN, epochs: int, lr: float = 0.01, dataset_test: DatasetRNN = None):
     """Training loop for GQL model."""
-    model.train()
     all_models = []
     
     for index_participant in range(len(dataset_training)):
         
         print(f"Training participant {index_participant+1}...")
         
-        model_participant = deepcopy(model)
+        model_participant = Dezfouli2019GQL(model=model_config, n_actions=n_actions, dimensions=dimensions)
         
         optimizer = torch.optim.Adam(model_participant.parameters(), lr=lr)
         
         xs = dataset_training.xs[index_participant]
         ys = dataset_training.ys[index_participant]
-        
-        if xs.device != model_participant.device:
-            xs = xs.to(model_participant.device)
-            ys = ys.to(model_participant.device)
         
         participant_losses = []
         current_loss = 0
@@ -276,10 +260,6 @@ def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, epochs=1, lr=
             if dataset_test is not None:
                 xs_test = dataset_test.xs[index_participant]
                 ys_test = dataset_test.ys[index_participant]
-                
-                if xs_test.device != model_participant.device:
-                    xs_test = xs_test.to(model_participant.device)
-                    ys_test = ys_test.to(model_participant.device)
                     
                 with torch.no_grad():
                     model_participant.eval()
@@ -300,7 +280,7 @@ def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, epochs=1, lr=
         
         epoch_pbar.close()
         
-        all_models.append(deepcopy(model_participant))
+        all_models.append(model_participant)
         
         # Print final summary for this participant
         if participant_losses:
@@ -316,61 +296,33 @@ class AgentGQL(AgentNetwork):
     def __init__(
         self,
         model: Dezfouli2019GQL,
-        n_actions: int = 2,
-        device=torch.device('cpu'),
         deterministic: bool = True,
     ):
         """Initialize the agent network."""
-        super().__init__(n_actions=n_actions, deterministic=deterministic)
+        super().__init__(model_rnn=None, n_actions=model.n_actions, deterministic=deterministic)
         
         assert isinstance(model, Dezfouli2019GQL), "The passed model is not an instance of Dezfouli2019GQL."
         
         self._model = model
-        self._model = self._model.to(device)
         self._model.eval()
 
-    def new_sess(self, *args, **kwargs):
-        """Reset the network for the beginning of a new session."""
-        self._model.set_initial_state(batch_size=1)
+    # def new_sess(self, *args, **kwargs):
+    #     """Reset the network for the beginning of a new session."""
+    #     self._model.set_initial_state(batch_size=1)
         
-        # Extract state as numpy arrays for compatibility with Agent interface
-        state = self._model.get_state()
-        self._state = {
-            'x_value_reward': state['x_value_reward'][0].detach().cpu().numpy(),  # (n_actions, d)
-            'x_value_choice': state['x_value_choice'][0].detach().cpu().numpy(),  # (n_actions, d)
-        }
+    #     # Extract state as numpy arrays for compatibility with Agent interface
+    #     state = self._model.get_state()
+    #     self._state = {
+    #         'x_value_reward': state['x_value_reward'][0].detach().cpu().numpy(),  # (n_actions, d)
+    #         'x_value_choice': state['x_value_choice'][0].detach().cpu().numpy(),  # (n_actions, d)
+    #     }
 
     def get_betas(self):
         """Return beta and kappa values."""
         with torch.no_grad():
-            beta = self._model.beta.squeeze().detach().cpu().numpy()  # (d,)
-            kappa = self._model.kappa.squeeze().detach().cpu().numpy()  # (d,)
+            beta = self._model.beta.squeeze(0)#.detach().cpu().numpy()  # (d,)
+            kappa = self._model.kappa.squeeze(0)#.detach().cpu().numpy()  # (d,)
         return beta, kappa
-    
-    def update(self, choice: int, reward: float, *args, **kwargs):
-        """Update the agent after one step."""
-        # Convert to tensors
-        with torch.no_grad():
-            # Create one-hot encoded choice
-            choice_tensor = torch.zeros(1, self._n_actions, device=self._model.device)
-            choice_tensor[0, choice] = 1.0
-            
-            # Create reward tensor
-            reward_tensor = torch.zeros(1, self._n_actions, device=self._model.device)
-            reward_tensor[0, choice] = reward
-            
-            # Get current state
-            q_values = torch.from_numpy(self._state['x_value_reward']).unsqueeze(0).to(self._model.device)
-            h_values = torch.from_numpy(self._state['x_value_choice']).unsqueeze(0).to(self._model.device)
-            
-            # Update using GQL step
-            q_values_new, h_values_new = self._model.gql_update_step(
-                q_values, h_values, choice_tensor, reward_tensor
-            )
-            
-            # Update internal state
-            self._state['x_value_reward'] = q_values_new[0].detach().cpu().numpy()
-            self._state['x_value_choice'] = h_values_new[0].detach().cpu().numpy()
     
     @property
     def q(self):
@@ -378,35 +330,57 @@ class AgentGQL(AgentNetwork):
         beta, kappa = self.get_betas()
         
         # Compute weighted values
-        q_weighted = np.sum(beta * self._state['x_value_reward'], axis=-1)  # (n_actions,)
-        h_weighted = np.sum(kappa * self._state['x_value_choice'], axis=-1)  # (n_actions,)
+        q_weighted = torch.sum(beta * self._state['x_value_reward'].squeeze(0), dim=-1)  # (n_actions,)
+        h_weighted = torch.sum(kappa * self._state['x_value_choice'].squeeze(0), dim=-1)  # (n_actions,)
         
         # Compute interaction terms
-        C = self._model.C.detach().cpu().numpy()
-        interaction = np.zeros(self._n_actions)
+        C = self._model.C#.detach().cpu().numpy()
+        interaction = torch.zeros(self._n_actions)
         for a in range(self._n_actions):
-            interaction[a] = self._state['x_value_choice'][a] @ C @ self._state['x_value_reward'][a]
+            interaction[a] = self._state['x_value_choice'].squeeze(0)[a] @ C @ self._state['x_value_reward'].squeeze(0)[a]
         
-        return q_weighted + h_weighted + interaction
+        return (q_weighted + h_weighted + interaction).detach().cpu().numpy()
+    
+    @property
+    def q_reward(self):
+        beta, _ = self.get_betas()
+        q_weighted = torch.sum(beta * self._state['x_value_reward'].squeeze(0), dim=-1)  # (n_actions,)
+        return (q_weighted).detach().cpu().numpy()
+    
+    @property
+    def q_choice(self):
+        _, kappa = self.get_betas()
+        q_weighted = torch.sum(kappa * self._state['x_value_choice'].squeeze(0), dim=-1)  # (n_actions,)
+        return (q_weighted).detach().cpu().numpy()
+    
+    @property
+    def learning_rate_reward(self):
+        return self._state['x_learning_rate_reward'][0, 0]
 
 
-def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC", n_actions: int = 2, dimensions: int = 2, device=torch.device('cpu')) -> AgentGQL:
+def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC") -> AgentGQL:
     """Setup GQL agent from saved model."""
-    # Create model
-    model = Dezfouli2019GQL(model=model_config, n_actions=n_actions, dimensions=dimensions)
     
     # Load state dict
-    state_dict = torch.load(path_model, map_location=device)
-    model.load_state_dict(state_dict)
+    with open(path_model, 'rb') as file:
+        all_models = pickle.load(file)
+
+    agent = []
+    for model in all_models:
+        agent.append(AgentGQL(model=model))
     
-    # Create agent
-    agent = AgentGQL(model=model, n_actions=n_actions, device=device)
+    n_parameters = 0
+    for index_letter, letter in enumerate(model_config):
+        if not letter.islower():
+            n_parameters += 1 * model.d * model.d if letter == 'C' and index_letter == len(model_config)-1 else 1 * model.d
     
-    return agent
+    return agent, n_parameters
 
 
-def main(path_save_model: str, path_data: str, model_config: str, n_actions: int, dimensions: int, n_epochs: int, lr: float, split_ratio=[3, 6, 9], device=torch.device('cpu')):
+def main(path_save_model: str, path_data: str, model_config: str, n_actions: int, dimensions: int, n_epochs: int, lr: float, split_ratio=[3, 6, 9]):
     """Main training function."""
+    
+    path_save_model = path_save_model.replace('.', '_'+model_config+'.')
     
     # Load and split data
     dataset_training, dataset_test = split_data_along_sessiondim(
@@ -416,15 +390,13 @@ def main(path_save_model: str, path_data: str, model_config: str, n_actions: int
     dataset_training = reshape_data_along_participantdim(dataset_training)
     dataset_test = reshape_data_along_participantdim(dataset_test)
     
-    # Create model and optimizer
-    model = Dezfouli2019GQL(model=model_config, n_actions=n_actions, dimensions=dimensions).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    
     print('Training GQL Model...')
     all_models = training(
         dataset_training=dataset_training, 
-        dataset_test=dataset_test, 
-        model=model, 
+        dataset_test=None,#dataset_test, 
+        model_config=model_config,
+        n_actions=n_actions,
+        dimensions=dimensions, 
         epochs=n_epochs,
         lr=lr,
     )
@@ -441,41 +413,35 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Train GQL model with PyTorch')
     
-    parser.add_argument('--path_save_model', type=str, default='params/dezfouli2019/gql_model.pkl',
+    parser.add_argument('--path_save_model', type=str, default='params/dezfouli2019/gql_dezfouli2019.pkl',
                         help='Path to save the trained model')
     parser.add_argument('--path_data', type=str, default='data/dezfouli2019/dezfouli2019.csv',
                         help='Path to the dataset')
-    parser.add_argument('--model_config', type=str, default='PhiChiBetaKappaC',
+    parser.add_argument('--model', type=str, default='PhiChiBetaKappaC',
                         help='Model configuration (e.g., PhiChiBeta)')
     parser.add_argument('--n_actions', type=int, default=2,
                         help='Number of actions')
     parser.add_argument('--dimensions', type=int, default=2,
                         help='Number of dimensions (d parameter)')
-    parser.add_argument('--n_epochs', type=int, default=1,
+    parser.add_argument('--n_epochs', type=int, default=300,
                         help='Number of training epochs')
-    parser.add_argument('--lr', type=float, default=0.01,
+    parser.add_argument('--lr', type=float, default=0.1,
                         help='Learning rate')
     parser.add_argument('--split_ratio', type=str, default='3,6,9',
                         help='Sessions to use for testing (comma-separated)')
-    parser.add_argument('--device', type=str, default='cpu',
-                        help='Device to use (cpu or cuda)')
     
     args = parser.parse_args()
     
     # Parse split ratio
     split_ratio = [int(x) for x in args.split_ratio.split(',')]
-    
-    # Setup device
-    device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
-    
+        
     main(
         path_save_model=args.path_save_model,
         path_data=args.path_data,
-        model_config=args.model_config,
+        model_config=args.model,
         n_actions=args.n_actions,
         dimensions=args.dimensions,
         n_epochs=args.n_epochs,
         lr=args.lr,
         split_ratio=split_ratio,
-        device=device
     )

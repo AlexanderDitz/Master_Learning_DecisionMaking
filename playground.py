@@ -18,19 +18,23 @@ from resources import rnn, sindy_utils
 from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc as setup_agent_mcmc_dezfouli, gql_model
 from benchmarking.benchmarking_eckstein2022 import setup_agent_mcmc as setup_agent_mcmc_eckstein, rl_model
+from benchmarking.benchmarking_dezfouli2019_sgd import setup_agent_gql, Dezfouli2019GQL
 
 # Your existing code
-path_data = 'data/eckstein2022/eckstein2022.csv'
-path_mcmc = 'params/dezfouli2019/mcmc_dezfouli2019_gql.nc'
+path_data = 'data/dezfouli2019/dezfouli2019.csv'
+# path_mcmc = 'params/dezfouli2019/mcmc_dezfouli2019_gql.nc'
 # path_rnn = 'params/eckstein2022/rnn_eckstein2022_FC_v1_ep1024.pkl'
 # path_rnn_2 = 'params/eckstein2022/rnn_eckstein2022_FC_v2_ep1024.pkl'
 # path_rnn_3 = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0005_ep4096.pkl'
+path_gql = 'params/dezfouli2019/gql_dezfouli2019.pkl'
 
 path_spice = None#'params/eckstein2022/spice_eckstein2022_no_l1_l2_0_0005.pkl'
 
 dataset = convert_dataset(path_data)[0]
 
-agent_mcmc = setup_agent_mcmc_dezfouli(path_mcmc)
+agent_gql, n_parameters = setup_agent_gql(path_model=path_gql, model_config='PhiChiBetaKappaC', dimensions=2)
+
+# agent_mcmc, n_parameters = setup_agent_mcmc_dezfouli(path_mcmc)
 
 # agent_rnn = setup_agent_rnn(
 #     class_rnn=rnn.RLRNN_eckstein2022_FC,
@@ -59,8 +63,8 @@ fig, axs = plot_session(
         # 'rnn': agent_rnn,
         # 'benchmark': agent_rnn_2,
         # 'sindy': agent_spice,
-        'benchmark': agent_mcmc[0][0],
-        }, 
+        'benchmark': agent_gql[0],
+        },
     experiment=dataset.xs[291],
     display_choice=0
     )

@@ -442,16 +442,13 @@ class AgentNetwork(Agent):
       """
       
       super().__init__(n_actions=n_actions)
-      
-      assert isinstance(model_rnn, BaseRNN), "The passed model is not an instance of BaseRNN."
               
       self._deterministic = deterministic
 
       self._model = model_rnn
-      self._model = self._model.to(device)
-      self._model.eval()
-      
-      self.new_sess()
+      if model_rnn is not None:
+        self._model = self._model.to(device)
+        self._model.eval()
 
   def new_sess(self, participant_id: int = 0, experiment_id: int = 0, additional_embedding_inputs: np.ndarray = torch.zeros(0), **kwargs):
     """Reset the network for the beginning of a new session."""
