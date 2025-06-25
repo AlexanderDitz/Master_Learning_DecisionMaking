@@ -18,7 +18,8 @@ from utils.convert_dataset import convert_dataset
 from resources import rnn, sindy_utils
 
 # dataset specific benchmarking models
-from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
+from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm, benchmarking_dezfouli2019_sgd
+from benchmarking.benchmarking_dezfouli2019_sgd import Dezfouli2019GQL
 
 
 # -------------------------------------------------------------------------------
@@ -32,7 +33,7 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, b
 # sindy_config = sindy_utils.SindyConfig_eckstein2022
 # rnn_class = rnn.RLRNN_eckstein2022
 # additional_inputs = None
-# setup_agent_mcmc = benchmarking_eckstein2022.setup_agent_mcmc
+# setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
 # rl_model = benchmarking_eckstein2022.rl_model
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
@@ -41,12 +42,16 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, b
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
-models_benchmark = ['gql']
+models_benchmark = ['PhiChiBetaKappaC']
 sindy_config = sindy_utils.SindyConfig_dezfouli2019
-rnn_class = rnn.RLRNN_dezfouli2019
+rnn_class = rnn.RLRNN
 additional_inputs = []
-setup_agent_mcmc = benchmarking_dezfouli2019.setup_agent_mcmc
-gql_model = benchmarking_dezfouli2019.gql_model
+# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
+# gql_model = benchmarking_dezfouli2019.gql_model
+setup_agent_benchmark = benchmarking_dezfouli2019_sgd.setup_agent_gql
+gql_model = benchmarking_dezfouli2019_sgd.Dezfouli2019GQL
+benchmark_file = f'gql_{dataset}_MODEL.pkl'
+baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 
 # ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 # dataset = 'dezfouli2019'
@@ -61,10 +66,10 @@ use_test = True
 
 path_data = f'data/{dataset}/{dataset}.csv'
 # path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
-path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_0005.pkl'
-path_model_spice = None#f'params/{dataset}/spice_{dataset}_no_l1_l2_0_0005.pkl'
-path_model_baseline = None#f'params/{dataset}/mcmc_{dataset}_ApBr.nc'
-path_model_benchmark = f'params/{dataset}/mcmc_{dataset}_MODEL.nc' if len(models_benchmark) > 0 else None
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_0001_ep16384.pkl'
+path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_0001_ep16384.pkl'
+path_model_baseline = None#os.path.join(f'params/{dataset}/', baseline_file)
+path_model_benchmark = None#os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}_training_0_5.pkl'
 
 # -------------------------------------------------------------------------------
@@ -86,10 +91,10 @@ print("Computing metrics on", 'test' if use_test else 'training', "data...")
 # new: Fitted ApBr model -> Tells the "true" story of how much better SPICE models can actually be by setting a good relative baseline
 print("Setting up baseline agent from file", path_model_baseline)
 if path_model_baseline:
-    agent_baseline = setup_agent_mcmc(path_model=path_model_baseline)
+    agent_baseline = setup_agent_benchmark(path_model=path_model_baseline)
 else:
     # agent_baseline = [AgentQ(alpha_reward=0.3, beta_reward=1) for _ in range(len(dataset))]
-    agent_baseline = [AgentQ(alpha_reward=0., beta_reward=1, beta_choice=3) for _ in range(len(dataset))]
+    agent_baseline = [[AgentQ(alpha_reward=0., beta_reward=1, beta_choice=3) for _ in range(len(dataset))], 2]
 
 n_parameters_baseline = 2
 
@@ -98,7 +103,7 @@ if path_model_benchmark:
     print("Setting up benchmark agent...")
     agent_benchmark = {}
     for model in models_benchmark:
-        agent_benchmark[model] = setup_agent_mcmc(path_model=path_model_benchmark.replace('MODEL', model))
+        agent_benchmark[model] = setup_agent_benchmark(path_model=path_model_benchmark.replace('MODEL', model))
 else:
     models_benchmark = []
 n_parameters_benchmark = 0
@@ -162,7 +167,7 @@ n_parameters_spice = 0
 if isinstance(train_test_ratio, float):
     dataset_train, dataset_test = split_data_along_timedim(dataset, split_ratio=train_test_ratio)
     data_input = dataset.xs
-    data_test = dataset.xs[..., :agent_baseline[0]._n_actions]
+    data_test = dataset.xs[..., :agent_baseline[0][0]._n_actions]
     # n_trials_test = dataset_test.xs.shape[1]
     
 elif isinstance(train_test_ratio, list) or isinstance(train_test_ratio, tuple):
@@ -170,7 +175,7 @@ elif isinstance(train_test_ratio, list) or isinstance(train_test_ratio, tuple):
     if not use_test:
         dataset_test = dataset_train
     data_input = dataset_test.xs
-    data_test = dataset_test.xs[..., :agent_baseline[0]._n_actions]
+    data_test = dataset_test.xs[..., :agent_baseline[0][0]._n_actions]
     
 else:
     raise TypeError("train_test_raio must be either a float number or a list of integers containing the session/block ids which should be used as test sessions/blocks")
@@ -199,7 +204,7 @@ for index_data in tqdm(range(len(dataset_test))):
             continue
         
         # Baseline model
-        probs_baseline = get_update_dynamics(experiment=data_input[index_data], agent=agent_baseline[index_data])[1]
+        probs_baseline = get_update_dynamics(experiment=data_input[index_data], agent=agent_baseline[0][pid])[1]
         
         # get number of actual trials
         n_trials = len(probs_baseline)
@@ -217,18 +222,18 @@ for index_data in tqdm(range(len(dataset_test))):
             index_start = 0
             index_end = n_trials
         
-        scores_baseline = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_baseline[index_start:index_end], n_parameters=n_parameters_baseline))
+        scores_baseline = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_baseline[index_start:index_end], n_parameters=agent_baseline[1]))
         metric_participant[0, index_data] += scores_baseline[0]
         
         # get scores of all mcmc benchmark models but keep only the best one for each session
         if path_model_benchmark:
             scores_benchmark = np.zeros((len(models_benchmark), 3))
             for index_model, model in enumerate(models_benchmark):
-                n_parameters_model = agent_benchmark[model][1][pid]
+                n_parameters_model = agent_benchmark[model][1]
                 probs_benchmark = get_update_dynamics(experiment=data_input[index_data], agent=agent_benchmark[model][0][pid])[1]
                 scores_benchmark[index_model] += np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_benchmark[index_start:index_end], n_parameters=n_parameters_model))
             index_best_benchmark = np.argmin(scores_benchmark, axis=0)[1] # index 0 -> NLL is indicating metric
-            n_parameters_benchmark += agent_benchmark[models_benchmark[index_best_benchmark]][1][0]
+            n_parameters_benchmark += agent_benchmark[models_benchmark[index_best_benchmark]][1]
             best_benchmarks_participant[index_data] += models_benchmark[index_best_benchmark]
             metric_participant[1, index_data] += scores_benchmark[index_best_benchmark, 0]
             metric_participant[5:, index_data] += scores_benchmark[:, 0]
@@ -300,7 +305,7 @@ avg_trial_likelihood_participant_std = avg_trial_likelihood_participant.std(axis
 # pd.DataFrame(data=np.concatenate((np.array(best_benchmarks_participant).reshape(-1, 1), avg_trial_likelihood), axis=1), columns=['benchmark model', 'baseline','benchmark', 'lstm', 'rnn', 'spice']+models_benchmark).to_csv('best_scores_benchmark.csv')
 
 # compute average number of parameters
-n_parameters_benchmark_single_models = [agent_benchmark[model][1][0] for model in models_benchmark] if path_model_benchmark else []
+n_parameters_benchmark_single_models = [agent_benchmark[model][1] for model in models_benchmark] if path_model_benchmark else []
 n_parameters = np.array([
     n_parameters_baseline,
     n_parameters_benchmark/(len(dataset_test)-failed_attempts) if path_model_benchmark else 0, 

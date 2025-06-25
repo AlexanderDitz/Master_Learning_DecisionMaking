@@ -14,19 +14,19 @@ from resources import rnn, sindy_utils
 # class_rnn = RLRNN
 # sindy_config = SindyConfig
 
-path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_001.pkl'
-sindy_config = sindy_utils.SindyConfig_eckstein2022
-class_rnn = rnn.RLRNN_eckstein2022
-additional_inputs = None
+# path_data = 'data/eckstein2022/eckstein2022.csv'
+# path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_001.pkl'
+# sindy_config = sindy_utils.SindyConfig_eckstein2022
+# class_rnn = rnn.RLRNN_eckstein2022
+# additional_inputs = None
 # class_rnn = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
 
-# path_data = 'data/dezfouli2019/dezfouli2019.csv'
-# path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0.pkl'
-# class_rnn = rnn.RLRNN_dezfouli2019
-# sindy_config = sindy_utils.SindyConfig_dezfouli2019
-# additional_inputs = None
+path_data = 'data/dezfouli2019/dezfouli2019.csv'
+path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_0001_ep16384.pkl'
+class_rnn = rnn.RLRNN
+sindy_config = sindy_utils.SindyConfig
+additional_inputs = None
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
