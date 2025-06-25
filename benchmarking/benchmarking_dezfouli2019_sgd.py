@@ -3,6 +3,8 @@ import argparse
 import torch
 from tqdm import tqdm
 import numpy as np
+from copy import deepcopy
+import pickle
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn_utils import DatasetRNN, split_data_along_timedim, split_data_along_sessiondim, reshape_data_along_participantdim
@@ -226,32 +228,37 @@ class Dezfouli2019GQL(torch.nn.Module):
         return self
 
 
-def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, optimizer: torch.optim.Optimizer, epochs=1, dataset_test: DatasetRNN = None):
+def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, epochs=1, lr=0.01, dataset_test: DatasetRNN = None):
     """Training loop for GQL model."""
     model.train()
+    all_models = []
     
     for index_participant in range(len(dataset_training)):
         
         print(f"Training participant {index_participant+1}...")
         
+        model_participant = deepcopy(model)
+        
+        optimizer = torch.optim.Adam(model_participant.parameters(), lr=lr)
+        
         xs = dataset_training.xs[index_participant]
         ys = dataset_training.ys[index_participant]
         
-        if xs.device != model.device:
-            xs = xs.to(model.device)
-            ys = ys.to(model.device)
+        if xs.device != model_participant.device:
+            xs = xs.to(model_participant.device)
+            ys = ys.to(model_participant.device)
         
         participant_losses = []
         current_loss = 0
         
         # Create inner progress bar for epochs
-        epoch_pbar = tqdm(range(epochs), desc=f"Loss={current_loss:.5f}", leave=False)
+        epoch_pbar = tqdm(range(epochs), desc=f"Participant {index_participant}", leave=False)
         
         for e in epoch_pbar:
             
             # Train model
-            model, optimizer, current_loss = batch_train(
-                model=model,
+            model_participant, optimizer, current_loss = batch_train(
+                model=model_participant,
                 xs=xs,
                 ys=ys,
                 optimizer=optimizer,
@@ -270,19 +277,19 @@ def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, optimizer: to
                 xs_test = dataset_test.xs[index_participant]
                 ys_test = dataset_test.ys[index_participant]
                 
-                if xs_test.device != model.device:
-                    xs_test = xs_test.to(model.device)
-                    ys_test = ys_test.to(model.device)
+                if xs_test.device != model_participant.device:
+                    xs_test = xs_test.to(model_participant.device)
+                    ys_test = ys_test.to(model_participant.device)
                     
                 with torch.no_grad():
-                    model.eval()
+                    model_participant.eval()
                     _, _, loss_test = batch_train(
-                        model=model,
+                        model=model_participant,
                         xs=xs_test,
                         ys=ys_test,
                         optimizer=optimizer,
                     )
-                    model.train()
+                    model_participant.train()
                     
                     # Update progress bar with test loss too
                     epoch_pbar.set_postfix({
@@ -293,12 +300,14 @@ def training(dataset_training: DatasetRNN, model: Dezfouli2019GQL, optimizer: to
         
         epoch_pbar.close()
         
+        all_models.append(deepcopy(model_participant))
+        
         # Print final summary for this participant
         if participant_losses:
             final_loss = participant_losses[-1]
             print(f"Participant {index_participant}: Final loss = {final_loss:.5f} (improved from {participant_losses[0]:.5f})")
     
-    return model
+    return all_models
 
 
 class AgentGQL(AgentNetwork):
@@ -412,16 +421,18 @@ def main(path_save_model: str, path_data: str, model_config: str, n_actions: int
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     
     print('Training GQL Model...')
-    model = training(
+    all_models = training(
         dataset_training=dataset_training, 
         dataset_test=dataset_test, 
         model=model, 
-        optimizer=optimizer, 
-        epochs=n_epochs
+        epochs=n_epochs,
+        lr=lr,
     )
     
     # Save model
-    torch.save(model.state_dict(), path_save_model)
+    with open(path_save_model, 'wb') as file:
+        pickle.dump(all_models, file)  
+    # torch.save(model.state_dict(), path_save_model)
     print(f'Model saved to {path_save_model}')
     print('Training GQL Model done!')
 
@@ -440,7 +451,7 @@ if __name__ == '__main__':
                         help='Number of actions')
     parser.add_argument('--dimensions', type=int, default=2,
                         help='Number of dimensions (d parameter)')
-    parser.add_argument('--n_epochs', type=int, default=300,
+    parser.add_argument('--n_epochs', type=int, default=1,
                         help='Number of training epochs')
     parser.add_argument('--lr', type=float, default=0.01,
                         help='Learning rate')
