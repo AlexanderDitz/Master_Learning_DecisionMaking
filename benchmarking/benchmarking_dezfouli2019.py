@@ -252,10 +252,10 @@ def setup_agent_mcmc(path_model: str, deterministic: bool = True) -> Tuple[List[
         n_parameters = 0
         for param in parameters:
             if param in mcmc.get_samples():
-                parameters[param] = mcmc.get_samples()[param][:, participant].mean(axis=0)
+                parameters[param] = mcmc.get_samples()[param][5000:, participant].mean(axis=0)
                 n_parameters += d
             elif param == 'C' and 'C_vec' in mcmc.get_samples():
-                parameters['C'] = mcmc.get_samples()['C_vec'][:, participant].reshape(-1, d, d).mean(axis=0)    
+                parameters['C'] = mcmc.get_samples()['C_vec'][5000:, participant].reshape(-1, d, d).mean(axis=0)    
                 n_parameters += d*d
                 
         agents.append(Agent_dezfouli2019(
@@ -305,7 +305,7 @@ def gql_model(model, choice, reward, d=2):
     if model[2] == 1:
         with numpyro.plate("d_beta_group", d):
             beta_mean = numpyro.sample("beta_mean", dist.Normal(0, 1))
-            beta_sigma = numpyro.sample("beta_sigma", dist.HalfNormal(1.0))
+            beta_sigma = numpyro.sample("beta_sigma", dist.HalfNormal(3.0))
     else:
         beta_mean, beta_sigma = jnp.ones(d), jnp.zeros(d)
         
@@ -359,7 +359,7 @@ def gql_model(model, choice, reward, d=2):
     if model[3] == 1:
         with numpyro.plate("d_kappa", d):
             with numpyro.plate("participants_kappa", n_participants):
-                kappa = numpyro.sample("kappa", dist.Normal(kappa_mean, kappa_sigma)) * 15
+                kappa = numpyro.sample("kappa", dist.Normal(kappa_mean, kappa_sigma))
     else:
         kappa = jnp.zeros((n_participants, d))
     

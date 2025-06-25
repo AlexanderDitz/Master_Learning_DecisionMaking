@@ -512,14 +512,51 @@ class AgentNetwork(Agent):
       return betas
     return None
 
-  @property
-  def q(self):
-    return self.get_logit()
-  
   def get_participant_ids(self):
     if hasattr(self._model, 'participant_embedding'):
       return tuple(np.arange(self._model.participant_embedding.num_embeddings).tolist())
 
+  @property
+  def q(self):
+    return self.get_logit()
+  
+  @property
+  def q_reward(self):
+    betas = self.get_betas()
+    if betas is not None:
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] * betas[key] for key in self._state if key in betas and 'reward' in key
+          ]), 
+        axis=0)
+    else:
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] for key in self._state if 'x_value' in key and 'reward' in key
+          ]),
+        axis=0)
+    return logits
+
+  @property
+  def q_choice(self):
+    betas = self.get_betas()
+    if betas is not None:
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] * betas[key] for key in self._state if key in betas and 'choice' in key
+          ]), 
+        axis=0)
+    else:
+      logits = np.sum(
+        np.concatenate([
+          self._state[key] for key in self._state if 'x_value' in key and 'choice' in key
+          ]),
+        axis=0)
+    return logits
+  
+  @property
+  def learning_rate_reward(self):
+    return self._state['x_learning_rate_reward']
 
 class AgentSpice(AgentNetwork):
   
@@ -576,6 +613,10 @@ class AgentSpice(AgentNetwork):
   def get_participant_ids(self):
     modules = self.get_modules()
     return list(modules[list(modules.keys())[0]].keys())  
+  
+  def print_model(self, participant_id: int):
+    for module in self.get_modules():
+      self._model.submodules_sindy[module][participant_id].print()
 
 
 ################

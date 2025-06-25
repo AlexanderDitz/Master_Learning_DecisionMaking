@@ -18,10 +18,10 @@ from utils.convert_dataset import convert_dataset
 def setup_rnn(
     class_rnn,
     path_model,
-    list_sindy_signals, 
     n_actions=2,
     counterfactual=False,
     device=device('cpu'),
+    **kwargs,
 ) -> BaseRNN:
     
     # get n_participants and hidden_size from state dict
@@ -48,26 +48,25 @@ def setup_rnn(
         hidden_size=hidden_size, 
         embedding_size=embedding_size,
         n_participants=n_participants, 
-        list_signals=list_sindy_signals, 
         device=device, 
         counterfactual=counterfactual,
         )
     rnn.load_state_dict(state_dict)
-    
+        
     return rnn
 
 
 def setup_agent_rnn(
     class_rnn,
     path_model,
-    list_sindy_signals,
     n_actions=2,
     counterfactual=False,
     deterministic=True,
     device=device('cpu'),
+    **kwargs,
     ) -> AgentNetwork:
     
-    rnn = setup_rnn(class_rnn=class_rnn, path_model=path_model, list_sindy_signals=list_sindy_signals, device=device, n_actions=n_actions, counterfactual=counterfactual)
+    rnn = setup_rnn(class_rnn=class_rnn, path_model=path_model, device=device, n_actions=n_actions, counterfactual=counterfactual)
     agent = AgentNetwork(model_rnn=rnn, n_actions=n_actions, deterministic=deterministic)
     
     return agent
@@ -76,14 +75,14 @@ def setup_agent_rnn(
 def setup_agent_spice(
     class_rnn: type,
     path_rnn: str,
-    path_data: str,
-    rnn_modules: List[str],
-    control_parameters: List[str],
-    sindy_library_polynomial_degree: int,
-    sindy_library_setup: Dict[str, List],
-    sindy_filter_setup: Dict[str, List],
-    sindy_dataprocessing: Dict[str, List],
     path_spice: str = None,
+    path_data: str = None,
+    rnn_modules: List[str] = None,
+    control_parameters: List[str] = None,
+    sindy_library_polynomial_degree: int = None,
+    sindy_library_setup: Dict[str, List] = None,
+    sindy_filter_setup: Dict[str, List] = None,
+    sindy_dataprocessing: Dict[str, List] = None,
     threshold: float = 0.05,
     regularization: float = 0.1,
     participant_id: int = None,
@@ -93,10 +92,11 @@ def setup_agent_spice(
     verbose: bool = False,
 ) -> AgentSpice:
     
-    agent_rnn = setup_agent_rnn(class_rnn=class_rnn, path_model=path_rnn, list_sindy_signals=rnn_modules+control_parameters)
-    dataset = convert_dataset(file=path_data)[0]
+    agent_rnn = setup_agent_rnn(class_rnn=class_rnn, path_model=path_rnn)
     
     if path_spice is None or path_spice == '':
+        dataset = convert_dataset(file=path_data)[0]
+
         # fit SPICE model to RNN
         agent_spice, _ = fit_spice(
             agent_rnn=agent_rnn,

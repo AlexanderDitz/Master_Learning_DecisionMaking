@@ -3,26 +3,26 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_rnn
-from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_dezfouli2019_blocks, RLRNN_eckstein2022, RLRNN_meta_eckstein2022
+from resources.rnn import RLRNN, RLRNN_dezfouli2019, RLRNN_dezfouli2019_blocks, RLRNN_eckstein2022, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_FC
 
 
 # -------------------------------------------------------------------------------
 # SPICE CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
-# path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0005.pkl'
-# path_data = 'data/eckstein2022/eckstein2022.csv'
-# train_test_ratio = 0.8
-# class_rnn = RLRNN_eckstein2022
-# additional_inputs = None
-# # class_rnn = RLRNN_meta_eckstein2022
-# # additional_inputs = ['age']
-
-class_rnn = RLRNN_dezfouli2019
-train_test_ratio = None#[3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_crossval_baseline.pkl'
-path_data = 'data/dezfouli2019/dezfouli2019_simulated_gql_multi_session_d1.csv'
+path_model = 'params/eckstein2022/rnn_eckstein2022_FC_v2.pkl'
+path_data = 'data/eckstein2022/eckstein2022.csv'
+train_test_ratio = 0.8
+class_rnn = RLRNN_eckstein2022_FC
 additional_inputs = None
+# class_rnn = RLRNN_meta_eckstein2022
+# additional_inputs = ['age']
+
+# class_rnn = RLRNN_dezfouli2019
+# train_test_ratio = None#[3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
+# path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_crossval_baseline.pkl'
+# path_data = 'data/dezfouli2019/dezfouli2019_simulated_gql_multi_session_d1.csv'
+# additional_inputs = None
 
 # class_rnn = RLRNN_dezfouli2019_blocks
 # train_test_ratio = [1, 3, 4, 6, 8, 10]  # list of test sessions

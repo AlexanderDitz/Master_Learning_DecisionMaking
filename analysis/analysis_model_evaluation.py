@@ -15,8 +15,7 @@ from utils.setup_agents import setup_agent_rnn, setup_agent_spice
 from utils.convert_dataset import convert_dataset
 
 # dataset specific SPICE models
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_meta_eckstein2022, RLRNN_eckstein2022_rearranged, RLRNN_dezfouli2019_blocks
-from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_eckstein2022_trials, SindyConfig_dezfouli2019_blocks
+from resources import rnn, sindy_utils
 
 # dataset specific benchmarking models
 from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
@@ -30,8 +29,8 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, b
 # dataset = 'eckstein2022'
 # models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
 # train_test_ratio = 0.8
-# sindy_config = SindyConfig_eckstein2022
-# rnn_class = RLRNN_eckstein2022
+# sindy_config = sindy_utils.SindyConfig_eckstein2022
+# rnn_class = rnn.RLRNN_eckstein2022
 # additional_inputs = None
 # setup_agent_mcmc = benchmarking_eckstein2022.setup_agent_mcmc
 # rl_model = benchmarking_eckstein2022.rl_model
@@ -42,9 +41,9 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, b
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
-models_benchmark = ['baseline']
-sindy_config = SindyConfig_dezfouli2019
-rnn_class = RLRNN_dezfouli2019
+models_benchmark = ['gql']
+sindy_config = sindy_utils.SindyConfig_dezfouli2019
+rnn_class = rnn.RLRNN_dezfouli2019
 additional_inputs = []
 setup_agent_mcmc = benchmarking_dezfouli2019.setup_agent_mcmc
 gql_model = benchmarking_dezfouli2019.gql_model
