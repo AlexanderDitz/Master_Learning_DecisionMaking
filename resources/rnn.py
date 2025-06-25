@@ -537,6 +537,7 @@ class RLRNN_eckstein2022(BaseRNN):
         hidden_size = 8,
         embedding_size = 8,
         dropout = 0.,
+        leaky_relu = 0.01,
         device = torch.device('cpu'),
         **kwargs,
     ):
@@ -548,21 +549,20 @@ class RLRNN_eckstein2022(BaseRNN):
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
         if embedding_size > 1:
-            # self.participant_embedding = torch.nn.Sequential(
-            #     torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
-            #     # CustomEmbedding(num_embeddings=n_participants, embedding_dim=embedding_size),
-            #     torch.nn.LeakyReLU(),
-            #     torch.nn.Dropout(p=dropout),
-            #     )
-            self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
+            self.participant_embedding = torch.nn.Sequential(
+                torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size),
+                torch.nn.LeakyReLU(leaky_relu),
+                torch.nn.Dropout(p=dropout),
+                )
+            # self.participant_embedding = torch.nn.Embedding(num_embeddings=n_participants, embedding_dim=self.embedding_size)
         else:
             self.embedding_size = 1
             self.participant_embedding = DummyModule()
             
         # scaling factor (inverse noise temperature) for each participant for the values which are handled by an hard-coded equation
         self.betas = torch.nn.ModuleDict()
-        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(negative_slope=0.01))
-        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(negative_slope=0.01))
+        self.betas['x_value_reward'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(leaky_relu))
+        self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(leaky_relu))
         
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
@@ -595,8 +595,7 @@ class RLRNN_eckstein2022(BaseRNN):
         # rewards_not_chosen = ((1-actions) * rewards).sum(dim=-1, keepdim=True).repeat(1, 1, self._n_actions)
         
         # Here we compute now the participant embeddings for each entry in the batch
-        # leaky relu also in rnn training hard coded for l1-reg of embedding activations -> take care when replacing
-        participant_embedding = self.dropout(torch.nn.functional.leaky_relu(self.participant_embedding(participant_id[:, 0].int()), negative_slope=0.01))
+        participant_embedding = self.participant_embedding(participant_id[:, 0].int())
         
         # get scaling factors
         scaling_factors = {}
