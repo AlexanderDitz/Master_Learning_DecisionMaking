@@ -3,9 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pipeline_sindy
-from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019, RLRNN_dezfouli2019_blocks, RLRNN_meta_eckstein2022 
-from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019, SindyConfig_dezfouli2019_blocks
-
+from resources import rnn, sindy_utils
 
 # -------------------------------------------------------------------------------
 # SPICE CONFIGURATIONS
@@ -17,23 +15,23 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 # sindy_config = SindyConfig
 
 path_data = 'data/eckstein2022/eckstein2022.csv'
-path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_0005.pkl'
-sindy_config = SindyConfig_eckstein2022
-class_rnn = RLRNN_eckstein2022
+path_model = 'params/eckstein2022/rnn_eckstein2022_no_l1_l2_0_001.pkl'
+sindy_config = sindy_utils.SindyConfig_eckstein2022
+class_rnn = rnn.RLRNN_eckstein2022
 additional_inputs = None
 # class_rnn = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0.pkl'
-# class_rnn = RLRNN_dezfouli2019
-# sindy_config = SindyConfig_dezfouli2019
+# class_rnn = rnn.RLRNN_dezfouli2019
+# sindy_config = sindy_utils.SindyConfig_dezfouli2019
 # additional_inputs = None
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
 # path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
-# class_rnn = RLRNN_dezfouli2019_blocks
-# sindy_config = SindyConfig_dezfouli2019_blocks
+# class_rnn = rnn.RLRNN_dezfouli2019_blocks
+# sindy_config = sindy_utils.SindyConfig_dezfouli2019_blocks
 # additional_inputs = None
 
 # -------------------------------------------------------------------------------
@@ -57,15 +55,14 @@ agent_spice, features, loss = pipeline_sindy.main(
     # sindy parameters
     # optimizer_type="SR3_weighted_l1",
     train_test_ratio=0.8,
-    polynomial_degree=2,
+    polynomial_degree=1,
     optimizer_alpha=0.1,
     optimizer_threshold=0.05,
     n_trials_off_policy=1000,
     n_sessions_off_policy=1,
     n_trials_same_action_off_policy=5,
     optuna_threshold=0.001,
-    optuna_trials_first_state=50,
-    optuna_trials_second_state=0,
+    optuna_n_trials=50,
     verbose=False,
     
     # generated training dataset parameters
@@ -81,7 +78,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     counterfactual=False,
     alpha_counterfactual=0.,
     
-    analysis=True,
+    analysis=False,
     get_loss=False,
     
     **sindy_config,

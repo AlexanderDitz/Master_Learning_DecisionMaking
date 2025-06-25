@@ -7,7 +7,7 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.rnn_utils import DatasetRNN, split_data_along_timedim, split_data_along_sessiondim
 from utils.convert_dataset import convert_dataset
-
+from resources.bandits import Agent
 
 class RLLSTM(torch.nn.Module):
     
@@ -35,7 +35,7 @@ class RLLSTM(torch.nn.Module):
         return self
     
 
-class AgentLSTM:
+class AgentLSTM(Agent):
     """A class that allows running a pretrained LSTM as an agent.
 
     Attributes:
@@ -56,39 +56,21 @@ class AgentLSTM:
             n_actions: number of permitted actions (default = 2)
         """
 
+        super().__init__(n_actions=n_actions, deterministic=deterministic)
+        
         assert isinstance(model_rnn, RLLSTM), "The passed model is not an instance of RLLSTM."
         
-        self._deterministic = deterministic
-        self._q_init = 0.5
-        self._n_actions = n_actions
-
         self._model = model_rnn
         self._model = self._model.to(device)
         self._model.eval()
 
         self._state = {'x_value_reward': np.zeros((n_actions))}
 
-        self.new_sess()
-
     def new_sess(self, *args, **kwargs):
         """Reset the network for the beginning of a new session."""    
         self._state = {'x_value_reward': np.zeros((self._n_actions))}
         self._hidden_state = torch.zeros((1, self._model.n_cells)).to(self._model.device)
         self._cell_state = torch.zeros((1, self._model.n_cells)).to(self._model.device)
-
-    def get_choice_probs(self) -> np.ndarray:
-        """Predict the choice probabilities as a softmax over output logits."""
-        decision_variable = self._state['x_value_reward']
-        choice_probs = np.exp(decision_variable) / np.sum(np.exp(decision_variable))
-        return choice_probs
-
-    def get_choice(self):
-        """Sample choice."""
-        choice_probs = self.get_choice_probs()
-        if self._deterministic:
-            return np.argmax(choice_probs)
-        else:
-            return np.random.choice(self._n_actions, p=choice_probs)
 
     def update(self, choice: float, reward: float, **kwargs):
         choice = torch.eye(self._n_actions)[int(choice)]

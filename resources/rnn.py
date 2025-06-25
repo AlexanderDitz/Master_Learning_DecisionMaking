@@ -93,7 +93,6 @@ class BaseRNN(nn.Module):
         hidden_size: int = 8,
         n_participants: int = 0,
         device=torch.device('cpu'),
-        list_signals=['x_V', 'c_a', 'c_r'],
         embedding_size: int = 1,
         ):
         super(BaseRNN, self).__init__()
@@ -106,7 +105,7 @@ class BaseRNN(nn.Module):
         self.n_participants = n_participants
         
         # session recording; used for sindy training; training variables start with 'x' and control parameters with 'c' 
-        self.recording = {key: [] for key in list_signals}
+        self.recording = {}
         self.submodules_rnn = nn.ModuleDict()
         self.submodules_eq = dict()
         self.submodules_sindy = dict()
@@ -156,8 +155,7 @@ class BaseRNN(nn.Module):
             Tuple[torch.Tensor]: initial hidden state
         """
                 
-        for key in self.recording.keys():
-            self.recording[key] = []
+        self.recording = {}
         
         # state dimensions: (habit_state, value_state, habit, value)
         # dimensions of states: (batch_size, substate, hidden_size)
@@ -205,6 +203,8 @@ class BaseRNN(nn.Module):
             new_value (_type_): value at timestep t of shape (batch_size, feature_dim)
         """
         
+        if key not in self.recording:
+            self.recording[key] = []
         self.recording[key].append(value.detach().cpu().numpy())
         
     def get_recording(self, key):
@@ -272,7 +272,6 @@ class BaseRNN(nn.Module):
         Returns:
             _type_: _description_
         """
-        record_signal = False
         
         if action is not None:
             action = action.unsqueeze(-1)
@@ -535,11 +534,10 @@ class RLRNN_eckstein2022(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
-        super().__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device, n_participants=n_participants)
+        super().__init__(n_actions=n_actions, hidden_size=hidden_size, device=device, n_participants=n_participants)
         
         self.dropout = nn.Dropout(dropout)
         
@@ -691,7 +689,7 @@ class RLRNN_eckstein2022(BaseRNN):
         logits = self.post_forward_pass(logits, batch_first)
                 
         return logits, self.get_state()
-        
+    
 
 class RLRNN_eckstein2022_rearranged(BaseRNN):
     
@@ -709,11 +707,10 @@ class RLRNN_eckstein2022_rearranged(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
-        super().__init__(n_actions=n_actions, list_signals=list_signals, hidden_size=hidden_size, device=device, n_participants=n_participants)
+        super().__init__(n_actions=n_actions, hidden_size=hidden_size, device=device, n_participants=n_participants)
         
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
@@ -890,7 +887,6 @@ class RLRNN_meta_eckstein2022(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
@@ -1055,7 +1051,6 @@ class RLRNN_dezfouli2019(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice'],
         **kwargs,
     ):
         
@@ -1229,7 +1224,6 @@ class RLRNN_dezfouli2019_blocks(BaseRNN):
         embedding_size = 8,
         dropout = 0.,
         device = torch.device('cpu'),
-        list_signals = ['x_learning_rate_reward', 'x_value_reward_not_chosen', 'x_value_choice_chosen', 'x_value_choice_not_chosen', 'x_value_block', 'x_value_trial', 'c_action', 'c_reward_chosen', 'c_value_reward', 'c_value_choice', 'c_value_block', 'c_value_trial'],
         **kwargs,
     ):
         

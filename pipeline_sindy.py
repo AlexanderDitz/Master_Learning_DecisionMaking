@@ -48,8 +48,7 @@ def main(
     pruning = False,
     train_test_ratio = 1.0,
     optuna_threshold = 0.03,
-    optuna_trials_first_state = 50,
-    optuna_trials_second_state = 100,
+    optuna_n_trials = 50,
     
     # ground truth parameters
     beta_reward = 3.,
@@ -207,8 +206,7 @@ def main(
         pruning=pruning,
         train_test_ratio=train_test_ratio,
         optuna_threshold=optuna_threshold,
-        optuna_trials_first_state=optuna_trials_first_state,
-        optuna_trials_second_state=optuna_trials_second_state,
+        optuna_n_trials=optuna_n_trials,
         )
     
     # If agent_spice is None, we couldn't fit the model, so return early
