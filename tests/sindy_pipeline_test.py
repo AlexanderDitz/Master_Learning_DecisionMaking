@@ -23,9 +23,9 @@ from resources import rnn, sindy_utils
 # additional_inputs = ['age']
 
 path_data = 'data/dezfouli2019/dezfouli2019.csv'
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_0001_ep16384.pkl'
-class_rnn = rnn.RLRNN
-sindy_config = sindy_utils.SindyConfig
+path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_0001_ep4096.pkl'
+class_rnn = rnn.RLRNN_eckstein2022
+sindy_config = sindy_utils.SindyConfig_eckstein2022
 additional_inputs = None
 
 # path_data = 'data/dezfouli2019/dezfouli2019.csv'
@@ -47,7 +47,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     save = True,
     
     # general recovery parameters
-    participant_id=None,
+    participant_id=0,
     filter_bad_participants=False,
     use_optuna=True,
     pruning=False,
@@ -55,14 +55,14 @@ agent_spice, features, loss = pipeline_sindy.main(
     # sindy parameters
     # optimizer_type="SR3_weighted_l1",
     train_test_ratio=0.8,
-    polynomial_degree=1,
+    polynomial_degree=2,
     optimizer_alpha=0.1,
     optimizer_threshold=0.05,
     n_trials_off_policy=1000,
-    n_sessions_off_policy=1,
+    n_sessions_off_policy=0,
     n_trials_same_action_off_policy=5,
-    optuna_threshold=0.001,
-    optuna_n_trials=50,
+    optuna_threshold=0.1,
+    optuna_n_trials=10,
     verbose=False,
     
     # generated training dataset parameters
@@ -78,7 +78,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     counterfactual=False,
     alpha_counterfactual=0.,
     
-    analysis=False,
+    analysis=True,
     get_loss=False,
     
     **sindy_config,

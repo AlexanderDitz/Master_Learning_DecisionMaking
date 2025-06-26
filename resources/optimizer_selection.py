@@ -87,15 +87,24 @@ def optimize_for_participant(
         
         agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions)
                 
-        # compute error
+        # compute loss
         probs_spice = get_update_dynamics(experiment=data.xs[0], agent=agent_spice)[1]
-        lik_spice = np.exp(log_likelihood(data.xs[0, :probs_spice.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
-        error = metric_rnn - lik_spice
         
-        if error == np.nan:
-            error = 1e3
+        # loss: Difference between average trial likelihoods of RNN and SPICE -> SPICE can become even better than RNN; But that does not make sense on off-policy data
+        # lik_spice = np.exp(log_likelihood(data.xs[0, :probs_spice.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
+        # loss = metric_rnn - lik_spice
+        
+        # loss: MSE between predicted trial probabilities
+        loss_reconstruction = np.power(metric_rnn - probs_spice, 2).mean()
+        # loss_parameter = bayesian_information_criterion(data.xs[0, :len(probs_spice), :agent_spice._n_actions].numpy(), probs_spice, n_parameters=agent_spice.count_parameters()[agent_spice.get_participant_ids()[0]])/len(probs_spice)
+        loss = loss_reconstruction# + loss_parameter
+        
+        if loss == np.nan:
+            loss = 1e3
                     
-        return error
+        return loss
+    
+    threshold_no_improvement = 50
     
     def callback_no_improvement(study, trial):
         """
@@ -124,7 +133,7 @@ def optimize_for_participant(
             study.set_user_attr("trial_count", trial_count)
 
             # Stop the study if patience is exceeded
-            if trial_count >= 15:
+            if trial_count >= threshold_no_improvement:
                 study.stop()
         
     def callback_threshold_reached(study, trial):

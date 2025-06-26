@@ -28,13 +28,15 @@ from benchmarking.benchmarking_dezfouli2019_sgd import Dezfouli2019GQL
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
 # dataset = 'eckstein2022'
-# models_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+# models_benchmark = ['ApAnBrBcfBch']#['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
 # train_test_ratio = 0.8
 # sindy_config = sindy_utils.SindyConfig_eckstein2022
 # rnn_class = rnn.RLRNN_eckstein2022
 # additional_inputs = None
 # setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
 # rl_model = benchmarking_eckstein2022.rl_model
+# benchmark_file = f'mcmc_{dataset}_MODEL.pkl'
+# baseline_file = f'mcmc_{dataset}_PhiBeta.pkl'
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
@@ -43,8 +45,8 @@ from benchmarking.benchmarking_dezfouli2019_sgd import Dezfouli2019GQL
 dataset = 'dezfouli2019'
 train_test_ratio = [3, 6, 9]
 models_benchmark = ['PhiChiBetaKappaC']
-sindy_config = sindy_utils.SindyConfig_dezfouli2019
-rnn_class = rnn.RLRNN
+sindy_config = sindy_utils.SindyConfig_eckstein2022
+rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = []
 # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
 # gql_model = benchmarking_dezfouli2019.gql_model
@@ -62,15 +64,15 @@ baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 # additional_inputs = []
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
-use_test = True
+use_test = True   
 
 path_data = f'data/{dataset}/{dataset}.csv'
 # path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_0001_ep16384.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_0001_ep16384.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_0001_ep1024.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_no_l1_l2_0_0005_poly2.pkl'
 path_model_baseline = None#os.path.join(f'params/{dataset}/', baseline_file)
 path_model_benchmark = None#os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}_training_0_5.pkl'
+path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
@@ -121,7 +123,6 @@ if path_model_rnn is not None:
     agent_rnn = setup_agent_rnn(
         class_rnn=rnn_class,
         path_model=path_model_rnn, 
-        list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
         )
     n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
 else:

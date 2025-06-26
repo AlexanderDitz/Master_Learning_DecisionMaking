@@ -347,6 +347,10 @@ class AgentQ(Agent):
   @property
   def q_choice(self):
     return (self._state['x_value_reward']*self._beta_choice).reshape(self._n_actions)
+  
+  @property
+  def learning_rate_reward(self):
+    return self._state['x_learning_rate_reward'].reshape(self._n_actions)
 
 
 class AgentQ_SampleZeros(AgentQ):
@@ -521,34 +525,38 @@ class AgentNetwork(Agent):
   def q_reward(self):
     betas = self.get_betas()
     if betas is not None:
-      logits = np.sum(
-        np.concatenate([
-          self._state[key] * betas[key] for key in self._state if key in betas and 'reward' in key
-          ]), 
-        axis=0)
+      # logits = np.sum(
+      #   np.concatenate([
+      #     self._state[key] * betas[key] for key in self._state if key in betas and 'reward' in key
+      #     ]), 
+      #   axis=0)
+      logits = self._state['x_value_reward'] * betas['x_value_reward']
     else:
-      logits = np.sum(
-        np.concatenate([
-          self._state[key] for key in self._state if 'x_value' in key and 'reward' in key
-          ]),
-        axis=0)
+      # logits = np.sum(
+      #   np.concatenate([
+      #     self._state[key] for key in self._state if 'x_value' in key and 'reward' in key
+      #     ]),
+      #   axis=0)
+      logits = self._state['x_value_reward']
     return logits
 
   @property
   def q_choice(self):
     betas = self.get_betas()
     if betas is not None:
-      logits = np.sum(
-        np.concatenate([
-          self._state[key] * betas[key] for key in self._state if key in betas and 'choice' in key
-          ]), 
-        axis=0)
+      # logits = np.sum(
+      #   np.concatenate([
+      #     self._state[key] * betas[key] for key in self._state if key in betas and 'choice' in key
+      #     ]), 
+      #   axis=0)
+      logits = self._state['x_value_choice'] * betas['x_value_choice']
     else:
-      logits = np.sum(
-        np.concatenate([
-          self._state[key] for key in self._state if 'x_value' in key and 'choice' in key
-          ]),
-        axis=0)
+      # logits = np.sum(
+      #   np.concatenate([
+      #     self._state[key] for key in self._state if 'x_value' in key and 'choice' in key
+      #     ]),
+      #   axis=0)
+      logits = self._state['x_value_choice']
     return logits
   
   @property

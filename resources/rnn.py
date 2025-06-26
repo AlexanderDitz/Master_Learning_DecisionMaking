@@ -656,7 +656,7 @@ class RLRNN_eckstein2022(BaseRNN):
                     ),
                 participant_embedding=participant_embedding,
                 participant_index=participant_id,
-                # activation_rnn=torch.nn.functional.sigmoid,
+                activation_rnn=torch.nn.functional.sigmoid,
                 )
             
             # updates for x_value_choice
