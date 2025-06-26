@@ -199,7 +199,7 @@ def main(
         optimizer_alpha=optimizer_alpha,
         get_loss=get_loss,
         participant_id=participant_id,
-        shuffle=True,
+        shuffle=False,
         verbose=verbose,
         use_optuna=use_optuna,
         filter_bad_participants=filter_bad_participants,

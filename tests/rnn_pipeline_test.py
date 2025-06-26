@@ -9,25 +9,20 @@ from resources import rnn
 # SPICE CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
+class_rnn = rnn.RLRNN_eckstein2022
+additional_inputs = None
+
 # path_model = 'params/eckstein2022/rnn_eckstein2022.pkl'
 # path_data = 'data/eckstein2022/eckstein2022.csv'
 # train_test_ratio = 0.8
-# class_rnn = rnn.RLRNN_eckstein2022
-# additional_inputs = None
-# class_rnn = rnn.RLRNN_meta_eckstein2022
-# additional_inputs = ['age']
 
-class_rnn = rnn.RLRNN_eckstein2022
-train_test_ratio = [3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_0001.pkl'
+path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0.pkl'
 path_data = 'data/dezfouli2019/dezfouli2019.csv'
-additional_inputs = None
+train_test_ratio = [3, 6, 9]#[1, 3, 4, 6, 8, 10]   # list of test sessions
 
-# class_rnn = rnn.RLRNN_dezfouli2019_blocks
-# train_test_ratio = [1, 3, 4, 6, 8, 10]  # list of test sessions
-# path_model = 'params/dezfouli2019/rnn_dezfouli2019_blocks_rldm_l1emb_0_001_l2_0_0001.pkl'
-# path_data = 'data/dezfouli2019/dezfouli2019.csv'
-# additional_inputs = None
+# train_test_ratio = 1.0
+# path_model = 'params/rnn_test_ep256.pkl'
+# path_data = None
 
 # -------------------------------------------------------------------------------
 # SPICE PIPELINE
@@ -38,8 +33,8 @@ _, loss = pipeline_rnn.main(
     # sparsification parameter
     l1_weight_decay=0.,
     # generalization parameters
-    l2_weight_decay=0.0001,
-    dropout=0.25,
+    l2_weight_decay=0.,
+    dropout=0.5,
     train_test_ratio=train_test_ratio,
     
     # general training parameters
@@ -75,6 +70,6 @@ _, loss = pipeline_rnn.main(
     alpha_counterfactual=0.,
     
     save_checkpoints=True,
-    analysis=True,
+    analysis=False,
     participant_id=5,
 )

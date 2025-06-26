@@ -190,7 +190,8 @@ def fit_spice(
             lik_rnn = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_rnn) / probs_rnn.size)
             lik_spice_before_optuna = np.exp(log_likelihood(data=data_pid.xs[0, :probs_rnn.shape[0], :agent_rnn._n_actions].numpy(), probs=probs_spice) / probs_spice.size)
             
-            if lik_rnn - lik_spice_before_optuna > optuna_threshold or np.isnan(lik_spice_before_optuna):
+            # if np.abs(lik_rnn - lik_spice_before_optuna) > optuna_threshold or np.isnan(lik_spice_before_optuna):
+            if np.abs(probs_rnn - probs_spice).mean() > optuna_threshold or np.isnan(lik_spice_before_optuna):
                 print(f"Likelihoods before optuna fitting: RNN = {np.round(lik_rnn, 5)}; SPICE =  {np.round(lik_spice_before_optuna, 5)}; Diff = {np.round(lik_rnn-lik_spice_before_optuna, 5)}")
                 likelihoods_rnn.append(np.round(lik_rnn, 5))
                 likelihoods_spice_before_optuna.append(np.round(lik_spice_before_optuna, 5))
@@ -203,7 +204,7 @@ def fit_spice(
                     participant_id=pid,
                     agent_rnn=agent_rnn,
                     data=data_pid,
-                    metric_rnn=lik_rnn,
+                    metric_rnn=probs_rnn,
                     rnn_modules=rnn_modules,
                     control_signals=control_signals,
                     library_setup=library_setup,

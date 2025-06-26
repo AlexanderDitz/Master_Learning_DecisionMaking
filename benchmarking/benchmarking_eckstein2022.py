@@ -180,7 +180,7 @@ class Agent_eckstein2022(Agent):
                 self._state['x_value_choice'] * self._params['beta_ch'])
 
 
-def setup_agent_mcmc(model: str) -> List[Agent_eckstein2022]:
+def setup_agent_benchmark(model: str) -> List[Agent_eckstein2022]:
     """Setup MCMC agents using the shared Agent class."""
     
     with open(model, 'rb') as file:
@@ -430,7 +430,7 @@ if __name__=='__main__':
 
     mcmc = fit_mcmc(args.file, args.model, args.num_samples, args.num_warmup, args.num_chains, args.output_dir, args.checkpoint)
 
-    agent_mcmc = setup_agent_mcmc(os.path.join(args.output_dir, 'mcmc_eckstein2022_'+args.model+'.nc'))
+    agent_mcmc = setup_agent_benchmark(os.path.join(args.output_dir, 'mcmc_eckstein2022_'+args.model+'.nc'))
     experiment = convert_dataset(args.file)[0].xs[0]
     fig, axs = plot_session(agents={'benchmark': agent_mcmc[0]}, experiment=experiment)
     plt.show()
