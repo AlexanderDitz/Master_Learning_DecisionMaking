@@ -64,15 +64,14 @@ baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 # additional_inputs = []
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
-use_test = True   
+use_test = True
 
 path_data = f'data/{dataset}/{dataset}.csv'
-# path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_rldm_l1emb_0_001_l2_0_0005.pkl'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_0001_ep1024.pkl'
-path_model_spice = None#f'params/{dataset}/spice_{dataset}_no_l1_l2_0_0005_poly2.pkl'
-path_model_baseline = None#os.path.join(f'params/{dataset}/', baseline_file)
-path_model_benchmark = None#os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_001_ep16384.pkl'
+path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_001_ep16384.pkl'
+path_model_baseline = os.path.join(f'params/{dataset}/', baseline_file)
+path_model_benchmark = os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
+path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
@@ -195,6 +194,10 @@ considered_trials = 0
 metric_participant = np.zeros((len(scores), len(dataset_test)))
 best_benchmarks_participant, considered_trials_participant = np.array(['' for _ in range(len(dataset_test))]), np.zeros(len(dataset_test))
 
+# from resources.rnn_utils import DatasetRNN
+# mask_dataset_test = dataset_test.xs[:, 0, -1] == 45
+# dataset_test = DatasetRNN(dataset_test.xs[mask_dataset_test], dataset_test.ys[mask_dataset_test])
+
 for index_data in tqdm(range(len(dataset_test))):
     try:
         # use whole session to include warm-up phase; make sure to exclude warm-up phase when computing metrics
@@ -262,6 +265,8 @@ for index_data in tqdm(range(len(dataset_test))):
             n_parameters_spice += n_params_spice
             metric_participant[4, index_data] = scores_spice[0]
         
+        
+        
         considered_trials_participant[index_data] += index_end - index_start
         considered_trials += index_end - index_start
         
@@ -302,6 +307,16 @@ avg_trial_likelihood = np.exp(- scores[:, 0])
 metric_participant_std = (metric_participant/considered_trials_participant).std(axis=1)
 avg_trial_likelihood_participant = np.exp(- metric_participant / considered_trials_participant)
 avg_trial_likelihood_participant_std = avg_trial_likelihood_participant.std(axis=1)
+
+# index_sorted = np.argsort(avg_trial_likelihood_participant[3] - avg_trial_likelihood_participant[4])[::-1]
+index_sorted = np.argsort(avg_trial_likelihood_participant[3])
+pd.DataFrame({
+    'INDEX': np.arange(0, 303)[index_sorted],
+    'SESSION': (np.zeros((101, 3),dtype=int)+np.array((3,6,9),dtype=int).reshape(1, 3)).reshape(-1,)[index_sorted],
+    'PID':dataset_test.xs[:, 0, -1].numpy()[index_sorted],
+    'RNN':avg_trial_likelihood_participant[3][index_sorted],
+    'SPICE':avg_trial_likelihood_participant[4][index_sorted]
+    }).to_csv('avg_trial_likelihood_participants.csv')
 
 # pd.DataFrame(data=np.concatenate((np.array(best_benchmarks_participant).reshape(-1, 1), avg_trial_likelihood), axis=1), columns=['benchmark model', 'baseline','benchmark', 'lstm', 'rnn', 'spice']+models_benchmark).to_csv('best_scores_benchmark.csv')
 
