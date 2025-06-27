@@ -21,7 +21,10 @@ def optimize_for_participant(
     library_setup: dict,
     filter_setup: dict,
     polynomial_degree: int,
+    optimizer_type: str,
     n_sessions_off_policy: int,
+    n_trials_off_policy: int,
+    n_trials_same_action_off_policy: int,
     n_trials_optuna: int = 50,
     timeout: int = 600,  # ? 10 minutes timeout
     threshold: float = 0.01,
@@ -49,15 +52,16 @@ def optimize_for_participant(
     def objective(trial):
         
         # Sample optimizer type
-        optimizer_type = trial.suggest_categorical("optimizer_type", ["STLSQ", "SR3_L1"])#, "SR3_weighted_l1"])
+        # optimizer_type = trial.suggest_categorical("optimizer_type", ["STLSQ", "SR3_L1"])#, "SR3_weighted_l1"])
         
         # Sample optimizer hyperparameters
         optimizer_alpha = trial.suggest_float("optimizer_alpha", 0.01, 1.0, log=True)
         optimizer_threshold = trial.suggest_float("optimizer_threshold", 0.01, 0.2, log=True)
         
         # Sample off-policy parameters
-        n_trials_off_policy = trial.suggest_categorical("n_trials_off_policy", [1000, 2000])
-        n_trials_same_action_off_policy = trial.suggest_categorical("n_trials_same_action_off_policy", [5, 10, 20])
+        # n_sessions_off_policy = trial.suggest_categorical("n_sessions_off_policy", [0, 1])
+        # n_trials_off_policy = trial.suggest_categorical("n_trials_off_policy", [1000, 2000])
+        # n_trials_same_action_off_policy = trial.suggest_categorical("n_trials_same_action_off_policy", [5, 10, 20])
         
         # just fit the SINDy modules with the given parameters 
         sindy_modules = fit_sindy_pipeline(
@@ -97,7 +101,9 @@ def optimize_for_participant(
         # loss: MSE between predicted trial probabilities
         loss_reconstruction = np.power(metric_rnn - probs_spice, 2).mean()
         # loss_parameter = bayesian_information_criterion(data.xs[0, :len(probs_spice), :agent_spice._n_actions].numpy(), probs_spice, n_parameters=agent_spice.count_parameters()[agent_spice.get_participant_ids()[0]])/len(probs_spice)
-        loss = loss_reconstruction# + loss_parameter
+        penalty_parameters = 0
+        penalty_parameters += np.sum([np.sum(np.abs(sindy_modules[module].coefficients())) for module in sindy_modules])
+        loss = loss_reconstruction + penalty_parameters * 0#1e-2
         
         if loss == np.nan:
             loss = 1e3
@@ -146,16 +152,17 @@ def optimize_for_participant(
         n_trials=n_trials_optuna, 
         timeout=timeout, 
         show_progress_bar=True, 
-        callbacks=[
-            callback_threshold_reached, 
-            callback_no_improvement,
-            ],
+        # callbacks=[
+        #     callback_threshold_reached, 
+        #     callback_no_improvement,
+        #     ],
     )
     
     return {
-        "optimizer_type": study.best_params["optimizer_type"],
+        # "optimizer_type": study.best_params["optimizer_type"],
         "optimizer_alpha": study.best_params["optimizer_alpha"],
         "optimizer_threshold": study.best_params["optimizer_threshold"],
-        "n_trials_off_policy": study.best_params["n_trials_off_policy"],
-        "n_trials_same_action_off_policy": study.best_params["n_trials_same_action_off_policy"],
+        # "n_sessions_off_policy": study.best_params["n_sessions_off_policy"],
+        # "n_trials_off_policy": study.best_params["n_trials_off_policy"],
+        # "n_trials_same_action_off_policy": study.best_params["n_trials_same_action_off_policy"],
     }
