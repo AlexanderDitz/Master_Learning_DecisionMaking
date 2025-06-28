@@ -8,6 +8,7 @@ from copy import copy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # standard methods and classes used for every model evaluation
+from benchmarking import benchmarking_dezfouli2019
 from resources.model_evaluation import get_scores
 from resources.bandits import get_update_dynamics, AgentQ
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
@@ -18,8 +19,8 @@ from utils.convert_dataset import convert_dataset
 from resources import rnn, sindy_utils
 
 # dataset specific benchmarking models
-from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm, benchmarking_dezfouli2019_sgd
-from benchmarking.benchmarking_dezfouli2019_sgd import Dezfouli2019GQL
+from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
+from benchmarking.benchmarking_dezfouli2019 import Dezfouli2019GQL
 
 
 # -------------------------------------------------------------------------------
@@ -50,8 +51,8 @@ rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = []
 # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
 # gql_model = benchmarking_dezfouli2019.gql_model
-setup_agent_benchmark = benchmarking_dezfouli2019_sgd.setup_agent_gql
-gql_model = benchmarking_dezfouli2019_sgd.Dezfouli2019GQL
+setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
+gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
 benchmark_file = f'gql_{dataset}_MODEL.pkl'
 baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 
@@ -67,8 +68,8 @@ baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 use_test = True
 
 path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_001_ep16384.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_001_ep16384.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_001_ep32768.pkl'
+path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_001_ep32768.pkl'
 path_model_baseline = os.path.join(f'params/{dataset}/', baseline_file)
 path_model_benchmark = os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}.pkl'
