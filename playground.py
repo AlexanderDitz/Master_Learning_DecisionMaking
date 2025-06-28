@@ -19,7 +19,7 @@ from resources.model_evaluation import log_likelihood
 from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking.benchmarking_dezfouli2019 import setup_agent_mcmc as setup_agent_mcmc_dezfouli, gql_model
 from benchmarking.benchmarking_eckstein2022 import setup_agent_benchmark as setup_agent_mcmc_eckstein, rl_model
-from benchmarking.benchmarking_dezfouli2019_sgd import setup_agent_gql, Dezfouli2019GQL
+from benchmarking.benchmarking_dezfouli2019 import setup_agent_gql, Dezfouli2019GQL
 
 # Your existing code
 path_data = 'data/dezfouli2019/dezfouli2019.csv'

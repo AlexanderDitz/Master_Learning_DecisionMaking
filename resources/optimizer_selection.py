@@ -49,6 +49,8 @@ def optimize_for_participant(
         dict: Best optimizer configuration with type and parameters
     """
     
+    threshold = 0.01
+    
     def objective(trial):
         
         # Sample optimizer type
@@ -143,19 +145,23 @@ def optimize_for_participant(
                 study.stop()
         
     def callback_threshold_reached(study, trial):
-        if study.best_value < threshold:  # Use the threshold argument
-            study.stop()
-    
+        try:
+            if study.best_value < threshold:  # Use the threshold argument
+                study.stop()
+        except ValueError as e:
+            if "No trials are completed yet" in str(e):
+                pass
+        
     study = optuna.create_study(direction="minimize")
     study.optimize(
         objective, 
         n_trials=n_trials_optuna, 
         timeout=timeout, 
         show_progress_bar=True, 
-        # callbacks=[
-        #     callback_threshold_reached, 
-        #     callback_no_improvement,
-        #     ],
+        callbacks=[
+            callback_threshold_reached, 
+            # callback_no_improvement,
+            ],
     )
     
     return {

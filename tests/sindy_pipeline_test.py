@@ -17,7 +17,7 @@ additional_inputs = None
 # train_test_ratio = 0.8
 
 path_data = 'data/dezfouli2019/dezfouli2019.csv'
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_001_ep16384.pkl'
+path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_001_ep32768.pkl'
 train_test_ratio = [3, 6, 9]
 
 # path_data='data/parameter_recovery/data_256p_0.csv'
@@ -55,6 +55,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     optuna_threshold=0.1,
     optuna_n_trials=50,
     optimizer_type='SR3_weighted_l1',
+    # optimizer_type='SR3_L1',
     verbose=False,
     
     # generated training dataset parameters
