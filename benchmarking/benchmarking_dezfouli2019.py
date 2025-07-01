@@ -358,7 +358,7 @@ class AgentGQL(AgentNetwork):
         return self._state['x_learning_rate_reward'][0, 0]
 
 
-def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC") -> AgentGQL:
+def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC", deterministic: bool = True) -> AgentGQL:
     """Setup GQL agent from saved model."""
     
     # Load state dict
@@ -367,7 +367,7 @@ def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC") -> 
 
     agent = []
     for model in all_models:
-        agent.append(AgentGQL(model=model))
+        agent.append(AgentGQL(model=model, deterministic=deterministic))
     
     n_parameters = 0
     for index_letter, letter in enumerate(model_config):
@@ -413,27 +413,22 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Train GQL model with PyTorch')
     
-    parser.add_argument('--path_save_model', type=str, default='params/dezfouli2019/gql_dezfouli2019.pkl',
-                        help='Path to save the trained model')
-    parser.add_argument('--path_data', type=str, default='data/dezfouli2019/dezfouli2019.csv',
-                        help='Path to the dataset')
-    parser.add_argument('--model', type=str, default='PhiChiBetaKappaC',
-                        help='Model configuration (e.g., PhiChiBeta)')
-    parser.add_argument('--n_actions', type=int, default=2,
-                        help='Number of actions')
-    parser.add_argument('--dimensions', type=int, default=2,
-                        help='Number of dimensions (d parameter)')
-    parser.add_argument('--n_epochs', type=int, default=300,
-                        help='Number of training epochs')
-    parser.add_argument('--lr', type=float, default=0.1,
-                        help='Learning rate')
-    parser.add_argument('--split_ratio', type=str, default='3,6,9',
-                        help='Sessions to use for testing (comma-separated)')
+    parser.add_argument('--path_save_model', type=str, default='params/dezfouli2019/gql_dezfouli2019.pkl', help='Path to save the trained model')
+    parser.add_argument('--path_data', type=str, default='data/dezfouli2019/dezfouli2019.csv', help='Path to the dataset')
+    parser.add_argument('--model', type=str, default='PhiChiBetaKappaC', help='Model configuration (e.g., PhiChiBeta)')
+    parser.add_argument('--n_actions', type=int, default=2, help='Number of actions')
+    parser.add_argument('--dimensions', type=int, default=2, help='Number of dimensions (d parameter)')
+    parser.add_argument('--n_epochs', type=int, default=300, help='Number of training epochs')
+    parser.add_argument('--lr', type=float, default=0.1, help='Learning rate')
+    parser.add_argument('--split_ratio', type=str, default=None, help='Sessions to use for testing (comma-separated)')
     
     args = parser.parse_args()
     
     # Parse split ratio
-    split_ratio = [int(x) for x in args.split_ratio.split(',')]
+    if args.split_ratio is not None:
+        split_ratio = [int(x) for x in args.split_ratio.split(',')]
+    else:
+        split_ratio = None
         
     main(
         path_save_model=args.path_save_model,

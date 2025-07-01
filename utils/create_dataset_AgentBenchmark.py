@@ -15,23 +15,26 @@ from utils.convert_dataset import convert_dataset
 from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-# dataset = 'eckstein2022'
-# model_benchmark = ['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
-# setup_agent_mcmc = benchmarking_eckstein2022.setup_agent_mcmc
-# rl_model = benchmarking_eckstein2022.rl_model
-# bandits_environment = BanditsFlip_eckstein2022
+dataset = 'eckstein2022'
+model = 'ApAnBrBcfBch'
+# model = 'ApAnBrBcfBch'
+setup_agent = benchmarking_eckstein2022.setup_agent_benchmark
+rl_model = benchmarking_eckstein2022.rl_model
+bandits_environment = BanditsFlip_eckstein2022
+path_model = f'params/{dataset}/mcmc_{dataset}_{model}.nc'
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-dataset = 'dezfouli2019'
-model = 'baseline'
-setup_agent_mcmc = benchmarking_dezfouli2019.setup_agent_mcmc
-gql_model = benchmarking_dezfouli2019.gql_model
-bandits_environment = BanditsDrift
+# dataset = 'dezfouli2019'
+# # model = 'PhiBeta'
+# model = 'PhiChiBetaKappaC'
+# setup_agent = benchmarking_dezfouli2019.setup_agent_gql
+# Dezfouli2019GQL = benchmarking_dezfouli2019.Dezfouli2019GQL
+# bandits_environment = BanditsDrift
+# path_model = f'params/{dataset}/gql_{dataset}_{model}.pkl'
 
 n_trials_per_session = 200
 
 path_data = f'data/{dataset}/{dataset}.csv'
-path_model = f'params/{dataset}/mcmc_{dataset}_{model}.nc'
 path_save = f'data/{dataset}/{dataset}_simulated_{model}.csv'
 
 
@@ -43,7 +46,7 @@ participant_ids = dataset.xs[:, 0, -1].unique().int().numpy()
 xs = torch.zeros((len(participant_ids), n_trials_per_session, dataset.xs.shape[-1]))
 ys = torch.zeros((len(participant_ids), n_trials_per_session, dataset.ys.shape[-1]))
 
-agent = setup_agent_mcmc(path_model, deterministic=False)
+agent = setup_agent(path_model, deterministic=False, model_config=model)
 
 for participant_id in tqdm(participant_ids):
     environment = bandits_environment(sigma=0.2)

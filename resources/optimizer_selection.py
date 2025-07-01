@@ -2,7 +2,6 @@ import sys, os
 
 import optuna
 import numpy as np
-import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from resources.fit_sindy import fit_sindy_pipeline
@@ -92,7 +91,7 @@ def optimize_for_participant(
             spice_modules[rnn_module][participant_id] = sindy_modules[rnn_module]
         
         agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions)
-                
+        
         # compute loss
         probs_spice = get_update_dynamics(experiment=data.xs[0], agent=agent_spice)[1]
         
