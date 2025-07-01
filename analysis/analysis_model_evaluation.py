@@ -68,11 +68,11 @@ baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 use_test = True
 
 path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_001_ep32768.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_001_ep32768.pkl'
-path_model_baseline = os.path.join(f'params/{dataset}/', baseline_file)
-path_model_benchmark = os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = f'params/{dataset}/lstm_{dataset}.pkl'
+path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_00005_ep8192.pkl'
+path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_00005_ep8192.pkl'
+path_model_baseline = None#os.path.join(f'params/{dataset}/', baseline_file)
+path_model_benchmark = None#os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
+path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE

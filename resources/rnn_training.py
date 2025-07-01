@@ -119,8 +119,6 @@ def batch_train(
     ys: torch.Tensor,
     optimizer: torch.optim.Optimizer = None,
     n_steps: int = -1,
-    l1_weight_decay: float = 1e-4,
-    l2_weight_decay: float = 1e-4,
     loss_fn: nn.modules.loss._Loss = nn.CrossEntropyLoss(),
     ):
 
@@ -159,51 +157,9 @@ def batch_train(
         
         if torch.is_grad_enabled():
             
-            # alternative l1-reg -> penalize additionally the activations of the embedding
-            # if hasattr(model, 'participant_embedding'):
-            #     id_array = torch.arange(0, model.n_participants, dtype=torch.int32, device=model.device).view(1, -1)
-            #     embedding = torch.nn.functional.leaky_relu(model.participant_embedding(id_array), negative_slope=0.001)
-            #     # compute l1 regularization on activations
-            #     l1_reg = l1_weight_decay * embedding.abs().mean()
-            # else:
-            # original: l1 weight decay to enforce sparsification in the network (except for participant embedding)
-            # l1_reg = l1_weight_decay * torch.stack([
-            #     torch.pow(param, 2).mean()
-            #     for name, param in model.named_parameters()
-            #     # if "embedding" not in name
-            #     # if "embedding" in name
-            #     ])
-                
-                
-            # Regularization of the embedding space
-            # if l2_weight_decay > 0:
-            #     if hasattr(model, 'participant_embedding') and isinstance(model.participant_embedding, nn.Sequential) and isinstance(model.participant_embedding[0], CustomEmbedding):
-            #         # gradient penalty between two participants
-            #         # sample two random distributions of participant indices as one-hot-encoded tensors
-            #         e_i = torch.randint(low=0, high=model.n_participants, size=(xs.shape[0],), dtype=torch.int64, device=xs_step.device)
-            #         e_j = torch.randint(low=0, high=model.n_participants, size=(xs.shape[0],), dtype=torch.int64, device=xs_step.device)
-            #         embedding_reg = gradient_penalty(model.participant_embedding, e_i, e_j, factor=l2_weight_decay)
-            #     elif hasattr(model, 'participant_embedding') and ((isinstance(model.participant_embedding, nn.Sequential) and isinstance(model.participant_embedding[0], nn.Embedding)) or isinstance(model.participant_embedding, nn.Embedding)):
-            #         # L2 weight decay on participant embedding to enforce smoother gradients between participants and prevent overfitting
-            #         if model.embedding_size > 1:
-            #             embedding_reg = l2_weight_decay * torch.stack([
-            #                 param.pow(2).sum()
-            #                 for name, param in model.named_parameters()
-            #                 if "embedding" in name
-            #                 # if "embedding" not in name
-            #                 ]).mean()
-            #         else:
-            #             embedding_reg = 0
-            #     else:
-            #         embedding_reg = 0
-            # else:
-            #     embedding_reg = 0
-                
-            loss = loss_step# + l1_reg# + embedding_reg
-            
             # backpropagation
             optimizer.zero_grad()
-            loss.backward()
+            loss_step.backward()
             optimizer.step()
     
     return model, optimizer, loss_batch.item()/iterations
@@ -220,11 +176,8 @@ def fit_model(
     bagging: bool = False,
     scheduler: bool = False,
     n_steps: int = -1,
-    l1_weight_decay: float = 1e-4,
-    l2_weight_decay: float = 1e-4,
     verbose: bool = True,
     path_save_checkpoints: str = None,
-    meta_optimization: bool = False,
     ):
     """_summary_
 
@@ -238,7 +191,6 @@ def fit_model(
         batch_size (int, optional): Batch size. Defaults to -1.
         bagging (bool, optional): Enables bootstrap aggregation. Defaults to False.
         n_steps (int, optional): Number of steps passed at once through the RNN to compute a gradient over steps. Defaults to -1.
-        l1_weight_decay (float, optional): L1 weight decay for sparsification. Defaults to 1e-4.
         verbose (bool, optional): Verbosity. Defaults to True.
 
     Returns:
@@ -330,8 +282,6 @@ def fit_model(
                     ys=ys,
                     optimizer=optimizer,
                     n_steps=n_steps,
-                    l1_weight_decay=l1_weight_decay,
-                    l2_weight_decay=l2_weight_decay,
                 )
                 loss_train += loss_i
             loss_train /= iterations_per_epoch

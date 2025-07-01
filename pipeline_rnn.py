@@ -25,23 +25,22 @@ def main(
 
   # rnn parameters
   hidden_size = 8,
-  embedding_size = 8,
-  dropout = 0.,
+  embedding_size = 32,
+  dropout = 0.5,
 
   # data and training parameters
   epochs = 128,
   train_test_ratio = 1.,
-  l1_weight_decay=1e-4,
   l2_weight_decay=0,
   bagging = False,
-  sequence_length = -1,
-  n_steps = 16,  # -1 for full sequence
+  sequence_length = -1, # -1 for full sequence
+  n_steps = -1,  # -1 for full sequence
   batch_size = -1,  # -1 for one batch per epoch
-  learning_rate = 5e-3,
+  learning_rate = 1e-2,
   convergence_threshold = 0,
   scheduler = False,
   additional_inputs_data: List[str] = None,
-  
+
   # ground truth parameters
   n_trials = 200,
   n_sessions = 256,
@@ -220,8 +219,6 @@ def main(
         bagging=bagging,
         n_steps=n_steps,
         scheduler=scheduler,
-        l1_weight_decay=l1_weight_decay,
-        l2_weight_decay=l2_weight_decay,
         path_save_checkpoints=params_path if save_checkpoints else None,
     )
         
@@ -283,21 +280,20 @@ if __name__=='__main__':
   
   # RNN parameters
   parser.add_argument('--hidden_size', type=int, default=8, help='Hidden size of the RNN')
-  parser.add_argument('--embedding_size', type=int, default=8, help='Participant embedding size of the RNN')
-  parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate')
+  parser.add_argument('--embedding_size', type=int, default=32, help='Participant embedding size of the RNN')
+  parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate')
 
   # data and training parameters
-  parser.add_argument('--epochs', type=int, default=128, help='Number of epochs for training')
-  parser.add_argument('--n_steps', type=int, default=16, help='Number of recurrent steps per training call; -1: Use whole sequence at once;')
+  parser.add_argument('--scheduler', action='store_true', help='Whether to use a learning rate scheduler during training')
   parser.add_argument('--bagging', action='store_true', help='Whether to use bagging')
+  parser.add_argument('--epochs', type=int, default=8192, help='Number of epochs for training')
+  parser.add_argument('--n_steps', type=int, default=-1, help='Number of recurrent steps per training call; -1: Use whole sequence at once;')
   parser.add_argument('--batch_size', type=int, default=-1, help='Batch size; -1: Use whole dataset at once;')
-  parser.add_argument('--learning_rate', type=float, default=5e-3, help='Learning rate of the RNN')
-  parser.add_argument('--l1_weight_decay', type=float, default=1e-4, help='Learning rate of the RNN')
+  parser.add_argument('--sequence_length', type=int, default=-1, help='Length of training sequences; -1: Use whole sequence at once;')
+  parser.add_argument('--learning_rate', type=float, default=1e-2, help='Learning rate of the RNN')
   parser.add_argument('--l2_weight_decay', type=float, default=0, help='Learning rate of the RNN')
   parser.add_argument('--convergence_threshold', type=float, default=0, help='Convergence threshold to early-stop training')
-  parser.add_argument('--train_test_ratio', type=float, default=1.0, help='Ratio of training data')
-  parser.add_argument('--sequence_length', type=int, default=-1, help='Length of training sequences; -1: Use whole sequence at once;')
-  parser.add_argument('--scheduler', action='store_true', help='Whether to use a learning rate scheduler during training')
+  parser.add_argument('--train_test_ratio', type=str, default=1.0, help='Ratio of training data; Can also be a comma-separated list of integeres to indicate testing sessions.')
   
   # Ground truth parameters
   parser.add_argument('--n_trials', type=int, default=200, help='Number of trials per session')
@@ -318,14 +314,25 @@ if __name__=='__main__':
   # Analysis parameters
   parser.add_argument('--analysis', action='store_true', help='Whether to perform visual analysis on one participant (keyword argument: participant_id)')
   parser.add_argument('--participant_id', type=int, default=None, help='Participant ID for visual analysis (keyword argument: analysis)')
-
+  parser.add_argument('--save_checkpoints', action='store_true', help='Save a checkpoint after 2^n training steps with $n\in\mathbb\{N\}$.')
+  
   args = parser.parse_args()  
   
+  # currently fixed 
+  class_rnn = rnn.RLRNN_eckstein2022
+  
+  # convert train_test_ratio to number of list of numbers
+  if ',' in args.train_test_ratio:
+    train_test_ratio = [int(x) for x in args.train_test_ratio.split(',')]
+  else:
+    train_test_ratio = float(args.train_test_ratio)
+    
   main(
     checkpoint = args.checkpoint,
     model = args.model,
     data = args.data,
-
+    class_rnn=class_rnn,
+    
     # rnn parameters
     hidden_size = args.hidden_size,
     embedding_size = args.embedding_size,
@@ -333,7 +340,7 @@ if __name__=='__main__':
 
     # data and training parameters
     epochs = args.epochs,
-    train_test_ratio = args.train_test_ratio,
+    train_test_ratio = train_test_ratio,
     n_trials = args.n_trials,
     n_sessions = args.n_sessions,
     bagging = args.bagging,
@@ -343,7 +350,6 @@ if __name__=='__main__':
     learning_rate = args.learning_rate,
     convergence_threshold = args.convergence_threshold,
     scheduler = args.scheduler,
-    l1_weight_decay=args.l1_weight_decay,
     l2_weight_decay=args.l2_weight_decay,
     
     # ground truth parameters
@@ -360,7 +366,9 @@ if __name__=='__main__':
     sigma = args.sigma,
     counterfactual = args.counterfactual,
     
+    # analysis parameters
     analysis = args.analysis,
+    save_checkpoints=args.save_checkpoints,
     participant_id = args.participant_id,
     )
   

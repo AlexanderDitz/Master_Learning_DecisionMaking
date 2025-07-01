@@ -17,7 +17,7 @@ additional_inputs = None
 # train_test_ratio = 0.8
 
 path_data = 'data/dezfouli2019/dezfouli2019.csv'
-path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_001_ep32768.pkl'
+path_model = 'params/dezfouli2019/rnn_dezfouli2019_no_l1_l2_0_00005_ep8192.pkl'
 train_test_ratio = [3, 6, 9]
 
 # path_data='data/parameter_recovery/data_256p_0.csv'
@@ -46,7 +46,7 @@ agent_spice, features, loss = pipeline_sindy.main(
     
     # sindy parameters
     train_test_ratio=train_test_ratio,
-    polynomial_degree=2,
+    polynomial_degree=3,
     optimizer_alpha=0.1,
     optimizer_threshold=0.05,
     n_trials_off_policy=1000,

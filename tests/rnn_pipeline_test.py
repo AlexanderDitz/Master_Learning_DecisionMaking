@@ -30,18 +30,16 @@ train_test_ratio = 0.8
 
 _, loss = pipeline_rnn.main(
     
-    # sparsification parameter
-    l1_weight_decay=0.,
     # generalization parameters
     l2_weight_decay=0.,
     dropout=0.5,
-    train_test_ratio=train_test_ratio,
     
     # general training parameters
-    checkpoint=False,
     epochs=65536, # <- 2^16
-    scheduler=True,
+    train_test_ratio=train_test_ratio,
     learning_rate=1e-2,
+    scheduler=True,
+    checkpoint=False,
     
     # hand-picked params
     n_steps=-1,
