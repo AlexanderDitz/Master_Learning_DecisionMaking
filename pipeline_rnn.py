@@ -293,7 +293,7 @@ if __name__=='__main__':
   parser.add_argument('--learning_rate', type=float, default=1e-2, help='Learning rate of the RNN')
   parser.add_argument('--l2_weight_decay', type=float, default=0, help='Learning rate of the RNN')
   parser.add_argument('--convergence_threshold', type=float, default=0, help='Convergence threshold to early-stop training')
-  parser.add_argument('--train_test_ratio', type=str, default=None, help='Ratio of training data; Can also be a comma-separated list of integeres to indicate testing sessions.')
+  parser.add_argument('--train_test_ratio', type=str, default=1.0, help='Ratio of training data; Can also be a comma-separated list of integeres to indicate testing sessions.')
   
   # Ground truth parameters
   parser.add_argument('--n_trials', type=int, default=200, help='Number of trials per session')
