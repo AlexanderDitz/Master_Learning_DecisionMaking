@@ -28,33 +28,36 @@ from benchmarking.benchmarking_dezfouli2019 import Dezfouli2019GQL
 # -------------------------------------------------------------------------------
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-# dataset = 'eckstein2022'
-# models_benchmark = ['ApAnBrBcfBch']#['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
-# train_test_ratio = 0.8
-# sindy_config = sindy_utils.SindyConfig_eckstein2022
-# rnn_class = rnn.RLRNN_eckstein2022
-# additional_inputs = None
-# setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
-# rl_model = benchmarking_eckstein2022.rl_model
-# benchmark_file = f'mcmc_{dataset}_MODEL.pkl'
-# baseline_file = f'mcmc_{dataset}_PhiBeta.pkl'
+dataset = 'eckstein2022'
+models_benchmark = ['ApAnBrBcfBch']#['ApBr', 'ApBrAcfpBcf', 'ApBrAcfpBcfBch', 'ApAnBrBch', 'ApAnBrAcfpAcfnBcfBch', 'ApAnBrBcfBch']
+train_test_ratio = 0.8
+sindy_config = sindy_utils.SindyConfig_eckstein2022
+rnn_class = rnn.RLRNN_eckstein2022
+additional_inputs = None
+setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
+rl_model = benchmarking_eckstein2022.rl_model
+benchmark_file = f'mcmc_{dataset}_MODEL.nc'
+model_config_baseline = 'ApBr'
+baseline_file = f'mcmc_{dataset}_ApBr.nc'
+
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
 # additional_inputs = ['age']
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-dataset = 'dezfouli2019'
-train_test_ratio = [3, 6, 9]
-models_benchmark = ['PhiChiBetaKappaC']
-sindy_config = sindy_utils.SindyConfig_eckstein2022
-rnn_class = rnn.RLRNN_eckstein2022
-additional_inputs = []
-# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
-# gql_model = benchmarking_dezfouli2019.gql_model
-setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
-gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
-benchmark_file = f'gql_{dataset}_MODEL.pkl'
-baseline_file = f'gql_{dataset}_PhiBeta.pkl'
+# dataset = 'dezfouli2019'
+# train_test_ratio = [3, 6, 9]
+# models_benchmark = ['PhiChiBetaKappaC']
+# sindy_config = sindy_utils.SindyConfig_eckstein2022
+# rnn_class = rnn.RLRNN_eckstein2022
+# additional_inputs = []
+# # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
+# # gql_model = benchmarking_dezfouli2019.gql_model
+# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
+# gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
+# benchmark_file = f'gql_{dataset}_MODEL.pkl'
+# model_config_baseline = 'PhiBeta'
+# baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 
 # ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
 # dataset = 'dezfouli2019'
@@ -68,10 +71,10 @@ baseline_file = f'gql_{dataset}_PhiBeta.pkl'
 use_test = True
 
 path_data = f'data/{dataset}/{dataset}.csv'
-path_model_rnn = f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_00005_ep8192.pkl'
-path_model_spice = f'params/{dataset}/spice_{dataset}_no_l1_l2_0_00005_ep8192.pkl'
+path_model_rnn = None#f'params/{dataset}/rnn_{dataset}_no_l1_l2_0_00005_ep8192.pkl'
+path_model_spice = None#f'params/{dataset}/spice_{dataset}_no_l1_l2_0_00005_ep8192.pkl'
 path_model_baseline = None#os.path.join(f'params/{dataset}/', baseline_file)
-path_model_benchmark = None#os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
+path_model_benchmark = os.path.join(f'params/{dataset}', benchmark_file) if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = None#f'params/{dataset}/lstm_{dataset}.pkl'
 
 # -------------------------------------------------------------------------------
@@ -93,7 +96,7 @@ print("Computing metrics on", 'test' if use_test else 'training', "data...")
 # new: Fitted ApBr model -> Tells the "true" story of how much better SPICE models can actually be by setting a good relative baseline
 print("Setting up baseline agent from file", path_model_baseline)
 if path_model_baseline:
-    agent_baseline = setup_agent_benchmark(path_model=path_model_baseline)
+    agent_baseline = setup_agent_benchmark(path_model=path_model_baseline, model_config=model_config_baseline)
 else:
     # agent_baseline = [AgentQ(alpha_reward=0.3, beta_reward=1) for _ in range(len(dataset))]
     agent_baseline = [[AgentQ(alpha_reward=0., beta_reward=1, beta_choice=3) for _ in range(len(dataset))], 2]
@@ -105,7 +108,7 @@ if path_model_benchmark:
     print("Setting up benchmark agent...")
     agent_benchmark = {}
     for model in models_benchmark:
-        agent_benchmark[model] = setup_agent_benchmark(path_model=path_model_benchmark.replace('MODEL', model))
+        agent_benchmark[model] = setup_agent_benchmark(path_model=path_model_benchmark.replace('MODEL', model), model_config=model)
 else:
     models_benchmark = []
 n_parameters_benchmark = 0
