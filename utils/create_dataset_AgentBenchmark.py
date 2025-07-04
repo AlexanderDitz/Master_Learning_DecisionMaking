@@ -15,27 +15,27 @@ from utils.convert_dataset import convert_dataset
 from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-dataset = 'eckstein2022'
-model = 'ApAnBrBcfBch'
+# dataset = 'eckstein2022'
 # model = 'ApAnBrBcfBch'
-setup_agent = benchmarking_eckstein2022.setup_agent_benchmark
-rl_model = benchmarking_eckstein2022.rl_model
-bandits_environment = BanditsFlip_eckstein2022
-path_model = f'params/{dataset}/mcmc_{dataset}_{model}.nc'
+# # model = 'ApAnBrBcfBch'
+# setup_agent = benchmarking_eckstein2022.setup_agent_benchmark
+# rl_model = benchmarking_eckstein2022.rl_model
+# bandits_environment = BanditsFlip_eckstein2022
+# path_model = f'params/{dataset}/mcmc_{dataset}_{model}.nc'
 
 # ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-# dataset = 'dezfouli2019'
-# # model = 'PhiBeta'
-# model = 'PhiChiBetaKappaC'
-# setup_agent = benchmarking_dezfouli2019.setup_agent_gql
-# Dezfouli2019GQL = benchmarking_dezfouli2019.Dezfouli2019GQL
-# bandits_environment = BanditsDrift
-# path_model = f'params/{dataset}/gql_{dataset}_{model}.pkl'
+dataset = 'dezfouli2019'
+# model = 'PhiBeta'
+model = 'PhiChiBetaKappaC'
+setup_agent = benchmarking_dezfouli2019.setup_agent_gql
+Dezfouli2019GQL = benchmarking_dezfouli2019.Dezfouli2019GQL
+bandits_environment = BanditsDrift
+path_model = f'params/{dataset}/gql_{dataset}_{model}.pkl'
 
 n_trials_per_session = 200
 
 path_data = f'data/{dataset}/{dataset}.csv'
-path_save = f'data/{dataset}/{dataset}_simulated_{model}.csv'
+path_save = f'data/{dataset}/{dataset}_simulated_{model}_test.csv'
 
 
 # --------------------- PIPELINE -------------------------------------
