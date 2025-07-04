@@ -381,7 +381,7 @@ def encode_model_name(model: str, model_parts: list) -> np.ndarray:
     return enc
 
 
-def fit_mcmc(file: str, model: str, num_samples: int, num_warmup: int, num_chains: int, output_dir: str, checkpoint: bool, train_test_ratio: float = 1.):
+def fit_mcmc(data: str, model: str, num_samples: int, num_warmup: int, num_chains: int, output_dir: str, checkpoint: bool, train_test_ratio: float = 1.):
     # Set output file
     output_file = os.path.join(output_dir, 'mcmc_eckstein2022_'+model+'.nc')
     
@@ -394,7 +394,7 @@ def fit_mcmc(file: str, model: str, num_samples: int, num_warmup: int, num_chain
         raise ValueError(f'The provided model {model} is not supported. At least some part of the configuration ({model_checked}) is not valid. Valid configurations may include {valid_config}.')
     
     # Get and prepare the data
-    dataset = convert_dataset(file)[0]
+    dataset = convert_dataset(data)[0]
     if isinstance(train_test_ratio, float):
         dataset = split_data_along_timedim(dataset=dataset, split_ratio=train_test_ratio)[0].xs.numpy()
     else:
@@ -413,8 +413,8 @@ def fit_mcmc(file: str, model: str, num_samples: int, num_warmup: int, num_chain
     print('Initialized MCMC model.')
     
     if checkpoint:
-        with open(output_file, 'rb') as file:
-            checkpoint = pickle.load(file)
+        with open(output_file, 'rb') as data:
+            checkpoint = pickle.load(data)
         mcmc.post_warmup_state = checkpoint.last_state
         rng_key = mcmc.post_warmup_state.rng_key
         print('Checkpoint loaded.')
@@ -423,8 +423,8 @@ def fit_mcmc(file: str, model: str, num_samples: int, num_warmup: int, num_chain
         
     mcmc.run(rng_key, model=tuple(encode_model_name(model, valid_config)), choice=jnp.array(choices.swapaxes(1, 0)), reward=jnp.array(rewards.swapaxes(1, 0)))
 
-    with open(output_file, 'wb') as file:
-        pickle.dump(mcmc, file)
+    with open(output_file, 'wb') as data:
+        pickle.dump(mcmc, data)
     
     return mcmc
 
@@ -432,11 +432,11 @@ def fit_mcmc(file: str, model: str, num_samples: int, num_warmup: int, num_chain
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Performs a hierarchical bayesian parameter inference with numpyro.')
 
-    parser.add_argument('--file', type=str, default='data/eckstein2022/eckstein2022.csv', help='Dataset of a 2-armed bandit task with columns (session, choice, reward)')
+    parser.add_argument('--data', type=str, default='data/eckstein2022/eckstein2022.csv', help='Dataset of a 2-armed bandit task with columns (session, choice, reward)')
     parser.add_argument('--model', type=str, default='ApBr', help='Model configuration (Ap: learning rate for positive outcomes, An: learning rate for negative outcomes, Ac: learning rate for choice-based value, Bc: Importance of choice-based values, Br: Importance and inverse noise termperature for reward-based values)')
-    parser.add_argument('--num_samples', type=int, default=10, help='Number of MCMC samples')
-    parser.add_argument('--num_warmup', type=int, default=5, help='Number of warmup samples (additional)')
-    parser.add_argument('--num_chains', type=int, default=1, help='Number of chains')
+    parser.add_argument('--num_samples', type=int, default=5000, help='Number of MCMC samples')
+    parser.add_argument('--num_warmup', type=int, default=1000, help='Number of warmup samples (additional)')
+    parser.add_argument('--num_chains', type=int, default=2, help='Number of chains')
     parser.add_argument('--output_dir', type=str, default='benchmarking/params', help='Output directory')
     parser.add_argument('--checkpoint', action='store_true', help='Whether to load the specified output file as a checkpoint')
     parser.add_argument('--train_test_ratio', type=float, default=1.0, help='Relative training set size of the total number of samples')
@@ -444,7 +444,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     mcmc = fit_mcmc(
-        file=args.file, 
+        data=args.data, 
         model=args.model, 
         num_samples=args.num_samples, 
         num_warmup=args.num_warmup, 

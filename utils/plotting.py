@@ -18,6 +18,9 @@ def plot_session(
     ):    
     # plot the dynamcis associated with the first arm
     
+    y_axis = True
+    x_axis = False
+    
     # valid keys in agent dictionary
     valid_keys_color_pairs = {'groundtruth': 'tab:blue', 'rnn': 'tab:orange', 'sindy': 'tab:pink', 'benchmark':'tab:grey'}    
     
@@ -77,7 +80,7 @@ def plot_session(
 
     # qs = normalize(qs)
 
-    fig, axs = plt.subplots(6, 1, figsize=(20, 10))
+    fig, axs = plt.subplots(5, 1, figsize=(2, 10))
     axs_row = 0
     fig_col = None
     
@@ -90,8 +93,8 @@ def plot_session(
         color=colors,
         labels=labels,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
-        x_axis_info=False,
-        y_axis_info=True,
+        x_axis_info=x_axis,
+        y_axis_info=y_axis,
         )
     axs_row += 1
     
@@ -103,8 +106,8 @@ def plot_session(
         timeseries_name='$q$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
-        y_axis_info=True,
-        x_axis_info=False,
+        y_axis_info=x_axis,
+        x_axis_info=y_axis,
         )
     axs_row += 1
     
@@ -116,8 +119,8 @@ def plot_session(
         timeseries_name='$q_{reward}$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
-        x_axis_info=False,
-        y_axis_info=True,
+        x_axis_info=x_axis,
+        y_axis_info=y_axis,
         )
     axs_row += 1
     
@@ -129,8 +132,8 @@ def plot_session(
         timeseries_name=r'$\alpha$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
-        x_axis_info=False,
-        y_axis_info=True,
+        x_axis_info=x_axis,
+        y_axis_info=y_axis,
         )
     axs_row += 1
     
@@ -142,23 +145,23 @@ def plot_session(
         timeseries_name='$q_{choice}$',
         color=colors,
         fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
-        x_axis_info=True,
-        y_axis_info=True,
+        x_axis_info=x_axis,
+        y_axis_info=y_axis,
         )
     axs_row += 1
     
-    plt_session(
-        compare=True,
-        choices=choices,
-        rewards=rewards,
-        timeseries=q_trial[:, :, display_choice],
-        timeseries_name='$q_{trial}$',
-        color=colors,
-        fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
-        x_axis_info=True,
-        y_axis_info=True,
-        )
-    axs_row += 1
+    # plt_session(
+    #     compare=True,
+    #     choices=choices,
+    #     rewards=rewards,
+    #     timeseries=q_trial[:, :, display_choice],
+    #     timeseries_name='$q_{trial}$',
+    #     color=colors,
+    #     fig_ax=(fig, axs[axs_row, fig_col]) if fig_col is not None else (fig, axs[axs_row]),
+    #     x_axis_info=x_axis,
+    #     y_axis_info=y_axis,
+    #     )
+    # axs_row += 1
     
     if save is not None:
         plt.savefig(save, dpi=300)

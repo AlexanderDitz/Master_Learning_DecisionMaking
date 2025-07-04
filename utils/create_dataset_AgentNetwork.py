@@ -13,16 +13,16 @@ from resources.rnn import RLRNN, RLRNN_eckstein2022, RLRNN_dezfouli2019
 from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyConfig_dezfouli2019
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-dataset = 'eckstein2022'
-class_rnn = RLRNN_eckstein2022
-sindy_config = SindyConfig_eckstein2022
-bandits_environment = BanditsFlip_eckstein2022
-
-# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-# dataset = 'dezfouli2019'
+# dataset = 'eckstein2022'
 # class_rnn = RLRNN_eckstein2022
 # sindy_config = SindyConfig_eckstein2022
-# bandits_environment = BanditsDrift
+# bandits_environment = BanditsFlip_eckstein2022
+
+# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
+dataset = 'dezfouli2019'
+class_rnn = RLRNN_eckstein2022
+sindy_config = SindyConfig_eckstein2022
+bandits_environment = BanditsDrift
 
 
 # ----------------------- GENERAL CONFIGURATION ----------------------------
@@ -30,7 +30,7 @@ n_trials_per_session = 200
 
 path_data = f'data/{dataset}/{dataset}.csv'
 path_rnn = f'params/{dataset}/rnn_{dataset}_l2_0_0005.pkl'
-path_save = f'data/{dataset}/{dataset}_simulated_rnn.csv'
+path_save = f'data/{dataset}/{dataset}_simulated_rnn_test.csv'
 
 
 # ------------------- PIPELINE ----------------------------
@@ -39,7 +39,6 @@ environment = bandits_environment(sigma=0.2)
 agent = setup_agent_rnn(
     class_rnn=class_rnn,
     path_model=path_rnn,
-    list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
     deterministic=False,
     )
 
