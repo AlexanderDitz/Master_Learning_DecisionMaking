@@ -19,12 +19,12 @@ from resources.model_evaluation import log_likelihood
 from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019
 
-study = 'eckstein2022'
+study = 'dezfouli2019'
 
 path_data = f'data/{study}/{study}.csv'
-path_rnn = f'params/{study}/rnn_{study}_l2_0_0005.pkl'
+path_rnn = f'params/{study}/rnn_{study}_l2_0_001.pkl'
 
-participant_id = 0 # 0, 150, 289
+participant_id = 3 # 0, 150, 289
 
 class_rnn = rnn.RLRNN_eckstein2022
 sindy_config = sindy_utils.SindyConfig_eckstein2022
@@ -77,6 +77,7 @@ agent_spice = setup_agent_spice(
     path_rnn=path_rnn,
     path_spice=path_rnn.replace('rnn', 'spice'),
 )
+agent_spice.new_sess()
 # probs_spice = get_update_dynamics(experiment=dataset.xs[participant_id].numpy(), agent=agent_spice)[1]
 # ll_spice = log_likelihood(dataset.xs[participant_id, :len(probs_spice), :agent_spice._n_actions].numpy(), probs_spice)
 # lik_spice = np.exp(ll_spice / len(probs_spice))
@@ -86,6 +87,8 @@ print('\n\nDiscovered SPICE models:\n')
 for pid in [participant_id]:#, 20, 40, 60, 80, 100]:
     print(f'For participant {pid}:\n')
     agent_spice.print_model(participant_id=pid)
+    for value in agent_spice.get_betas():
+        print(f"{value}: {agent_spice.get_betas()[value]}")
 
 fig, axs = plot_session(
     agents={

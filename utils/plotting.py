@@ -18,7 +18,7 @@ def plot_session(
     ):    
     # plot the dynamcis associated with the first arm
     
-    y_axis = True
+    y_axis = False
     x_axis = False
     
     # valid keys in agent dictionary

@@ -530,7 +530,7 @@ class AgentNetwork(Agent):
       #     self._state[key] * betas[key] for key in self._state if key in betas and 'reward' in key
       #     ]), 
       #   axis=0)
-      logits = self._state['x_value_reward'] * betas['x_value_reward']
+      logits = self._state['x_value_reward'] #* betas['x_value_reward']
     else:
       # logits = np.sum(
       #   np.concatenate([
@@ -549,7 +549,7 @@ class AgentNetwork(Agent):
       #     self._state[key] * betas[key] for key in self._state if key in betas and 'choice' in key
       #     ]), 
       #   axis=0)
-      logits = self._state['x_value_choice'] * betas['x_value_choice']
+      logits = self._state['x_value_choice'] #* betas['x_value_choice']
     else:
       # logits = np.sum(
       #   np.concatenate([
@@ -932,6 +932,41 @@ class BanditsFlip_eckstein2022(Bandits):
   @property
   def n_actions(self) -> int:
     return 2
+  
+
+class Bandits_Standard(Bandits):
+  """Env for 2-armed bandit task with reward probs that flip in blocks."""
+
+  def __init__(
+      self,
+      reward_prob_0: float = 0.8,
+      reward_prob_1: float = 0.2,
+      counterfactual: bool = False,
+      **kwargs,
+  ):
+    
+    super().__init__()
+    
+    # Assign the input parameters as properties
+    self.reward_probs = [reward_prob_0, reward_prob_1]
+    self._counterfactual = counterfactual
+    
+  def step(self, choice: int = None):
+    """Step the model forward given chosen action."""
+
+    # Sample a reward with this probability
+    reward = np.array([float(np.random.binomial(1, prob)) for prob in self.reward_probs], dtype=float)
+
+    # Return the reward
+    choice_onehot = np.eye(self.n_actions)[choice]
+    if self._counterfactual:
+      return reward
+    else:
+      return choice_onehot * reward[choice] + (1-choice_onehot)*-1
+
+  @property
+  def n_actions(self) -> int:
+    return 2
 
 
 class BanditSession(NamedTuple):
@@ -1043,16 +1078,20 @@ def create_dataset(
     An experliment_list with the results of (simulated) experiments
   """
   
-  xs = np.zeros((n_sessions, n_trials, agent._n_actions*2 + 1))
-  ys = np.zeros((n_sessions, n_trials, agent._n_actions))
+  agent_original = agent
+  n_actions = agent[0]._n_actions if isinstance(agent_original, list) else agent._n_actions
+  xs = np.zeros((n_sessions, n_trials, n_actions*2 + 1))
+  ys = np.zeros((n_sessions, n_trials, n_actions))
   experiment_list = []
   parameter_list = []
-
+  
   print('Creating dataset...')
   for session in tqdm(range(n_sessions)):
     if verbose:
       print(f'Running session {session+1}/{n_sessions}...')
     environment.new_sess()
+    if isinstance(agent_original, list):
+      agent = agent_original[session]
     agent.new_sess(sample_parameters=sample_parameters, participant_id=session)
     experiment, choices, rewards = run_experiment(agent, environment, n_trials, session)
     experiment_list.append(experiment)

@@ -358,7 +358,7 @@ class AgentGQL(AgentNetwork):
         return self._state['x_learning_rate_reward'][0, 0]
 
 
-def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC", deterministic: bool = True) -> AgentGQL:
+def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC", deterministic: bool = True, **kwargs) -> AgentGQL:
     """Setup GQL agent from saved model."""
     
     # Load state dict
