@@ -185,7 +185,7 @@ class Agent_eckstein2022(Agent):
         return (self._state['x_value_choice'] * self._params['beta_ch']).reshape(-1)
     
 
-def setup_agent_benchmark(path_model: str, model_config: str, deterministic: bool = True) -> List[Agent_eckstein2022]:
+def setup_agent_benchmark(path_model: str, model_config: str, deterministic: bool = True, **kwargs) -> List[Agent_eckstein2022]:
     """Setup MCMC agents using the shared Agent class."""
     
     with open(path_model, 'rb') as file:
