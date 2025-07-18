@@ -452,10 +452,10 @@ if __name__=='__main__':
         train_test_ratio=args.train_test_ratio,
         )
 
-    agent_mcmc = setup_agent_benchmark(
-        path_model=os.path.join(args.output_dir, 'mcmc_eckstein2022_'+args.model+'.nc'),
-        model_config=args.model,
-        )
-    experiment = convert_dataset(args.file)[0].xs[0]
-    fig, axs = plot_session(agents={'benchmark': agent_mcmc[0][0]}, experiment=experiment)
-    plt.show()
+    # agent_mcmc = setup_agent_benchmark(
+    #     path_model=os.path.join(args.output_dir, 'mcmc_eckstein2022_'+args.model+'.nc'),
+    #     model_config=args.model,
+    #     )
+    # experiment = convert_dataset(args.file)[0].xs[0]
+    # fig, axs = plot_session(agents={'benchmark': agent_mcmc[0][0]}, experiment=experiment)
+    # plt.show()
