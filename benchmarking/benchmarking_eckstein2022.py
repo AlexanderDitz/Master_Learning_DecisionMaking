@@ -381,9 +381,7 @@ def encode_model_name(model: str, model_parts: list) -> np.ndarray:
     return enc
 
 
-def fit_mcmc(data: str, model: str, num_samples: int, num_warmup: int, num_chains: int, output_dir: str, checkpoint: bool, train_test_ratio: float = 1.):
-    # Set output file
-    output_file = os.path.join(output_dir, 'mcmc_eckstein2022_'+model+'.nc')
+def fit_mcmc(data: str, model: str, num_samples: int, num_warmup: int, num_chains: int, output_file: str, checkpoint: bool, train_test_ratio: float = 1.):
     
     # Check model string
     valid_config = ['Ap', 'An', 'Acfp', 'Acfn', 'Ach', 'Bch', 'Br', 'Bcf']
@@ -437,7 +435,7 @@ if __name__=='__main__':
     parser.add_argument('--num_samples', type=int, default=5000, help='Number of MCMC samples')
     parser.add_argument('--num_warmup', type=int, default=1000, help='Number of warmup samples (additional)')
     parser.add_argument('--num_chains', type=int, default=2, help='Number of chains')
-    parser.add_argument('--output_dir', type=str, default='benchmarking/params', help='Output directory')
+    parser.add_argument('--output_file', type=str, default='mcmc_eckstein2022.nc', help='Output directory')
     parser.add_argument('--checkpoint', action='store_true', help='Whether to load the specified output file as a checkpoint')
     parser.add_argument('--train_test_ratio', type=float, default=1.0, help='Relative training set size of the total number of samples')
 
@@ -449,7 +447,7 @@ if __name__=='__main__':
         num_samples=args.num_samples, 
         num_warmup=args.num_warmup, 
         num_chains=args.num_chains, 
-        output_dir=args.output_dir, 
+        output_file=args.output_file, 
         checkpoint=args.checkpoint, 
         train_test_ratio=args.train_test_ratio,
         )

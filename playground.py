@@ -19,12 +19,12 @@ from resources.model_evaluation import log_likelihood
 from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019
 
-study = 'dezfouli2019'
+study = 'eckstein2022'
 
 path_data = f'data/{study}/{study}.csv'
 path_rnn = f'params/{study}/rnn_{study}_l2_0_001.pkl'
 
-participant_id = 3 # 0, 150, 289
+participant_id = 0 # 0, 150, 289
 
 class_rnn = rnn.RLRNN_eckstein2022
 sindy_config = sindy_utils.SindyConfig_eckstein2022
