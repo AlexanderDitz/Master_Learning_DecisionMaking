@@ -1080,7 +1080,7 @@ def create_dataset(
   
   agent_original = agent
   n_actions = agent[0]._n_actions if isinstance(agent_original, list) else agent._n_actions
-  xs = np.zeros((n_sessions, n_trials, n_actions*2 + 1))
+  xs = np.zeros((n_sessions, n_trials, n_actions*2 + 3))
   ys = np.zeros((n_sessions, n_trials, n_actions))
   experiment_list = []
   parameter_list = []
@@ -1097,9 +1097,10 @@ def create_dataset(
     experiment_list.append(experiment)
     
     # one-hot encoding of choices
+    participant_id = experiment.session[:, None]
     choices = np.eye(agent._n_actions)[choices]
     ys[session] = choices[1:]
-    xs[session] = np.concatenate((choices[:-1], rewards[:-1], experiment.session[:, None]), axis=-1)
+    xs[session] = np.concatenate((choices[:-1], rewards[:-1], np.zeros_like(participant_id), np.zeros_like(participant_id), participant_id), axis=-1)
     
     if isinstance(agent, AgentQ):
       # add current parameters to list
@@ -1272,14 +1273,22 @@ def plot_session(
   not_chosen_y = max_y + 1e-1  # Slightly lower for not chosen (smaller tick)
   # not_chosen_y = chosen_y - 1e-1 * diff_min_max  # Slightly lower for not chosen (smaller tick)
 
+  # if (rewards > 0 and rewards < 1).any():
   # Plot ticks for chosen options
-  ax.scatter(x[(choices == 1) & (rewards == 1)], np.full(sum((choices == 1) & (rewards == 1)), chosen_y), color='green', s=100, marker='|')  # Large green tick for chosen reward
+  ax.scatter(x[(choices == 1) & (rewards == 1)], np.full(sum((choices == 1) & (rewards == 1)), chosen_y), color='green', s=120, marker='|')  # Large green tick for chosen reward
   ax.scatter(x[(choices == 1) & (rewards == 0)], np.full(sum((choices == 1) & (rewards == 0)), chosen_y), color='red', s=80, marker='|')  # Large red tick for chosen penalty
 
   # Plot ticks for not chosen options
-  ax.scatter(x[(choices == 0) & (rewards == 1)], np.full(sum((choices == 0) & (rewards == 1)), not_chosen_y), color='green', s=100, marker='|')  # Small green tick
+  ax.scatter(x[(choices == 0) & (rewards == 1)], np.full(sum((choices == 0) & (rewards == 1)), not_chosen_y), color='green', s=120, marker='|')  # Small green tick
   ax.scatter(x[(choices == 0) & (rewards == 0)], np.full(sum((choices == 0) & (rewards == 0)), not_chosen_y), color='red', s=80, marker='|')  # Small red tick
+  # else:
+  #   # Plot ticks for chosen options
+  #   ax.scatter(x[(choices == 1)], np.full(sum((choices == 1)), chosen_y), color='green', s=100, marker='|')  # Large green tick for chosen reward
+  #   ax.scatter(x[(choices == 1)], np.full(sum((choices == 1)), chosen_y), color='red', s=80, marker='|')  # Large red tick for chosen penalty
 
+  #   # Plot ticks for not chosen options
+  #   ax.scatter(x[(choices == 0) & (rewards == 1)], np.full(sum((choices == 0)), not_chosen_y), color='green', s=100, marker='|')  # Small green tick
+  #   ax.scatter(x[(choices == 0) & (rewards == 0)], np.full(sum((choices == 0)), not_chosen_y), color='red', s=80, marker='|')  # Small red tick
   # ax.set_ylim(not_chosen_y, np.max((-not_chosen_y, np.max(timeseries + 1e-1 * diff_min_max))))
   
   if x_axis_info:
