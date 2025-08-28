@@ -106,7 +106,7 @@ if path_model_rnn is not None:
         print("Setting up RNN agent from file", current_rnn)
         agent_rnn[value] = setup_agent_rnn(
             class_rnn=rnn_class,
-            path_model=current_rnn,
+            path_rnn=current_rnn,
             )
     n_parameters_rnn = sum(p.numel() for p in agent_rnn[value]._model.parameters() if p.requires_grad)
 else:

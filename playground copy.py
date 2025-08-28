@@ -6,6 +6,15 @@ import torch
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from scipy.stats import gaussian_kde
+from jax import random
+import jax.numpy as jnp
+import arviz as az
+import numpyro
+import numpyro.distributions as dist
+from numpyro.infer import MCMC, NUTS
+from numpyro.diagnostics import hpdi, summary, gelman_rubin, effective_sample_size, autocorrelation
+from typing import Dict, Any, Optional, List
+import pickle
 
 from resources.bandits import AgentQ, get_update_dynamics, create_dataset, BanditsDrift, AgentNetwork
 from resources.rnn_utils import split_data_along_sessiondim
@@ -22,11 +31,13 @@ from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019
 
 
-agent = AgentQ(alpha_reward=0.3, beta_reward=1.)
+# dataset = convert_dataset('data/q_agent_.csv')[0]
+
+agent = AgentQ(alpha_reward=0.3, beta_reward=3.)
 env = BanditsDrift(0.2)
 dataset = create_dataset(agent, env, 100, 100)[0]
 
-rnn = RLRNN_eckstein2022(2, 100)
+rnn = RLRNN_eckstein2022(2, 128)
 optimizer = torch.optim.Adam(rnn.parameters(), 0.01)
 rnn, optimizer, _ = fit_model(rnn, dataset, None, optimizer, 0, 1024)
 

@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.setup_agents import setup_agent_spice
 from resources.bandits import AgentSpice
-from resources.rnn import RLRNN_eckstein2022 as RLRNN
+from resources.rnn import RLRNN_eckstein2022 as class_rnn
 from resources.sindy_utils import SindyConfig_eckstein2022 as SindyConfig
 
 
@@ -257,7 +257,7 @@ for index_sess, sess in enumerate(n_sessions):
         
         # setup of sindy agent for current dataset
         sindy_agent = setup_agent_spice(
-            class_rnn=RLRNN,
+            class_rnn=class_rnn,
             path_rnn=path_rnn, 
             path_data=path_data,
             path_spice=path_spice,

@@ -60,7 +60,7 @@ dataset = rnn_utils.DatasetRNN(xs, choices)
 
 agent_rnn = setup_agent_rnn(
     class_rnn=rnn.RLRNN_eckstein2022,
-    path_model=path_rnn,
+    path_rnn=path_rnn,
 )
 # probs_rnn = get_update_dynamics(experiment=dataset.xs[participant_id].numpy(), agent=agent_rnn)[1]
 # ll_rnn = log_likelihood(dataset.xs[participant_id, :len(probs_rnn), :agent_rnn._n_actions].numpy(), probs_rnn)

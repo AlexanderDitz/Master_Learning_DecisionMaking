@@ -192,7 +192,6 @@ def setup_agent_benchmark(path_model: str, model_config: str, deterministic: boo
         mcmc = pickle.load(file)
     
     n_sessions = mcmc.get_samples()[list(mcmc.get_samples().keys())[0]].shape[-1]
-    model_name = path_model.split('_')[-1].split('.')[0]
     
     agents = []
     
@@ -217,23 +216,23 @@ def setup_agent_benchmark(path_model: str, model_config: str, deterministic: boo
         if np.mean(parameters['alpha_neg']) == -1:
             parameters['alpha_neg'] = parameters['alpha_pos']
         
-        if np.mean(parameters['alpha_cf_pos']) == 0 and 'Bcf' in model_name:
+        if np.mean(parameters['alpha_cf_pos']) == 0 and 'Bcf' in model_config:
             parameters['alpha_cf_pos'] = parameters['alpha_pos']
         
-        if np.mean(parameters['alpha_cf_neg']) == 0 and 'Acfp' in model_name:
+        if np.mean(parameters['alpha_cf_neg']) == 0 and 'Acfp' in model_config:
             parameters['alpha_cf_neg'] = parameters['alpha_cf_pos']
-        elif np.mean(parameters['alpha_cf_neg']) == 0 and 'Bcf' in model_name:
+        elif np.mean(parameters['alpha_cf_neg']) == 0 and 'Bcf' in model_config:
             parameters['alpha_cf_neg'] = parameters['alpha_neg']
             
         agents.append(Agent_eckstein2022(
             alpha_reward=parameters['alpha_pos'],
             alpha_penalty=parameters['alpha_neg'],
-            alpha_counterfactual_reward=parameters['alpha_cf_pos']*(1 if 'Bcf' in model_name else 0),
-            alpha_counterfactual_penalty=parameters['alpha_cf_neg']*(1 if 'Bcf' in model_name else 0),
+            alpha_counterfactual_reward=parameters['alpha_cf_pos']*(1 if 'Bcf' in model_config else 0),
+            alpha_counterfactual_penalty=parameters['alpha_cf_neg']*(1 if 'Bcf' in model_config else 0),
             alpha_choice=parameters['alpha_ch'],
-            beta_reward=parameters['beta_r']*15,
-            beta_choice=parameters['beta_ch']*15,
-            beta_counterfactual=1.0 if 'Bcf' in model_name else 0.0,
+            beta_reward=parameters['beta_r'],#*15,
+            beta_choice=parameters['beta_ch'],#*15,
+            beta_counterfactual=1.0 if 'Bcf' in model_config else 0.0,
             deterministic=deterministic,
         ))
     
@@ -252,31 +251,24 @@ def rl_model(model, choice, reward):
     """
     A reinforcement learning model using shared update logic for parameter inference.
     """
-    def scaled_beta(a, b, low, high):
-        return dist.TransformedDistribution(
-            dist.Beta(a, b),
-            dist.transforms.AffineTransform(0, high - low)
-        )
-    
-    beta_scaling = 15
     
     # Hierarchical priors
-    alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Beta(1, 1)) if model[0]==1 else 1
-    alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Beta(1, 1)) if model[1]==1 else -1
-    alpha_cf_pos_mean = numpyro.sample("alpha_cf_pos_mean", dist.Beta(1, 1)) if model[2]==1 else 0
-    alpha_cf_neg_mean = numpyro.sample("alpha_cf_neg_mean", dist.Beta(1, 1)) if model[3]==1 else 0
-    alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Beta(1, 1)) if model[4]==1 else 1
-    beta_ch_mean = numpyro.sample("beta_ch_mean", dist.Beta(1, 1)) if model[5]==1 else 0
-    beta_r_mean = numpyro.sample("beta_r_mean", dist.Beta(1, 1)) if model[6]==1 else 1
+    alpha_pos_mean = numpyro.sample("alpha_pos_mean", dist.Beta(2, 2)) if model[0]==1 else 1
+    alpha_neg_mean = numpyro.sample("alpha_neg_mean", dist.Beta(2, 2)) if model[1]==1 else -1
+    alpha_cf_pos_mean = numpyro.sample("alpha_cf_pos_mean", dist.Beta(2, 2)) if model[2]==1 else 0
+    alpha_cf_neg_mean = numpyro.sample("alpha_cf_neg_mean", dist.Beta(2, 2)) if model[3]==1 else 0
+    alpha_ch_mean = numpyro.sample("alpha_ch_mean", dist.Beta(2, 2)) if model[4]==1 else 1
+    beta_ch_mean = numpyro.sample("beta_ch_mean", dist.Gamma(2, 0.5)) if model[5]==1 else 0
+    beta_r_mean = numpyro.sample("beta_r_mean", dist.Gamma(2, 0.5)) if model[6]==1 else 1
     
     # Hierarchical variation parameters
-    alpha_pos_kappa = numpyro.sample("alpha_pos_kappa", dist.HalfNormal(1.0)) if model[0]==1 else 0
-    alpha_neg_kappa = numpyro.sample("alpha_neg_kappa", dist.HalfNormal(1.0)) if model[1]==1 else 0
-    alpha_cf_pos_kappa = numpyro.sample("alpha_cf_pos_kappa", dist.HalfNormal(1.0)) if model[2]==1 else 0
-    alpha_cf_neg_kappa = numpyro.sample("alpha_cf_neg_kappa", dist.HalfNormal(1.0)) if model[3]==1 else 0
-    alpha_ch_kappa = numpyro.sample("alpha_ch_kappa", dist.HalfNormal(1.0))  if model[4]==1 else 0
-    beta_ch_kappa = numpyro.sample("beta_ch_kappa", dist.HalfNormal(1.0)) if model[5]==1 else 0
-    beta_r_kappa = numpyro.sample("beta_r_kappa", dist.HalfNormal(1.0)) if model[6]==1 else 0
+    alpha_pos_kappa = numpyro.sample("alpha_pos_kappa", dist.Gamma(2, 1)) if model[0]==1 else 0
+    alpha_neg_kappa = numpyro.sample("alpha_neg_kappa", dist.Gamma(2, 1)) if model[1]==1 else 0
+    alpha_cf_pos_kappa = numpyro.sample("alpha_cf_pos_kappa", dist.Gamma(2, 1)) if model[2]==1 else 0
+    alpha_cf_neg_kappa = numpyro.sample("alpha_cf_neg_kappa", dist.Gamma(2, 1)) if model[3]==1 else 0
+    alpha_ch_kappa = numpyro.sample("alpha_ch_kappa", dist.Gamma(2, 1))  if model[4]==1 else 0
+    beta_ch_kappa = numpyro.sample("beta_ch_kappa", dist.Gamma(2, 1)) if model[5]==1 else 0
+    beta_r_kappa = numpyro.sample("beta_r_kappa", dist.Gamma(2, 1)) if model[6]==1 else 0
     
     # Individual parameters
     n_participants = choice.shape[1]
@@ -309,12 +301,12 @@ def rl_model(model, choice, reward):
             alpha_ch = jnp.full((n_participants, 1), 1.0)
 
         if model[5]:
-            beta_ch = numpyro.sample("beta_ch", dist.Beta(beta_ch_mean * beta_ch_kappa, (1 - beta_ch_mean) * beta_ch_kappa))[:, None] * beta_scaling
+            beta_ch = numpyro.sample("beta_ch", dist.Gamma(beta_ch_kappa, beta_ch_kappa / beta_ch_mean))[:, None]
         else:
             beta_ch = jnp.full((n_participants, 1), 0.0)
             
         if model[6]:
-            beta_r = numpyro.sample("beta_r", dist.Beta(beta_r_mean * beta_r_kappa, (1 - beta_r_mean) * beta_r_kappa))[:, None] * beta_scaling
+            beta_r = numpyro.sample("beta_r", dist.Gamma(beta_r_kappa, beta_r_kappa / beta_r_mean))[:, None]
         else:
             beta_r = jnp.full((n_participants, 1), 1.0)
 
@@ -365,7 +357,6 @@ def rl_model(model, choice, reward):
     # Likelihood
     next_choice_0 = choice[1:, :, 0]
     valid_mask = (next_choice_0 >= 0) & (next_choice_0 <= 1)
-    
     
     with numpyro.handlers.mask(mask=valid_mask):
         with numpyro.plate("participants", choice.shape[1], dim=-1):

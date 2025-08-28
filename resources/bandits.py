@@ -1,4 +1,4 @@
-from typing import NamedTuple, Union, Optional, Dict, Callable, Tuple
+from typing import NamedTuple, Union, Optional, Dict, Callable, Tuple, List
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -202,6 +202,7 @@ class AgentQ(Agent):
       forget_rate: float = 0.,
       confirmation_bias: float = 0.,
       parameter_variance: Union[Dict[str, float], float] = 0.,
+      deterministic: bool = False,
       ):
     """Update the agent after one step of the task.
     
@@ -216,7 +217,7 @@ class AgentQ(Agent):
       parameter_variance (float): sets a variance around the model parameters' mean values to sample from a normal distribution e.g. at each new session. 0: no variance, -1: std = mean
     """
     
-    super().__init__(n_actions=n_actions, parameter_variance=parameter_variance)
+    super().__init__(n_actions=n_actions, parameter_variance=parameter_variance, deterministic=deterministic)
     
     self._list_params = ['beta_reward', 'alpha_reward', 'alpha_penalty', 'alpha_counterfactual', 'beta_choice', 'alpha_choice', 'confirmation_bias', 'forget_rate']
     
@@ -1052,7 +1053,7 @@ def run_experiment(
 
 
 def create_dataset(
-  agent: Agent,
+  agent: Union[Agent, List[Agent]],
   environment: Bandits,
   n_trials: int,
   n_sessions: int,

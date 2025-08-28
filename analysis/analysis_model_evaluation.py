@@ -36,9 +36,9 @@ rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = None
 setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
 rl_model = benchmarking_eckstein2022.rl_model
-benchmark_file = f'mcmc_{study}_MODEL.nc'
+benchmark_file = f'mcmc_{study}_benchmark_gamma.nc'
 model_config_baseline = 'ApBr'
-baseline_file = f'mcmc_{study}_ApBr.nc'
+baseline_file = f'mcmc_{study}_baseline_gamma.nc'
 
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
@@ -87,10 +87,10 @@ use_test = True
 spice_suffix = '_l2_0_0005'
 
 path_data = f'data/{study}/{study}.csv'
-path_model_rnn = f'params/{study}/rnn_{study+spice_suffix}.pkl'
-path_model_spice = f'params/{study}/spice_{study+spice_suffix}.pkl'
+path_model_rnn = None#f'params/{study}/rnn_{study+spice_suffix}.pkl'
+path_model_spice = None#f'params/{study}/spice_{study+spice_suffix}.pkl'
 path_model_baseline = None#os.path.join(f'params/{study}/', baseline_file)
-path_model_benchmark = None#os.path.join(f'params/{study}', benchmark_file) if len(models_benchmark) > 0 else None
+path_model_benchmark = os.path.join(f'params/{study}', benchmark_file) if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = None#f'params/{study}/lstm_{study}.pkl'
 
 # -------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ if path_model_rnn is not None:
     print("Setting up RNN agent from file", path_model_rnn)
     agent_rnn = setup_agent_rnn(
         class_rnn=rnn_class,
-        path_model=path_model_rnn, 
+        path_rnn=path_model_rnn, 
         )
     n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
 else:
