@@ -37,7 +37,7 @@ agent_spice = setup_agent_spice(
 
 agent_rnn = setup_agent_rnn(
     class_rnn=class_rnn,
-    path_model=model_rnn,
+    path_rnn=model_rnn,
     list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
 )
 

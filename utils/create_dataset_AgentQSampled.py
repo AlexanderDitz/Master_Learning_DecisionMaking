@@ -26,11 +26,11 @@ for iteration in range(n_iterations_per_n_sessions):
         #     )
         
         agent = AgentQ(
-            alpha_reward=0.25,
+            alpha_reward=0.3,
             beta_reward=3.,
-            beta_choice=1,
+            # beta_choice=1,
             )
-
+            
         environment = BanditsDrift(sigma=sigma)
 
         dataset, _, parameter_list = create_dataset(

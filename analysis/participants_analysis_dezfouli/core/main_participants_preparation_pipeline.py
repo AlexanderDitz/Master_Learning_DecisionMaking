@@ -148,7 +148,7 @@ sindy_config = SindyConfig_dezfouli2019
 
 
 agent_rnn = setup_agent_rnn(
-    path_model=model_rnn_path,
+    path_rnn=model_rnn_path,
     class_rnn=class_rnn,
     list_sindy_signals=sindy_config["rnn_modules"] + sindy_config['control_parameters']
 )

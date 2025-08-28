@@ -709,7 +709,7 @@ def main_quartile_analysis(embedding_type: int = PARTICIPANT_EMB):
         print("Loading participant embeddings...")
         agent_rnn = setup_agent_rnn(
             class_rnn=rnn_class, 
-            path_model=path_rnn,
+            path_rnn=path_rnn,
             list_sindy_signals=sindy_config['rnn_modules']+sindy_config['control_parameters'],
         )
         embeddings = get_embeddings(agent_rnn=agent_rnn)

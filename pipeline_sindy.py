@@ -143,7 +143,7 @@ def main(
     
     agent_rnn = setup_agent_rnn(
         class_rnn=class_rnn,
-        path_model=file_rnn,
+        path_rnn=file_rnn,
         list_sindy_signals=rnn_modules+control_parameters,
     )
     

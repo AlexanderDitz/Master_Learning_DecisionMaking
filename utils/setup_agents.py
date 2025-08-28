@@ -17,7 +17,7 @@ from utils.convert_dataset import convert_dataset
 
 def setup_rnn(
     class_rnn,
-    path_model,
+    path_rnn,
     n_actions=2,
     counterfactual=False,
     device=device('cpu'),
@@ -25,7 +25,7 @@ def setup_rnn(
 ) -> BaseRNN:
     
     # get n_participants and hidden_size from state dict
-    state_dict = torch.load(path_model, map_location=torch.device('cpu'))
+    state_dict = torch.load(path_rnn, map_location=torch.device('cpu'))
     
     if 'model' in state_dict:
         state_dict = state_dict['model']
@@ -58,7 +58,7 @@ def setup_rnn(
 
 def setup_agent_rnn(
     class_rnn,
-    path_model,
+    path_rnn,
     n_actions=2,
     counterfactual=False,
     deterministic=True,
@@ -66,7 +66,7 @@ def setup_agent_rnn(
     **kwargs,
     ) -> AgentNetwork:
     
-    rnn = setup_rnn(class_rnn=class_rnn, path_model=path_model, device=device, n_actions=n_actions, counterfactual=counterfactual)
+    rnn = setup_rnn(class_rnn=class_rnn, path_rnn=path_rnn, device=device, n_actions=n_actions, counterfactual=counterfactual)
     agent = AgentNetwork(model_rnn=rnn, n_actions=n_actions, deterministic=deterministic)
     
     return agent
@@ -93,7 +93,7 @@ def setup_agent_spice(
     **kwargs,
 ) -> AgentSpice:
     
-    agent_rnn = setup_agent_rnn(class_rnn=class_rnn, path_model=path_rnn)
+    agent_rnn = setup_agent_rnn(class_rnn=class_rnn, path_rnn=path_rnn)
     
     if path_spice is None or path_spice == '':
         dataset = convert_dataset(file=path_data)[0]
