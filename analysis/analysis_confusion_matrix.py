@@ -23,7 +23,7 @@ from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019
 # CONFIGURATION CONFUSION MATRIX FILES
 #----------------------------------------------------------------------------------------------
 
-fitted_models = ["baseline", "benchmark", "rnn"]
+fitted_models = ["baseline", "benchmark", "spice"]
 simulated_models = ["baseline", "benchmark", "rnn"]
 
 study = "eckstein2022"
@@ -34,10 +34,9 @@ setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
 rl_model = benchmarking_eckstein2022.rl_model
 
 # study = "dezfouli2019"
-# models = ["baseline", "benchmark"]
 # model_mapping = {"baseline": "PhiBeta", "benchmark": "PhiChiBetaKappaC"}
 # path_model_benchmark = f'params/{study}/gql_{study}_sim_SIMULATED_fit_FITTED.pkl'
-# path_data = f'data/{study}/{study}_simulated_SIMULATED_test.csv'
+# path_data = f'data/{study}/{study}_generated_behavior_SIMULATED_test.csv'
 # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
 # Dezfouli2019GQL = benchmarking_dezfouli2019.Dezfouli2019GQL
 
@@ -117,8 +116,8 @@ for index_simulated_model, simulated_model in enumerate(simulated_models):
             ll_test = log_likelihood(choices_test, choice_probs_fitted_test)
             
             metrics_session['nll'][session, index_fitted_model] = -ll_test
-            metrics_session['bic'][session, index_fitted_model] = bayesian_information_criterion(choices_training, choice_probs_fitted_training, n_parameters[session] if isinstance(n_parameters, list) else n_parameters, ll=ll_training)
-            metrics_session['aic'][session, index_fitted_model] = akaike_information_criterion(choices_training, choice_probs_fitted_training, n_parameters[session] if isinstance(n_parameters, list) else n_parameters, ll=ll_training)
+            metrics_session['bic'][session, index_fitted_model] = bayesian_information_criterion(choices_training, choice_probs_fitted_training, n_parameters[session] if isinstance(n_parameters, list) or isinstance(n_parameters, dict) else n_parameters, ll=ll_training)
+            metrics_session['aic'][session, index_fitted_model] = akaike_information_criterion(choices_training, choice_probs_fitted_training, n_parameters[session] if isinstance(n_parameters, list) or isinstance(n_parameters, dict) else n_parameters, ll=ll_training)
 
     for metric in metrics:
         

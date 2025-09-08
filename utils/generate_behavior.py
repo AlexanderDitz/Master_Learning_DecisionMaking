@@ -18,47 +18,48 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022
 
 
 # ----------------------- GENERAL CONFIGURATION ----------------------------
-agent_type = 'benchmark'  # 'rnn', 'spice', 'benchmark', 'baseline', 'q_agent'
+agent_type = 'rnn'  # 'rnn', 'spice', 'benchmark', 'baseline', 'q_agent'
 n_trials_per_session = 200
 
 
 # ------------------- CONFIGURATION ECKSTEIN2022 --------------------
-dataset = 'eckstein2022'
-benchmark_model = 'ApAnBrBcfBch'
-baseline_model = 'ApBr'
-class_rnn = RLRNN_eckstein2022
-sindy_config = SindyConfig_eckstein2022
-bandits_environment = BanditsFlip_eckstein2022
-bandits_kwargs_per_session = [
-    {'sigma': 0.2},
-    ]
-n_sessions = 1
-setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
-rl_model = benchmarking_eckstein2022.rl_model
-path_rnn = f'params/{dataset}/rnn_{dataset}_l2_0_0001.pkl'
-path_spice = f'params/{dataset}/spice_{dataset}_l2_0_0001.pkl'
-path_benchmark = f'params/{dataset}/mcmc_{dataset}_BENCHMARK.nc'
-
-# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-# dataset = 'dezfouli2019'
-# benchmark_model = 'PhiChiBetaKappaC'
+# dataset = 'eckstein2022'
+# benchmark_model = 'ApAnBrBcfBch'
+# baseline_model = 'ApBr'
 # class_rnn = RLRNN_eckstein2022
 # sindy_config = SindyConfig_eckstein2022
-# bandits_environment = Bandits_Standard
-# n_sessions = 6
+# bandits_environment = BanditsFlip_eckstein2022
 # bandits_kwargs_per_session = [
-#     {'reward_prob_0': 0.25, 'reward_prob_1': 0.05},
-#     {'reward_prob_0': 0.125, 'reward_prob_1': 0.05},
-#     {'reward_prob_0': 0.08, 'reward_prob_1': 0.05},
-#     {'reward_prob_0': 0.05, 'reward_prob_1': 0.25},
-#     {'reward_prob_0': 0.05, 'reward_prob_1': 0.125},
-#     {'reward_prob_0': 0.05, 'reward_prob_1': 0.08},
+#     {'sigma': 0.2},
 #     ]
-# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
-# Dezfouli2019GQL = benchmarking_dezfouli2019.Dezfouli2019GQL
-# path_rnn = f'params/{dataset}/rnn_{dataset}_l2_0_001.pkl'
-# path_spice = f'params/{dataset}/spice_{dataset}_l2_0_001.pkl'
-# path_benchmark = f'params/{dataset}/gql_{dataset}_BENCHMARK.pkl'
+# n_sessions = 1
+# setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
+# rl_model = benchmarking_eckstein2022.rl_model
+# path_rnn = f'params/{dataset}/rnn_{dataset}_l2_0_0001.pkl'
+# path_spice = f'params/{dataset}/spice_{dataset}_l2_0_0001.pkl'
+# path_benchmark = f'params/{dataset}/mcmc_{dataset}_BENCHMARK.nc'
+
+# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
+dataset = 'dezfouli2019'
+benchmark_model = 'PhiChiBetaKappaC'
+baseline_model = 'PhiBeta'
+class_rnn = RLRNN_eckstein2022
+sindy_config = SindyConfig_eckstein2022
+bandits_environment = Bandits_Standard
+n_sessions = 6
+bandits_kwargs_per_session = [
+    {'reward_prob_0': 0.25, 'reward_prob_1': 0.05},
+    {'reward_prob_0': 0.125, 'reward_prob_1': 0.05},
+    {'reward_prob_0': 0.08, 'reward_prob_1': 0.05},
+    {'reward_prob_0': 0.05, 'reward_prob_1': 0.25},
+    {'reward_prob_0': 0.05, 'reward_prob_1': 0.125},
+    {'reward_prob_0': 0.05, 'reward_prob_1': 0.08},
+    ]
+setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
+Dezfouli2019GQL = benchmarking_dezfouli2019.Dezfouli2019GQL
+path_rnn = f'params/{dataset}/rnn_{dataset}_l2_0_001.pkl'
+path_spice = f'params/{dataset}/spice_{dataset}_l2_0_001.pkl'
+path_benchmark = f'params/{dataset}/gql_{dataset}_BENCHMARK.pkl'
 
 
 # ------------------- PIPELINE ----------------------------
