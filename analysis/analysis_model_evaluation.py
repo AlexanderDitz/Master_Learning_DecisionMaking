@@ -8,7 +8,7 @@ from copy import copy
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # standard methods and classes used for every model evaluation
-from benchmarking import benchmarking_dezfouli2019
+from benchmarking import benchmarking_gershman2018, benchmarking_dezfouli2019
 from resources.model_evaluation import get_scores
 from resources.bandits import get_update_dynamics, AgentQ
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
@@ -36,9 +36,9 @@ rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = None
 setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
 rl_model = benchmarking_eckstein2022.rl_model
-benchmark_file = f'mcmc_{study}_benchmark_gamma.nc'
+benchmark_file = f'mcmc_{study}_benchmark.nc'
 model_config_baseline = 'ApBr'
-baseline_file = f'mcmc_{study}_baseline_gamma.nc'
+baseline_file = f'mcmc_{study}_baseline.nc'
 
 # -------------------- CONFIGURATION ECKSTEIN2022 w/ AGE --------------------
 # rnn_class = RLRNN_meta_eckstein2022
@@ -51,8 +51,6 @@ baseline_file = f'mcmc_{study}_baseline_gamma.nc'
 # sindy_config = sindy_utils.SindyConfig_eckstein2022
 # rnn_class = rnn.RLRNN_eckstein2022
 # additional_inputs = []
-# # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
-# # gql_model = benchmarking_dezfouli2019.gql_model
 # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
 # gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
 # benchmark_file = f'gql_{study}_MODEL.pkl'
@@ -62,36 +60,26 @@ baseline_file = f'mcmc_{study}_baseline_gamma.nc'
 # ------------------------ CONFIGURATION GERSHMAN2018 -----------------------
 # study = 'gershmanB2018'
 # train_test_ratio = [4, 8, 12, 16]
-# models_benchmark = ['PhiBeta']
+# models_benchmark = ['Hybrid']
 # sindy_config = sindy_utils.SindyConfig_eckstein2022
 # rnn_class = rnn.RLRNN_eckstein2022
 # additional_inputs = []
-# # setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_benchmark
-# # gql_model = benchmarking_dezfouli2019.gql_model
-# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
-# gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
-# benchmark_file = f'ql_{study}_MODEL.pkl'
+# setup_agent_benchmark = benchmarking_gershman2018.setup_agent_benchmark
+# gql_model = benchmarking_gershman2018.Agent_gershman2018
+# benchmark_file = f'uncertainty_gershmanB2018_MODEL.pkl'
 # model_config_baseline = 'PhiBeta'
 # baseline_file = f'ql_{study}_PhiBeta.pkl'
 
-# ------------------------ CONFIGURATION DEZFOULI2019 w/ blocks -----------------------
-# study = 'dezfouli2019'
-# train_test_ratio = [3, 6, 9]
-# models_benchmark = ['ApAnBrBcfAchBch']#['ApBr', 'ApBrBch', 'ApAnBrBcfAchBch']
-# sindy_config = SindyConfig_dezfouli2019
-# rnn_class = RLRNN_dezfouli2019
-# additional_inputs = []
-
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
-use_test = True
+use_test = False
 spice_suffix = '_l2_0_0005'
 
 path_data = f'data/{study}/{study}.csv'
-path_model_rnn = None#f'params/{study}/rnn_{study+spice_suffix}.pkl'
-path_model_spice = None#f'params/{study}/spice_{study+spice_suffix}.pkl'
-path_model_baseline = None#os.path.join(f'params/{study}/', baseline_file)
+path_model_rnn = f'params/{study}/rnn_{study+spice_suffix}.pkl'
+path_model_spice = f'params/{study}/spice_{study+spice_suffix}.pkl'
+path_model_baseline = os.path.join(f'params/{study}/', baseline_file)
 path_model_benchmark = os.path.join(f'params/{study}', benchmark_file) if len(models_benchmark) > 0 else None
-path_model_benchmark_lstm = None#f'params/{study}/lstm_{study}.pkl'
+path_model_benchmark_lstm = f'params/{study}/lstm_{study}.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
@@ -143,7 +131,9 @@ if path_model_rnn is not None:
         class_rnn=rnn_class,
         path_rnn=path_model_rnn, 
         )
-    n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad)
+    # consider in n_parameters which are actually used for the computation of the probabilities
+    # i.e. when using the embedding -> only the embedding weights of the current participant are used. All others are ignored.
+    n_parameters_rnn = sum(p.numel() for p in agent_rnn._model.parameters() if p.requires_grad) - agent_rnn._model.embedding_size * (len(participant_ids)-1)
 else:
     n_parameters_rnn = 0
     
@@ -159,7 +149,7 @@ if path_model_spice is not None:
     )
 
 n_parameters_spice = 0
-    
+
 # ------------------------------------------------------------
 # Dataset splitting
 # ------------------------------------------------------------
@@ -186,7 +176,7 @@ else:
 # ------------------------------------------------------------
 
 print('Running model evaluation...')
-scores = np.zeros((5+len(models_benchmark), 3))
+scores = np.zeros((5, 3))
 
 failed_attempts = 0
 considered_trials = 0
@@ -241,7 +231,6 @@ for index_data in tqdm(range(len(dataset_test))):
             n_parameters_benchmark += agent_benchmark[models_benchmark[index_best_benchmark]][1]
             best_benchmarks_participant[index_data] += models_benchmark[index_best_benchmark]
             metric_participant[1, index_data] += scores_benchmark[index_best_benchmark, 0]
-            metric_participant[5:, index_data] += scores_benchmark[:, 0]
         
         # Benchmark LSTM
         if path_model_benchmark_lstm:
@@ -274,7 +263,6 @@ for index_data in tqdm(range(len(dataset_test))):
         scores[0] += scores_baseline
         if path_model_benchmark:
             scores[1] += scores_benchmark[index_best_benchmark]
-            scores[5:] += scores_benchmark
         if path_model_benchmark_lstm:
             scores[2] += scores_lstm
         if path_model_rnn is not None:
@@ -291,12 +279,12 @@ for index_data in tqdm(range(len(dataset_test))):
 # Post processing
 # ------------------------------------------------------------
 
-if path_model_benchmark:
-    # print how often each benchmark model was the best one
-    from collections import Counter
-    occurrences = Counter(best_benchmarks_participant)
-    print("Counter for each benchmark model being the best one:")
-    print(occurrences)
+metric_participant_interpretable = np.stack((metric_participant[0], metric_participant[1], metric_participant[-1]))
+best_values = metric_participant_interpretable.min(axis=0)
+counts = np.sum(metric_participant_interpretable == best_values[None, :], axis=1)
+counts = counts / np.sum(counts)
+counts_all = np.zeros((len(scores), 1))
+counts_all[0], counts_all[1], counts_all[-1] = counts[0], counts[1], counts[2]
 
 # compute trial-level metrics (and NLL -> Likelihood)
 scores = scores / (considered_trials)# * agent_baseline[0]._n_actions)
@@ -322,16 +310,15 @@ parameter_participant_std = parameters_participant.std(axis=1)
 # pd.DataFrame(data=np.concatenate((np.array(best_benchmarks_participant).reshape(-1, 1), avg_trial_likelihood), axis=1), columns=['benchmark model', 'baseline','benchmark', 'lstm', 'rnn', 'spice']+models_benchmark).to_csv('best_scores_benchmark.csv')
 
 # compute average number of parameters
-n_parameters_benchmark_single_models = [agent_benchmark[model][1] for model in models_benchmark] if path_model_benchmark else []
 n_parameters = np.array([
     n_parameters_baseline,
     n_parameters_benchmark/(len(dataset_test)-failed_attempts) if path_model_benchmark else 0, 
     n_parameters_lstm,
     n_parameters_rnn, 
     n_parameters_spice/(len(dataset_test)-failed_attempts),
-    ]+n_parameters_benchmark_single_models)
+    ])
 
-scores = np.concatenate((avg_trial_likelihood.reshape(-1, 1), avg_trial_likelihood_participant_std.reshape(-1, 1), scores[:, :1], metric_participant_std.reshape(-1, 1), scores[:, 1:], n_parameters.reshape(-1, 1)), axis=1)
+scores = np.concatenate((counts_all, avg_trial_likelihood.reshape(-1, 1), avg_trial_likelihood_participant_std.reshape(-1, 1), scores[:, :1], metric_participant_std.reshape(-1, 1), scores[:, 1:], n_parameters.reshape(-1, 1)), axis=1)
 
 
 # ------------------------------------------------------------
@@ -342,7 +329,7 @@ print(f'Failed attempts: {failed_attempts}')
 
 df = pd.DataFrame(
     data=scores,
-    index=['Baseline', 'Benchmark', 'LSTM', 'RNN', 'SPICE']+models_benchmark,
-    columns = ('Trial Lik.', '(std)', 'NLL', '(std)', 'AIC', 'BIC', 'n_parameters'),
+    index=['Baseline', 'Benchmark', 'LSTM', 'RNN', 'SPICE'],
+    columns = ('Best model', 'Trial Lik.', '(std)', 'NLL', '(std)', 'AIC', 'BIC', 'n_parameters'),
     )
 print(df)
