@@ -9,7 +9,7 @@ class GRUModule(nn.Module):
     def __init__(self, input_size, **kwargs):
         super().__init__()
         
-        self.gru_in = nn.GRU(input_size, 1)
+        self.gru_in = nn.GRU(input_size=input_size, hidden_size=1)
         self.linear_out = nn.Linear(1, 1)
 
     def forward(self, inputs):
@@ -237,7 +237,7 @@ class BaseRNN(nn.Module):
         # module = nn.Sequential(*layers)
         
         # GRU network
-        module = GRUModule(input_size=input_size, hidden_size=hidden_size, dropout=dropout)
+        module = GRUModule(input_size=input_size, hidden_size=hidden_size)
         
         return module 
     
@@ -565,10 +565,10 @@ class RLRNN_eckstein2022(BaseRNN):
         self.betas['x_value_choice'] = torch.nn.Sequential(torch.nn.Linear(self.embedding_size, 1), torch.nn.LeakyReLU(leaky_relu))
         
         # set up the submodules
-        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=2+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
-        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
+        self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size)
+        self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=2+self.embedding_size)
+        self.submodules_rnn['x_value_choice_chosen'] = self.setup_module(input_size=1+self.embedding_size)
+        self.submodules_rnn['x_value_choice_not_chosen'] = self.setup_module(input_size=1+self.embedding_size)
         
         # set up hard-coded equations
         self.submodules_eq['x_value_reward_chosen'] = self.x_value_reward_chosen
