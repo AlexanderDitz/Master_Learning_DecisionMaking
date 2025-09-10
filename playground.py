@@ -19,88 +19,135 @@ from resources.model_evaluation import log_likelihood
 from benchmarking.benchmarking_lstm import setup_agent_lstm
 from benchmarking import benchmarking_eckstein2022, benchmarking_dezfouli2019
 
-study = 'eckstein2022'
 
-path_data = f'data/{study}/{study}.csv'
-path_rnn = f'params/{study}/rnn_{study}_l2_0_001.pkl'
+# \toprule
+# &$n_\text{parameters}$&$(\sigma)$&$\bar{\mathcal{L}}$&($\sigma$)&NLL&AIC&BIC\\
+# \midrule
+# Baseline&2&0&0.67622&0.12087&0.39124&0.81364&0.86432\\
+# Benchmark&4&0&0.70341&0.13075&0.35182&0.74656&0.84791\\
+# LSTM&1442&0&0.69989&0.12470&0.35684&28.30485&64.84373\\
+# \midrule
+# $l_2=0$&&&&&&&\\
+# RNN&547&0&0.69346&0.14281&0.36606&11.10921&24.96966\\
+# SPICE&13.31&3.67&0.61740&0.16760&0.48224&1.09541&1.43259\\
+# \midrule
+# $l_2=0.00001$&&&&&&&\\
+# RNN&547&0&0.69620&0.14050&0.36211&11.07344&24.93389\\
+# SPICE&14.43&2.96&0.68266&0.14289&0.38176&&0.95644&1.32211\\
+# \midrule
+# $l_2=0.00005$&&&&&&&\\
+# RNN&547&0&0.70280&0.13696&0.35269&11.09775&24.95819\\
+# SPICE&15.17&2.19&0.70148&0.13659&0.35457&0.93909&1.32360\\
+# \midrule
+# $l_2=0.0001$&&&&&&&\\
+# RNN&547&0&0.70560&0.13410&0.34870&11.09763&24.95808\\
+# SPICE&14.82&1.36&0.70348&0.13228&0.35172&0.93633&1.31191\\
+# \midrule
+# $l_2=0.0005$&&&&&&&\\
+# RNN&547&0&0.70459&0.12051&0.35014&11.15791&25.01836\\
+# SPICE&12.83&1.96&0.70288&0.12018&0.35257&0.94384&1.26878\\
+# \midrule
+# $l_2=0.001$&&&&&&&\\
+# RNN&547&0&0.69702&0.11429&0.36093&11.18507&25.04551\\
+# SPICE&11.41&0.59&0.69577&0.11442&0.36273&0.94101&1.23005\\
+# \bottomrule
 
-participant_id = 0 # 0, 150, 289
 
-class_rnn = rnn.RLRNN_eckstein2022
-sindy_config = sindy_utils.SindyConfig_eckstein2022
-additional_inputs = None
+L_baseline, NLL_baseline, AIC_baseline, BIC_baseline = 0.67622, 0.39124, 0.81364, 0.86432
+L_benchmark, NLL_benchmark, AIC_benchmark, BIC_benchmark = 0.70341, 0.35182, 0.74656, 0.84791
+L_LSTM, NLL_LSTM, AIC_LSTM, BIC_LSTM = 0.69989, 0.35684, 28.30485, 64.84373
 
-# dataset = convert_dataset(path_data)[0]
-# dataset = sindy_utils.generate_off_policy_data(
-#     participant_id=participant_id,
-#     block=0,
-#     experiment_id=0,
-#     additional_inputs=torch.zeros(0),
-#     n_trials_off_policy=20,
-#     n_trials_same_action_off_policy=5,
-#     n_sessions_off_policy=1,
-#     sigma_drift=0.5,
-# )
+# L̄ (L_bar) values
+L_RNN = [0.69346, 0.69620, 0.70280, 0.70560, 0.70459, 0.69702]
+L_SPICE = [0.61740, 0.68266, 0.70148, 0.70348, 0.70288, 0.69577]
 
-rewards_int = [1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0]
-choices_int = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
-rewards = torch.zeros((20, 2)) - 1
-for i, choice in enumerate(choices_int):
-    rewards[i, choice] = rewards_int[i]
-choices = torch.eye(2)[choices_int]
-blocks = torch.zeros((20, 1))
-experiment_id = torch.zeros((20, 1))
-participant_ids = torch.zeros((20, 1)) + participant_id
-xs = torch.concat((choices, rewards, blocks, experiment_id, participant_ids), dim=-1).reshape(1, 20, -1)
-dataset = rnn_utils.DatasetRNN(xs, choices)
+# NLL (Negative Log-Likelihood) values
+NLL_RNN = [0.36606, 0.36211, 0.35269, 0.34870, 0.35014, 0.36093]
+NLL_SPICE = [0.48224, 0.38176, 0.35457, 0.35172, 0.35257, 0.36273]
 
-# agent_gql, n_parameters = setup_agent_gql(path_model=path_gql, model_config='PhiChiBetaKappaC', dimensions=2)
+# AIC (Akaike Information Criterion) values
+AIC_RNN = [11.10921, 11.07344, 11.09775, 11.09763, 11.15791, 11.18507]
+AIC_SPICE = [1.09541, 0.95644, 0.93909, 0.93633, 0.94384, 0.94101]
 
-# agent_mcmc, n_parameters = setup_agent_mcmc_dezfouli(path_mcmc)
+# BIC (Bayesian Information Criterion) values
+BIC_RNN = [24.96966, 24.93389, 24.95819, 24.95808, 25.01836, 25.04551]
+BIC_SPICE = [1.43259, 1.32211, 1.32360, 1.31191, 1.26878, 1.23005]
 
-agent_rnn = setup_agent_rnn(
-    class_rnn=rnn.RLRNN_eckstein2022,
-    path_rnn=path_rnn,
-)
-# probs_rnn = get_update_dynamics(experiment=dataset.xs[participant_id].numpy(), agent=agent_rnn)[1]
-# ll_rnn = log_likelihood(dataset.xs[participant_id, :len(probs_rnn), :agent_rnn._n_actions].numpy(), probs_rnn)
-# lik_rnn = np.exp(ll_rnn / len(probs_rnn))
-# print(f"Avg. Trial Likelihood RNN: {lik_rnn:.5f}")
+# L2 regularization values (for reference)
+l2_values = [0, 0.00001, 0.00005, 0.0001, 0.0005, 0.001]
 
-# agent_rnn_2 = setup_agent_rnn(
-#     class_rnn=rnn.RLRNN_eckstein2022_FC,
-#     path_model=path_rnn_2,
-# )
 
-agent_spice = setup_agent_spice(
-    class_rnn=rnn.RLRNN_eckstein2022,
-    path_rnn=path_rnn,
-    path_spice=path_rnn.replace('rnn', 'spice'),
-)
-agent_spice.new_sess()
-# probs_spice = get_update_dynamics(experiment=dataset.xs[participant_id].numpy(), agent=agent_spice)[1]
-# ll_spice = log_likelihood(dataset.xs[participant_id, :len(probs_spice), :agent_spice._n_actions].numpy(), probs_spice)
-# lik_spice = np.exp(ll_spice / len(probs_spice))
-# print(f"Avg. Trial Likelihood SPICE: {lik_spice:.5f}")
 
-print('\n\nDiscovered SPICE models:\n')
-for pid in [participant_id]:#, 20, 40, 60, 80, 100]:
-    print(f'For participant {pid}:\n')
-    agent_spice.print_model(participant_id=pid)
-    for value in agent_spice.get_betas():
-        print(f"{value}: {agent_spice.get_betas()[value]}")
+# Colors
+orange = '#FF8C00'
+pink = '#FF69B4'
+dark_grey = '#2F2F2F'
 
-fig, axs = plot_session(
-    agents={
-        'rnn': agent_rnn,
-        # 'benchmark': agent_rnn_2,
-        'sindy': agent_spice,
-        # 'benchmark': agent_gql[participant_id],
-        },
-    experiment=dataset.xs[0],
-    display_choice=0
-    )
+# Create subplots
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+fig.suptitle('Model Performance Comparison', fontsize=16, fontweight='bold')
 
-# plt.show()
+# Plot L̄ values
+ax = axes[0, 0]
+ax.plot(l2_values, L_RNN, 'x-', color=orange, linestyle='--', label='RNN', markersize=8, linewidth=2)
+ax.plot(l2_values, L_SPICE, 'x-', color=pink, linestyle='--', label='SPICE', markersize=8, linewidth=2)
+ax.axhline(y=L_baseline, color=dark_grey, linestyle='--', alpha=0.8)
+ax.axhline(y=L_benchmark, color=dark_grey, linestyle='--', alpha=0.8)
+ax.axhline(y=L_LSTM, color=dark_grey, linestyle='--', alpha=0.8)
+ax.text(max(l2_values)*1.02, L_baseline, 'Baseline', va='center', color=dark_grey, fontsize=9)
+ax.text(max(l2_values)*1.02, L_benchmark, 'Benchmark', va='center', color=dark_grey, fontsize=9)
+ax.text(max(l2_values)*1.02, L_LSTM, 'LSTM', va='center', color=dark_grey, fontsize=9)
+ax.set_xlabel('L2 Regularization')
+ax.set_ylabel(r'$\bar{\mathcal{L}}$')
+ax.set_xscale('log')
+ax.grid(True, alpha=0.3)
+ax.legend()
 
-plt.savefig(f'participant{participant_id}.png', dpi=500)
+# Plot NLL values
+ax = axes[0, 1]
+ax.plot(l2_values, NLL_RNN, 'x-', color=orange, linestyle='--', label='RNN', markersize=8, linewidth=2)
+ax.plot(l2_values, NLL_SPICE, 'x-', color=pink, linestyle='--', label='SPICE', markersize=8, linewidth=2)
+ax.axhline(y=NLL_baseline, color=dark_grey, linestyle='--', alpha=0.8)
+ax.axhline(y=NLL_benchmark, color=dark_grey, linestyle='--', alpha=0.8)
+ax.axhline(y=NLL_LSTM, color=dark_grey, linestyle='--', alpha=0.8)
+ax.text(max(l2_values)*1.02, NLL_baseline, 'Baseline', va='center', color=dark_grey, fontsize=9)
+ax.text(max(l2_values)*1.02, NLL_benchmark, 'Benchmark', va='center', color=dark_grey, fontsize=9)
+ax.text(max(l2_values)*1.02, NLL_LSTM, 'LSTM', va='center', color=dark_grey, fontsize=9)
+ax.set_xlabel('L2 Regularization')
+ax.set_ylabel('NLL')
+ax.set_xscale('log')
+ax.grid(True, alpha=0.3)
+ax.legend()
+
+# Plot AIC values (excluding RNN and LSTM baselines due to high values)
+ax = axes[1, 0]
+ax.plot(l2_values, AIC_SPICE, 'x-', color=pink, linestyle='--', label='SPICE', markersize=8, linewidth=2)
+ax.axhline(y=AIC_baseline, color=dark_grey, linestyle='--', alpha=0.8)
+ax.axhline(y=AIC_benchmark, color=dark_grey, linestyle='--', alpha=0.8)
+ax.text(max(l2_values)*1.02, AIC_baseline, 'Baseline', va='center', color=dark_grey, fontsize=9)
+ax.text(max(l2_values)*1.02, AIC_benchmark, 'Benchmark', va='center', color=dark_grey, fontsize=9)
+ax.set_xlabel('L2 Regularization')
+ax.set_ylabel('AIC')
+ax.set_xscale('log')
+ax.grid(True, alpha=0.3)
+ax.legend()
+
+# Plot BIC values (excluding RNN and LSTM baselines due to high values)
+ax = axes[1, 1]
+ax.plot(l2_values, BIC_SPICE, 'x-', color=pink, linestyle='--', label='SPICE', markersize=8, linewidth=2)
+ax.axhline(y=BIC_baseline, color=dark_grey, linestyle='--', alpha=0.8)
+ax.axhline(y=BIC_benchmark, color=dark_grey, linestyle='--', alpha=0.8)
+ax.text(max(l2_values)*1.02, BIC_baseline, 'Baseline', va='center', color=dark_grey, fontsize=9)
+ax.text(max(l2_values)*1.02, BIC_benchmark, 'Benchmark', va='center', color=dark_grey, fontsize=9)
+ax.set_xlabel('L2 Regularization')
+ax.set_ylabel('BIC')
+ax.set_xscale('log')
+ax.grid(True, alpha=0.3)
+ax.legend()
+
+plt.tight_layout()
+plt.show()
+
+
+
+ 

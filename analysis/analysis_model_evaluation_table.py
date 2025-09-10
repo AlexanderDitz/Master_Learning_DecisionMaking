@@ -9,7 +9,7 @@ from copy import copy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # standard methods and classes used for every model evaluation
 from benchmarking import benchmarking_dezfouli2019
-from resources.model_evaluation import get_scores
+from resources.model_evaluation import get_scores, log_likelihood, akaike_information_criterion, bayesian_information_criterion
 from resources.bandits import get_update_dynamics, AgentQ
 from resources.rnn_utils import split_data_along_timedim, split_data_along_sessiondim
 from utils.setup_agents import setup_agent_rnn, setup_agent_spice
@@ -22,46 +22,46 @@ from resources import rnn, sindy_utils
 from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022, benchmarking_lstm
 from benchmarking.benchmarking_dezfouli2019 import Dezfouli2019GQL
 
-l2_values = ['0.0001']#['0', '0.00001', '0.00005', '0.0001', '0.0005', '0.001']
+l2_values = ['0', '0.00001', '0.00005', '0.0001', '0.0005', '0.001']
 
 # -------------------------------------------------------------------------------
 # AGENT CONFIGURATIONS
 # -------------------------------------------------------------------------------
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-# study = 'eckstein2022'
-# train_test_ratio = 0.8
-# sindy_config = sindy_utils.SindyConfig_eckstein2022
-# rnn_class = rnn.RLRNN_eckstein2022
-# additional_inputs = None
-# setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
-# rl_model = benchmarking_eckstein2022.rl_model
-# model_config_baseline = 'ApBr'
-# model_config_benchmark = 'ApAnBrBcfBch'
-# benchmark_file = f'mcmc_eckstein2022_ApAnBrBcfBch.nc'
-# baseline_file = f'mcmc_eckstein2022_ApBr.nc'
-
-# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-study = 'dezfouli2019'
-train_test_ratio = [3, 6, 9]
+study = 'eckstein2022'
+train_test_ratio = 0.8
 sindy_config = sindy_utils.SindyConfig_eckstein2022
 rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = None
-setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
-gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
-model_config_baseline = 'PhiBeta'
-model_config_benchmark = 'PhiChiBetaKappaC'
-benchmark_file = f'gql_dezfouli2019_PhiChiBetaKappaC.pkl'
-baseline_file = f'gql_dezfouli2019_PhiBeta.pkl'
+setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
+rl_model = benchmarking_eckstein2022.rl_model
+model_config_baseline = 'ApBr'
+model_config_benchmark = 'ApAnBrBcfBch'
+benchmark_file = f'mcmc_eckstein2022_benchmark.nc'
+baseline_file = f'mcmc_eckstein2022_baseline.nc'
+
+# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
+# study = 'dezfouli2019'
+# train_test_ratio = [3, 6, 9]
+# sindy_config = sindy_utils.SindyConfig_eckstein2022
+# rnn_class = rnn.RLRNN_eckstein2022
+# additional_inputs = None
+# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
+# gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
+# model_config_baseline = 'PhiBeta'
+# model_config_benchmark = 'PhiChiBetaKappaC'
+# benchmark_file = f'gql_dezfouli2019_benchmark.pkl'
+# baseline_file = f'gql_dezfouli2019_baseline.pkl'
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
 path_data = f'data/{study}/{study}.csv'
-path_model_baseline = None#os.path.join(f'params/{study}/', baseline_file)
-path_model_benchmark = None#os.path.join(f'params/{study}', benchmark_file)
-path_model_benchmark_lstm = None#f'params/{study}/lstm_{study}.pkl'
+path_model_baseline = os.path.join(f'params/{study}/', baseline_file)
+path_model_benchmark = os.path.join(f'params/{study}', benchmark_file)
+path_model_benchmark_lstm = f'params/{study}/lstm_{study}.pkl'
 
-path_model_rnn = f'params/{study}/rnn_{study}_l2_L2VALUE_v2_ep4096.pkl'
-path_model_spice = f'params/{study}/spice_{study}_l2_L2VALUE_v2_ep4096.pkl'
+path_model_rnn = f'params/{study}/rnn_{study}_l2_L2VALUE.pkl'
+path_model_spice = f'params/{study}/spice_{study}_l2_L2VALUE.pkl'
 
 # -------------------------------------------------------------------------------
 # MODEL COMPARISON PIPELINE
@@ -108,7 +108,7 @@ if path_model_rnn is not None:
             class_rnn=rnn_class,
             path_rnn=current_rnn,
             )
-    n_parameters_rnn = sum(p.numel() for p in agent_rnn[value]._model.parameters() if p.requires_grad)
+    n_parameters_rnn = sum(p.numel() for p in agent_rnn[value]._model.parameters() if p.requires_grad) - agent_rnn._model.embedding_size * (len(participant_ids)-1)
 else:
     n_parameters_rnn = 0
     
@@ -178,6 +178,7 @@ for index_data in tqdm(range(len(dataset_test))):
         index_start = n_trials - n_trials_test
         index_end = n_trials
         
+        score_nll = - log_likelihood
         scores_baseline = np.array(get_scores(data=data_ys[index_start:index_end], probs=probs_baseline[index_start:index_end], n_parameters=agent_baseline[1]))
         table_values_raw[0, -3:, index_data] = scores_baseline
         table_values_raw[0, 0, index_data] = n_parameters_baseline

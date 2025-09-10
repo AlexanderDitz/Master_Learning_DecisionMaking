@@ -172,14 +172,14 @@ if __name__=='__main__':
     # dataset_name = 'dezfouli2019'
     # split_ratio = [3, 6, 9]
     
-    dataset_name = 'gershmanB2018'
-    split_ratio = [4, 8, 12, 16]
+    dataset_name = 'bahrami2020'
+    split_ratio = 0.8
     
     path_model_save = f'params/{dataset_name}/lstm_{dataset_name}.pkl'
     path_data = f'data/{dataset_name}/{dataset_name}.csv'
-    n_actions = 2
+    n_actions = 4
     n_cells = 16
-    n_epochs = 2000
+    n_epochs = 3000
     lr = 1e-3
     
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
