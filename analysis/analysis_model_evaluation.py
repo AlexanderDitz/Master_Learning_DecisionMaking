@@ -36,7 +36,7 @@ rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = None
 setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
 rl_model = benchmarking_eckstein2022.rl_model
-benchmark_file = f'mcmc_{study}_benchmark.nc'
+benchmark_file = f'mcmc_{study}_benchmark_ttr_1.nc'
 model_config_baseline = 'ApBr'
 baseline_file = f'mcmc_{study}_baseline.nc'
 n_actions = 2
@@ -84,13 +84,13 @@ n_actions = 2
 # n_actions = 4
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
-use_test = True
-spice_suffix = '_l2_0_0001'
+use_test = False
+spice_suffix = '_ttr_1_l2_0_000001'
 
 path_data = f'data/{study}/{study}.csv'
 path_model_rnn = f'params/{study}/rnn_{study+spice_suffix}.pkl'
-path_model_spice =f'params/{study}/spice_{study+spice_suffix}.pkl'
-path_model_baseline = None#os.path.join(f'params/{study}/', baseline_file)
+path_model_spice = f'params/{study}/spice_{study+spice_suffix}.pkl'
+path_model_baseline = os.path.join(f'params/{study}/', baseline_file)
 path_model_benchmark = os.path.join(f'params/{study}', benchmark_file) if len(models_benchmark) > 0 else None
 path_model_benchmark_lstm = None#f'params/{study}/lstm_{study}.pkl'
 

@@ -319,7 +319,8 @@ if __name__=='__main__':
   args = parser.parse_args()  
   
   # currently fixed 
-  class_rnn = rnn.RLRNN_eckstein2022
+  # class_rnn = rnn.RLRNN_eckstein2022
+  class_rnn = rnn.RLRNN_noLR
   
   # convert train_test_ratio to number of list of numbers
   if ',' in args.train_test_ratio:
