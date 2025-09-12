@@ -401,7 +401,7 @@ class RLRNN(BaseRNN):
             torch.nn.Linear(self.embedding_size, 1), 
             torch.nn.LeakyReLU(leaky_relu),
             )
-        
+            
         # set up the submodules
         self.submodules_rnn['x_learning_rate_reward'] = self.setup_module(input_size=3+self.embedding_size, dropout=dropout)
         self.submodules_rnn['x_value_reward_not_chosen'] = self.setup_module(input_size=1+self.embedding_size, dropout=dropout)
