@@ -29,30 +29,30 @@ l2_values = ['0', '0.00001', '0.00005', '0.0001', '0.0005', '0.001']
 # -------------------------------------------------------------------------------
 
 # ------------------- CONFIGURATION ECKSTEIN2022 w/o AGE --------------------
-# study = 'eckstein2022'
-# train_test_ratio = 0.8
-# sindy_config = sindy_utils.SindyConfig_eckstein2022
-# rnn_class = rnn.RLRNN_eckstein2022
-# additional_inputs = None
-# setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
-# rl_model = benchmarking_eckstein2022.rl_model
-# model_config_baseline = 'ApBr'
-# model_config_benchmark = 'ApAnBrBcfBch'
-# benchmark_file = f'mcmc_eckstein2022_benchmark.nc'
-# baseline_file = f'mcmc_eckstein2022_baseline.nc'
-
-# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
-study = 'dezfouli2019'
-train_test_ratio = [3, 6, 9]
+study = 'eckstein2022'
+train_test_ratio = 0.8
 sindy_config = sindy_utils.SindyConfig_eckstein2022
 rnn_class = rnn.RLRNN_eckstein2022
 additional_inputs = None
-setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
-gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
-model_config_baseline = 'PhiBeta'
-model_config_benchmark = 'PhiChiBetaKappaC'
-benchmark_file = f'gql_dezfouli2019_benchmark.pkl'
-baseline_file = f'gql_dezfouli2019_baseline.pkl'
+setup_agent_benchmark = benchmarking_eckstein2022.setup_agent_benchmark
+rl_model = benchmarking_eckstein2022.rl_model
+model_config_baseline = 'ApBr'
+model_config_benchmark = 'ApAnBrBcfBch'
+benchmark_file = f'mcmc_eckstein2022_benchmark.nc'
+baseline_file = f'mcmc_eckstein2022_baseline.nc'
+
+# ------------------------ CONFIGURATION DEZFOULI2019 -----------------------
+# study = 'dezfouli2019'
+# train_test_ratio = [3, 6, 9]
+# sindy_config = sindy_utils.SindyConfig_eckstein2022
+# rnn_class = rnn.RLRNN_eckstein2022
+# additional_inputs = None
+# setup_agent_benchmark = benchmarking_dezfouli2019.setup_agent_gql
+# gql_model = benchmarking_dezfouli2019.Dezfouli2019GQL
+# model_config_baseline = 'PhiBeta'
+# model_config_benchmark = 'PhiChiBetaKappaC'
+# benchmark_file = f'gql_dezfouli2019_benchmark.pkl'
+# baseline_file = f'gql_dezfouli2019_baseline.pkl'
 
 # ------------------------- CONFIGURATION FILE PATHS ------------------------
 path_data = f'data/{study}/{study}.csv'
