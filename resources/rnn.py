@@ -541,7 +541,7 @@ class RLRNN_noLR(BaseRNN):
         **kwargs,
     ):
         
-        super(RLRNN, self).__init__(n_actions=n_actions, hidden_size=hidden_size, device=device, n_participants=n_participants)
+        super().__init__(n_actions=n_actions, hidden_size=hidden_size, device=device, n_participants=n_participants)
         
         # set up the participant-embedding layer
         self.embedding_size = embedding_size
