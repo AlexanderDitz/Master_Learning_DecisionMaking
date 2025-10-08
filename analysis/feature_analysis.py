@@ -286,21 +286,45 @@ def create_behavioral_phenotype_clusters(df):
     kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
     df['behavioral_cluster'] = kmeans.fit_predict(X_scaled)
     
-    # Create cluster visualization
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('Behavioral Phenotype Clusters', fontsize=20, fontweight='bold')
+    # Define diagnosis colors
+    diagnosis_colors = {'Healthy': '#2E8B57', 'Depression': '#CD5C5C', 'Bipolar': '#4682B4'}
     
-    # Win-Stay vs Lose-Shift scatter plot with clusters
-    scatter = ax1.scatter(df['win_stay'], df['lose_shift'], 
-                         c=df['behavioral_cluster'], cmap='viridis', 
-                         alpha=0.8, s=100, edgecolors='black', linewidth=1)
+    # Create visualization with only 2 plots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig.suptitle('Behavioral Phenotype Analysis', fontsize=20, fontweight='bold')
+    
+    # Plot 1: Win-Stay vs Lose-Shift scatter plot colored by diagnosis
+    for diagnosis in df['diagnosis'].unique():
+        mask = df['diagnosis'] == diagnosis
+        ax1.scatter(df[mask]['win_stay'], df[mask]['lose_shift'], 
+                   label=diagnosis, color=diagnosis_colors[diagnosis], 
+                   alpha=0.8, s=100, edgecolors='black', linewidth=1)
     ax1.set_xlabel('Win-Stay Rate', fontsize=14)
     ax1.set_ylabel('Lose-Shift Rate', fontsize=14)
-    ax1.set_title('Decision Strategy Clusters', fontsize=16, fontweight='bold')
+    ax1.set_title('Decision Strategy by Diagnosis', fontsize=16, fontweight='bold')
+    ax1.legend(title='Diagnosis', fontsize=12, title_fontsize=12)
     ax1.grid(True, alpha=0.3)
-    plt.colorbar(scatter, ax=ax1, label='Behavioral Cluster')
+    
+    # Plot 2: Reward Rate vs Win-Stay scatter plot colored by diagnosis
+    for diagnosis in df['diagnosis'].unique():
+        mask = df['diagnosis'] == diagnosis
+        ax2.scatter(df[mask]['reward_rate'], df[mask]['win_stay'], 
+                   label=diagnosis, color=diagnosis_colors[diagnosis], 
+                   alpha=0.8, s=100, edgecolors='black', linewidth=1)
+    ax2.set_xlabel('Reward Rate', fontsize=14)
+    ax2.set_ylabel('Win-Stay Rate', fontsize=14)
+    ax2.set_title('Performance vs Strategy by Diagnosis', fontsize=16, fontweight='bold')
+    ax2.legend(title='Diagnosis', fontsize=12, title_fontsize=12)
+    ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('../data/visualization_plots/08_behavioral_clusters.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print("✅ Created behavioral phenotype clusters")
+    return df
 
- # Call the functions to create the plots
+# Call the functions to create the plots
 if __name__ == "__main__":
     create_correlation_heatmap(df)
     df = create_behavioral_phenotype_clusters(df)
