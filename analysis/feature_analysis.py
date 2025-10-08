@@ -238,3 +238,32 @@ def create_seaborn_feature_plots(df):
 # Call the function to create the plots
 if __name__ == "__main__":
     create_seaborn_feature_plots(df)
+
+#%%
+def create_correlation_heatmap(df):
+    """Create correlation heatmap of all behavioral features."""
+    
+    # Select only numeric features
+    numeric_features = ['reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift']
+    
+    plt.figure(figsize=(12, 10))
+    
+    # Calculate correlation matrix
+    corr_matrix = df[numeric_features].corr()
+    
+    # Create heatmap
+    sns.heatmap(corr_matrix, 
+                annot=True, 
+                cmap='RdBu_r', 
+                center=0,
+                square=True,
+                linewidths=0.5,
+                cbar_kws={"shrink": .8},
+                fmt='.3f')
+    
+    plt.title('Behavioral Features Correlation Matrix', fontsize=18, fontweight='bold', pad=20)
+    plt.tight_layout()
+    plt.savefig('data/visualization_plots/25_correlation_heatmap.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print("✅ Created correlation heatmap")
