@@ -49,3 +49,13 @@ df.to_csv('dezfouli2019.csv', index=False)
 print(f"\nProcessed data saved to 'dezfouli2019.csv'")
 print(f"Final dataset shape: {df.shape}")
 
+# Load the cleaned dataset
+df = pd.read_csv('dezfouli2019.csv')
+
+# Load original data to get diagnosis information
+original_df = pd.read_csv('original_data.csv')
+
+# Create participant-to-diagnosis mapping
+participant_diagnosis_map = original_df.groupby('ID')['diag'].first().to_dict()
+
+print(f"Created diagnosis mapping for {len(participant_diagnosis_map)} participants")
