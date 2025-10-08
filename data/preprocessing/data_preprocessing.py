@@ -95,3 +95,25 @@ def compute_participant_features(group):
     }
     return features
 
+# === Group by participant only, compute participant-level features ===
+participant_rows = []
+
+for pid, group in df.groupby('participant_id'):  # Remove brackets to get string keys instead of tuples
+    feats = compute_participant_features(group)
+    feats["participant"] = pid
+    # Add diagnosis information
+    diagnosis = participant_diagnosis_map.get(pid, "Unknown")
+    feats["diagnosis"] = diagnosis
+    participant_rows.append(feats)
+
+# Create DataFrame of participant-level features
+participant_df = pd.DataFrame(participant_rows)
+
+# Rearranging columns before saving
+desired_order = [
+    'participant', 'diagnosis', 'n_trials',
+    'choice_rate', 'reward_rate',
+    'win_stay', 'win_shift', 'lose_stay', 'lose_shift'
+]
+
+participant_df = participant_df[desired_order]
