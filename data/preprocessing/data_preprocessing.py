@@ -117,3 +117,13 @@ desired_order = [
 ]
 
 participant_df = participant_df[desired_order]
+
+# Save to CSV
+participant_df.to_csv('data/features/participant_features.csv', index=False)
+
+print("Saved participant-level features to 'data/features/participant_features.csv'")
+print(participant_df.head())
+print("\nDiagnosis distribution in generated features:")
+print(participant_df['diagnosis'].value_counts())
+
+print(f"✅ Created features for {len(participant_df)} participants")
