@@ -63,8 +63,8 @@ print("Sample mappings:", {k: v for i, (k, v) in enumerate(participant_diagnosis
 
 # === Define feature computation per participant ===
 def compute_participant_features(group):
-    choices = group['choice'].values
-    rewards = group['reward'].values
+    choices = group['df_choice'].values
+    rewards = group['df_reward'].values
 
     n_trials = len(choices)
     choice_rate = choices.mean()
@@ -98,7 +98,7 @@ def compute_participant_features(group):
 # === Group by participant only, compute participant-level features ===
 participant_rows = []
 
-for pid, group in df.groupby('participant_id'):  # Remove brackets to get string keys instead of tuples
+for pid, group in df.groupby('df_participant_id'):  # Use the correct column name
     feats = compute_participant_features(group)
     feats["participant"] = pid
     # Add diagnosis information
@@ -117,6 +117,9 @@ desired_order = [
 ]
 
 participant_df = participant_df[desired_order]
+
+# Create the features directory if it doesn't exist
+os.makedirs('data/features', exist_ok=True)
 
 # Save to CSV
 participant_df.to_csv('data/features/participant_features.csv', index=False)
