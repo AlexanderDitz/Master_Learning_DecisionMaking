@@ -59,3 +59,39 @@ original_df = pd.read_csv('original_data.csv')
 participant_diagnosis_map = original_df.groupby('ID')['diag'].first().to_dict()
 
 print(f"Created diagnosis mapping for {len(participant_diagnosis_map)} participants")
+print("Sample mappings:", {k: v for i, (k, v) in enumerate(participant_diagnosis_map.items()) if i < 3})
+
+# === Define feature computation per participant ===
+def compute_participant_features(group):
+    choices = group['choice'].values
+    rewards = group['reward'].values
+
+    n_trials = len(choices)
+    choice_rate = choices.mean()
+    reward_rate = rewards.mean()
+
+    win_stay, win_shift, lose_stay, lose_shift = [], [], [], []
+
+    for t in range(1, n_trials):
+        prev_choice = choices[t - 1]
+        curr_choice = choices[t]
+        prev_reward = rewards[t - 1]
+
+        if prev_reward == 1:
+            win_stay.append(curr_choice == prev_choice)
+            win_shift.append(curr_choice != prev_choice)
+        else:
+            lose_stay.append(curr_choice == prev_choice)
+            lose_shift.append(curr_choice != prev_choice)
+
+    features = {
+        "choice_rate": choice_rate,
+        "reward_rate": reward_rate,
+        "win_stay": np.mean(win_stay) if win_stay else np.nan,
+        "win_shift": np.mean(win_shift) if win_shift else np.nan,
+        "lose_stay": np.mean(lose_stay) if lose_stay else np.nan,
+        "lose_shift": np.mean(lose_shift) if lose_shift else np.nan,
+        "n_trials": n_trials
+    }
+    return features
+
