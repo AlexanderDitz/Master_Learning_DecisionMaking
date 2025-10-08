@@ -10,6 +10,8 @@ import seaborn as sns
 import numpy as np
 import os
 from scipy import stats
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -267,3 +269,33 @@ def create_correlation_heatmap(df):
     plt.show()
     
     print("✅ Created correlation heatmap")
+
+    def create_behavioral_phenotype_clusters(df):
+        """Create behavioral phenotype clusters and visualizations."""
+    
+    print("\n=== Creating Behavioral Phenotype Clusters ===")
+    
+    # Define key features for clustering (exclude complementary pairs)
+    cluster_features = ['reward_rate', 'win_stay', 'lose_shift']
+    
+    # Standardize features for clustering
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(df[cluster_features])
+    
+    # Perform K-means clustering (3 clusters based on diagnoses)
+    kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+    df['behavioral_cluster'] = kmeans.fit_predict(X_scaled)
+    
+    # Create cluster visualization
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+    fig.suptitle('Behavioral Phenotype Clusters', fontsize=20, fontweight='bold')
+    
+    # Win-Stay vs Lose-Shift scatter plot with clusters
+    scatter = ax1.scatter(df['win_stay'], df['lose_shift'], 
+                         c=df['behavioral_cluster'], cmap='viridis', 
+                         alpha=0.8, s=100, edgecolors='black', linewidth=1)
+    ax1.set_xlabel('Win-Stay Rate', fontsize=14)
+    ax1.set_ylabel('Lose-Shift Rate', fontsize=14)
+    ax1.set_title('Decision Strategy Clusters', fontsize=16, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    plt.colorbar(scatter, ax=ax1, label='Behavioral Cluster')
