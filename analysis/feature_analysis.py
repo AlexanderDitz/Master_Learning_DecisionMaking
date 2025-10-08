@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import os
+from scipy import stats
 
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +23,7 @@ print(f"Current working directory: {os.getcwd()}")
 pd.set_option('future.no_silent_downcasting', True)
 
 # Load the participant features data
-features_path = '../features/participant_features.csv'
+features_path = '../data/features/participant_features.csv'
 df = pd.read_csv(features_path)
 print(f"Loaded data from {features_path}")
 print(f"Data shape: {df.shape}")
@@ -36,12 +37,20 @@ def create_seaborn_feature_plots(df):
     """Create comprehensive seaborn plots for all behavioral features by diagnosis."""
     
     # Create visualization_plots directory if it doesn't exist
-    os.makedirs('data/visualization_plots', exist_ok=True)
+    os.makedirs('../data/visualization_plots', exist_ok=True)
     
     # Set seaborn style
     sns.set_style("whitegrid")
-    # Professional medical research palette - colorblind friendly
-    sns.set_palette("viridis", n_colors=3)  # or try "Set2", "husl", or custom medical colors
+    
+    # Define custom colors for each diagnosis - colorblind friendly
+    diagnosis_colors = {
+        'Healthy': '#2E8B57',      # Sea Green
+        'Depression': '#CD5C5C',   # Indian Red  
+        'Bipolar': '#4682B4'       # Steel Blue
+    }
+    
+    # Create a color palette list in the same order as diagnosis_order
+    colors_list = [diagnosis_colors['Healthy'], diagnosis_colors['Depression'], diagnosis_colors['Bipolar']]
     
     # Define features to plot (excluding participant and diagnosis columns)
     features = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift']
@@ -64,18 +73,168 @@ def create_seaborn_feature_plots(df):
     for feature in features:
         print(f"Creating plots for {feature_labels[feature]}...")
         
-        # Boxplot with individual points
+        # Boxplot with individual points and custom colors
         plt.figure(figsize=(12, 8))
-        sns.boxplot(data=df, x='diagnosis', y=feature, order=diagnosis_order)
-        sns.stripplot(data=df, x='diagnosis', y=feature, order=diagnosis_order, 
-                     color='black', alpha=0.6, size=4)
+        
+        # Create boxplot with custom colors (hide outliers to avoid duplication)
+        box_plot = sns.boxplot(data=df, x='diagnosis', y=feature, order=diagnosis_order, 
+                              hue='diagnosis', palette=colors_list, legend=False, showfliers=False,
+                              width=0.6)
+        
+        # Make boxplot patches transparent
+        for patch in box_plot.patches:
+            patch.set_alpha(0.6)
+        
+        # Calculate outliers for each diagnosis group to show them differently
+        strip_colors = ['#1F5F3F', '#8B0000', '#2F4F4F']  # Darker versions for strip plot
+        
+        for i, diagnosis in enumerate(diagnosis_order):
+            # Get data for this diagnosis
+            group_data = df[df['diagnosis'] == diagnosis][feature]
+            
+            # Calculate outlier bounds (same as boxplot: Q1-1.5*IQR, Q3+1.5*IQR)
+            Q1 = group_data.quantile(0.25)
+            Q3 = group_data.quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
+            # Separate normal points and outliers
+            normal_mask = (group_data >= lower_bound) & (group_data <= upper_bound)
+            outlier_mask = ~normal_mask
+            
+            # Get x-positions for this diagnosis group
+            x_pos = i
+            
+            # Plot normal points as filled circles with better positioning
+            if normal_mask.any():
+                normal_data = group_data[normal_mask]
+                x_positions = np.random.normal(x_pos, 0.08, size=len(normal_data))  # Increased jitter
+                plt.scatter(x_positions, normal_data, color=strip_colors[i], alpha=0.8, s=25, 
+                           edgecolor='white', linewidth=0.5, zorder=10)
+            
+            # Plot outliers as empty circles with same size as normal points
+            if outlier_mask.any():
+                outlier_data = group_data[outlier_mask]
+                x_positions = np.random.normal(x_pos, 0.08, size=len(outlier_data))  # Increased jitter
+                plt.scatter(x_positions, outlier_data, facecolors='none', edgecolors=strip_colors[i], 
+                           alpha=0.9, s=25, linewidths=2, zorder=10)
+        
+        # Perform statistical significance testing
+        from scipy import stats
+        
+        # Get data for each group
+        healthy_data = df[df['diagnosis'] == 'Healthy'][feature]
+        depression_data = df[df['diagnosis'] == 'Depression'][feature]
+        bipolar_data = df[df['diagnosis'] == 'Bipolar'][feature]
+        
+        # Perform pairwise comparisons (Mann-Whitney U test for non-parametric data)
+        _, p_healthy_depression = stats.mannwhitneyu(healthy_data, depression_data, alternative='two-sided')
+        _, p_healthy_bipolar = stats.mannwhitneyu(healthy_data, bipolar_data, alternative='two-sided')
+        _, p_depression_bipolar = stats.mannwhitneyu(depression_data, bipolar_data, alternative='two-sided')
+        
+        # Function to get significance stars
+        def get_significance_stars(p_value):
+            if p_value < 0.001:
+                return '***'
+            elif p_value < 0.01:
+                return '**'
+            elif p_value < 0.05:
+                return '*'
+            else:
+                return 'ns'
+        
+        # Get significance stars for each comparison
+        sig_healthy_depression = get_significance_stars(p_healthy_depression)
+        sig_healthy_bipolar = get_significance_stars(p_healthy_bipolar)
+        sig_depression_bipolar = get_significance_stars(p_depression_bipolar)
+        
+        # Add significance annotations to the plot
+        y_max = df[feature].max()
+        y_min = df[feature].min()
+        y_range = y_max - y_min
+        
+        # Calculate positions for significance bars
+        bar_height = y_max + 0.05 * y_range
+        bar_height_2 = y_max + 0.12 * y_range
+        bar_height_3 = y_max + 0.19 * y_range
+        
+        # Add significance bars and stars - clean simple lines
+        # Healthy vs Depression (positions 0 and 1)
+        if sig_healthy_depression != 'ns':
+            plt.plot([0, 1], [bar_height, bar_height], 'k-', linewidth=1.2)
+            plt.text(0.5, bar_height + 0.015 * y_range, sig_healthy_depression, 
+                    ha='center', va='bottom', fontsize=12, fontweight='bold')
+        
+        # Depression vs Bipolar (positions 1 and 2)  
+        if sig_depression_bipolar != 'ns':
+            plt.plot([1, 2], [bar_height_2, bar_height_2], 'k-', linewidth=1.2)
+            plt.text(1.5, bar_height_2 + 0.015 * y_range, sig_depression_bipolar, 
+                    ha='center', va='bottom', fontsize=12, fontweight='bold')
+        
+        # Healthy vs Bipolar (positions 0 and 2)
+        if sig_healthy_bipolar != 'ns':
+            plt.plot([0, 2], [bar_height_3, bar_height_3], 'k-', linewidth=1.2)
+            plt.text(1, bar_height_3 + 0.015 * y_range, sig_healthy_bipolar, 
+                    ha='center', va='bottom', fontsize=12, fontweight='bold')
+        
+        # Adjust y-axis limits to accommodate significance bars
+        plt.ylim(y_min - 0.05 * y_range, y_max + 0.30 * y_range)
+        
+        # Add title and axis labels
         plt.title(f'{feature_labels[feature]} - Box Plot with Individual Points', 
                  fontsize=16, fontweight='bold', pad=20)
-        plt.xlabel('Diagnosis', fontsize=14)
+        plt.xlabel('Diagnosis', fontsize=14, labelpad=20)
         plt.ylabel(feature_labels[feature], fontsize=14)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
+        
+        # Create two separate legends
+        
+        # Legend 1: Diagnosis colors
+        color_legend_elements = [
+            plt.Line2D([0], [0], color=diagnosis_colors['Healthy'], linewidth=0, 
+                      marker='s', markersize=10, label='Healthy'),
+            plt.Line2D([0], [0], color=diagnosis_colors['Depression'], linewidth=0, 
+                      marker='s', markersize=10, label='Depression'),
+            plt.Line2D([0], [0], color=diagnosis_colors['Bipolar'], linewidth=0, 
+                      marker='s', markersize=10, label='Bipolar')
+        ]
+        
+        # Legend 2: Statistical significance
+        significance_legend_elements = [
+            plt.Line2D([0], [0], color='white', markerfacecolor='white', marker='', 
+                      markersize=0, label='Statistical Significance:'),
+            plt.Line2D([0], [0], color='white', markerfacecolor='white', marker='', 
+                      markersize=0, label='*** p < 0.001'),
+            plt.Line2D([0], [0], color='white', markerfacecolor='white', marker='', 
+                      markersize=0, label='** p < 0.01'),
+            plt.Line2D([0], [0], color='white', markerfacecolor='white', marker='', 
+                      markersize=0, label='* p < 0.05')
+        ]
+        
+        # Add color legend (positioned outside plot area)
+        color_legend = plt.legend(handles=color_legend_elements, 
+                                bbox_to_anchor=(1.02, 1), loc='upper left', 
+                                fontsize=11, frameon=True, fancybox=True, shadow=True,
+                                title='Diagnosis Groups', title_fontsize=12)
+        
+        # Add significance legend (positioned below color legend)
+        significance_legend = plt.legend(handles=significance_legend_elements, 
+                                       bbox_to_anchor=(1.02, 0.65), loc='upper left', 
+                                       fontsize=10, frameon=True, fancybox=True, shadow=True)
+        
+        # Add the color legend back (matplotlib only shows the last legend by default)
+        plt.gca().add_artist(color_legend)
+        
         plt.tight_layout()
-        plt.savefig(f'data/visualization_plots/{plot_counter:02d}_{feature}_boxplot.png', dpi=300, bbox_inches='tight')
+        plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_{feature}_boxplot.png', dpi=300, bbox_inches='tight')
         plt.show()
         plot_counter += 1
+        
+    print(f"\n✅ Successfully created {plot_counter-1} feature plots!")
+    print(f"All plots saved to '../data/visualization_plots/'")
+
+# Call the function to create the plots
+if __name__ == "__main__":
+    create_seaborn_feature_plots(df)
