@@ -118,13 +118,13 @@ desired_order = [
 
 participant_df = participant_df[desired_order]
 
-# Create the features directory if it doesn't exist
-os.makedirs('data/features', exist_ok=True)
+# Create the features directory if it doesn't exist (parallel to preprocessing)
+os.makedirs('../features', exist_ok=True)
 
 # Save to CSV
-participant_df.to_csv('data/features/participant_features.csv', index=False)
+participant_df.to_csv('../features/participant_features.csv', index=False)
 
-print("Saved participant-level features to 'data/features/participant_features.csv'")
+print("Saved participant-level features to '../features/participant_features.csv'")
 print(participant_df.head())
 print("\nDiagnosis distribution in generated features:")
 print(participant_df['diagnosis'].value_counts())
