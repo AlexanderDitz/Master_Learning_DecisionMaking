@@ -265,13 +265,13 @@ def create_correlation_heatmap(df):
     
     plt.title('Behavioral Features Correlation Matrix', fontsize=18, fontweight='bold', pad=20)
     plt.tight_layout()
-    plt.savefig('data/visualization_plots/25_correlation_heatmap.png', dpi=300, bbox_inches='tight')
+    plt.savefig('../data/visualization_plots/07_correlation_heatmap.png', dpi=300, bbox_inches='tight')
     plt.show()
     
     print("✅ Created correlation heatmap")
 
-    def create_behavioral_phenotype_clusters(df):
-        """Create behavioral phenotype clusters and visualizations."""
+def create_behavioral_phenotype_clusters(df):
+    """Create behavioral phenotype clusters and visualizations."""
     
     print("\n=== Creating Behavioral Phenotype Clusters ===")
     
@@ -299,3 +299,8 @@ def create_correlation_heatmap(df):
     ax1.set_title('Decision Strategy Clusters', fontsize=16, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     plt.colorbar(scatter, ax=ax1, label='Behavioral Cluster')
+
+ # Call the functions to create the plots
+if __name__ == "__main__":
+    create_correlation_heatmap(df)
+    df = create_behavioral_phenotype_clusters(df)
