@@ -20,6 +20,7 @@ from utils.setup_agents import setup_agent_spice
 from utils.convert_dataset import convert_dataset
 from resources.bandits import AgentSpice
 from resources.sindy_utils import load_spice
+from resources.rnn import RLRNN_eckstein2022
 
 
 def load_lstm_model(path_model: str) -> AgentLSTM:
@@ -54,29 +55,33 @@ def load_lstm_model(path_model: str) -> AgentLSTM:
     return agent
 
 
-def load_spice_model(path_model: str, path_rnn: str = None) -> AgentSpice:
+def load_spice_model(path_spice: str, path_rnn: str) -> AgentSpice:
     """
     Load SPICE model from saved checkpoint.
     
     Args:
-        path_model: Path to the saved SPICE model (.pkl file)
-        path_rnn: Path to the RNN model (if needed for SPICE setup)
+        path_spice: Path to the saved SPICE model (.pkl file)
+        path_rnn: Path to the corresponding RNN model (.pkl file)
     
     Returns:
         AgentSpice: Loaded SPICE agent
     """
-    print(f"Loading SPICE model from: {path_model}")
+    print(f"Loading SPICE model from: {path_spice}")
+    print(f"Loading corresponding RNN model from: {path_rnn}")
     
-    # Load SPICE modules
-    spice_modules = load_spice(path_model)
+    # Load SPICE agent using the setup function
+    agent_spice = setup_agent_spice(
+        class_rnn=RLRNN_eckstein2022,
+        path_rnn=path_rnn,
+        path_spice=path_spice,
+    )
     
-    # For now, we'll implement the basic loading
-    # This might need adjustment based on the actual SPICE model structure
     print("SPICE model loaded successfully!")
+    print(f"  - Model type: {type(agent_spice)}")
+    print(f"  - Number of actions: {agent_spice._n_actions}")
+    print(f"  - SPICE modules: {list(agent_spice.get_modules().keys())}")
     
-    # TODO: Complete SPICE loading implementation
-    # This will be implemented in the next step
-    return None
+    return agent_spice
 
 
 def main():
@@ -87,6 +92,7 @@ def main():
     base_path = "params/dezfouli2019"
     lstm_path = os.path.join(base_path, "lstm_dezfouli2019.pkl")
     spice_path = os.path.join(base_path, "spice_dezfouli2019_l2_0_001.pkl")
+    rnn_path = os.path.join(base_path, "rnn_dezfouli2019_l2_0_001.pkl")  # RNN model for SPICE
     
     print("=== Model Comparison: LSTM vs SPICE ===")
     print()
@@ -100,13 +106,31 @@ def main():
         print()
     except Exception as e:
         print(f"✗ Failed to load LSTM model: {e}")
-        return
+        lstm_agent = None
     
-    # TODO: Load SPICE model (will be implemented next)
-    print("SPICE model loading will be implemented next...")
+    # Load SPICE model
+    try:
+        spice_agent = load_spice_model(spice_path, rnn_path)
+        print(f"✓ SPICE model loaded successfully")
+        print()
+    except Exception as e:
+        print(f"✗ Failed to load SPICE model: {e}")
+        print(f"Error details: {str(e)}")
+        spice_agent = None
     
-    # TODO: Compare models (will be implemented after both models are loaded)
-    print("Model comparison will be implemented after both models are loaded...")
+    # Check if both models loaded successfully
+    if lstm_agent is not None and spice_agent is not None:
+        print("🎉 Both models loaded successfully!")
+        print("Ready for comparison...")
+        
+        # TODO: Implement model comparison
+        print("\nModel comparison metrics will be implemented next...")
+    else:
+        print("❌ Could not load both models. Comparison cannot proceed.")
+        if lstm_agent is None:
+            print("  - LSTM model failed to load")
+        if spice_agent is None:
+            print("  - SPICE model failed to load")
 
 
 if __name__ == "__main__":
