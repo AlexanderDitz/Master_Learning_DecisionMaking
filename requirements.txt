@@ -1,4 +1,5 @@
 arviz==0.20.0
+dill==0.4.0
 jax==0.4.35
 matplotlib==3.10.1
 numpy==2.2.3
