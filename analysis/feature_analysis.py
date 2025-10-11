@@ -184,7 +184,7 @@ def create_seaborn_feature_plots(df):
         plt.ylim(y_min - 0.05 * y_range, y_max + 0.30 * y_range)
         
         # Add title and axis labels
-        plt.title(f'{feature_labels[feature]} - Box Plot with Individual Points', 
+        plt.title(f'{feature_labels[feature]}', 
                  fontsize=16, fontweight='bold', pad=20)
         plt.xlabel('Diagnosis', fontsize=14, labelpad=20)
         plt.ylabel(feature_labels[feature], fontsize=14)
@@ -291,8 +291,8 @@ def create_behavioral_phenotype_clusters(df):
     
     # Create visualization with only 2 plots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-    fig.suptitle('Behavioral Phenotype Analysis', fontsize=20, fontweight='bold')
-    
+    fig.suptitle('Behavioral Cluster Analysis', fontsize=20, fontweight='bold')
+
     # Plot 1: Win-Stay vs Lose-Shift scatter plot colored by diagnosis
     for diagnosis in df['diagnosis'].unique():
         mask = df['diagnosis'] == diagnosis
@@ -324,7 +324,55 @@ def create_behavioral_phenotype_clusters(df):
     print("✅ Created behavioral phenotype clusters")
     return df
 
+
+
+def create_ridge_plot(df):
+    """Create ridge/KDE plots for elegant distribution comparison."""
+    
+    print("\n=== Creating Ridge/KDE Plots ===")
+    
+    # Focus on key behavioral features
+    features = ['reward_rate', 'win_stay', 'lose_shift']
+    feature_labels = {
+        'reward_rate': 'Reward Rate', 
+        'win_stay': 'Win-Stay Rate',
+        'lose_shift': 'Lose-Shift Rate'
+    }
+    
+    diagnosis_colors = {'Healthy': '#2E8B57', 'Depression': '#CD5C5C', 'Bipolar': '#4682B4'}
+    
+    fig, axes = plt.subplots(3, 1, figsize=(12, 10))
+    fig.suptitle('Distribution of behavioral features', fontsize=18, fontweight='bold')
+    
+    for idx, feature in enumerate(features):
+        ax = axes[idx]
+        
+        # Create KDE for each diagnosis
+        for i, diagnosis in enumerate(['Healthy', 'Depression', 'Bipolar']):
+            data = df[df['diagnosis'] == diagnosis][feature]
+            
+            # Create KDE
+            sns.kdeplot(data=data, ax=ax, label=diagnosis, 
+                       color=diagnosis_colors[diagnosis], fill=True, alpha=0.6, linewidth=2)
+        
+        ax.set_xlabel(feature_labels[feature], fontsize=12)
+        ax.set_ylabel('Density', fontsize=12)
+        ax.set_title(f'{feature_labels[feature]} Distribution', fontsize=14, fontweight='bold')
+        ax.legend(title='Diagnosis')
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('../data/visualization_plots/10_ridge_kde.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print("✅ Created ridge/KDE plots")
+
+
+
 # Call the functions to create the plots
 if __name__ == "__main__":
     create_correlation_heatmap(df)
     df = create_behavioral_phenotype_clusters(df)
+    
+    # Add only the ridge plots
+    create_ridge_plot(df)
