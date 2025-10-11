@@ -301,7 +301,7 @@ def create_behavioral_phenotype_clusters(df):
                    alpha=0.8, s=100, edgecolors='black', linewidth=1)
     ax1.set_xlabel('Win-Stay Rate', fontsize=14)
     ax1.set_ylabel('Lose-Shift Rate', fontsize=14)
-    ax1.set_title('Decision Strategy by Diagnosis', fontsize=16, fontweight='bold')
+    ax1.set_title('Win-Stay vs. Lose-Shift', fontsize=16, fontweight='bold')
     ax1.legend(title='Diagnosis', fontsize=12, title_fontsize=12)
     ax1.grid(True, alpha=0.3)
     
@@ -313,7 +313,7 @@ def create_behavioral_phenotype_clusters(df):
                    alpha=0.8, s=100, edgecolors='black', linewidth=1)
     ax2.set_xlabel('Reward Rate', fontsize=14)
     ax2.set_ylabel('Win-Stay Rate', fontsize=14)
-    ax2.set_title('Performance vs Strategy by Diagnosis', fontsize=16, fontweight='bold')
+    ax2.set_title('Reward Rate vs. Win-Stay', fontsize=16, fontweight='bold')
     ax2.legend(title='Diagnosis', fontsize=12, title_fontsize=12)
     ax2.grid(True, alpha=0.3)
     
