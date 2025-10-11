@@ -302,7 +302,7 @@ def create_behavioral_phenotype_clusters(df):
     ax1.set_xlabel('Win-Stay Rate', fontsize=14)
     ax1.set_ylabel('Lose-Shift Rate', fontsize=14)
     ax1.set_title('Win-Stay vs. Lose-Shift', fontsize=16, fontweight='bold')
-    ax1.legend(title='Diagnosis', fontsize=12, title_fontsize=12)
+    ax1.legend(title='Diagnosis', fontsize=12, title_fontsize=12, loc='lower right')
     ax1.grid(True, alpha=0.3)
     
     # Plot 2: Reward Rate vs Win-Stay scatter plot colored by diagnosis
@@ -314,7 +314,7 @@ def create_behavioral_phenotype_clusters(df):
     ax2.set_xlabel('Reward Rate', fontsize=14)
     ax2.set_ylabel('Win-Stay Rate', fontsize=14)
     ax2.set_title('Reward Rate vs. Win-Stay', fontsize=16, fontweight='bold')
-    ax2.legend(title='Diagnosis', fontsize=12, title_fontsize=12)
+    ax2.legend(title='Diagnosis', fontsize=12, title_fontsize=12, loc='lower right')
     ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -362,7 +362,7 @@ def create_ridge_plot(df):
         ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('../data/visualization_plots/10_ridge_kde.png', dpi=300, bbox_inches='tight')
+    plt.savefig('../data/visualization_plots/09_ridge_kde.png', dpi=300, bbox_inches='tight')
     plt.show()
     
     print("✅ Created ridge/KDE plots")
