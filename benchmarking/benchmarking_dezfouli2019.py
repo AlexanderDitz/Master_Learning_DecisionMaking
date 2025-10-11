@@ -380,7 +380,9 @@ def setup_agent_gql(path_model: str, model_config: str = "PhiChiBetaKappaC", det
 def main(path_save_model: str, path_data: str, model_config: str, n_actions: int, dimensions: int, n_epochs: int, lr: float, split_ratio=[3, 6, 9]):
     """Main training function."""
     
-    path_save_model = path_save_model.replace('.', '_'+model_config+'.')
+    # Create modified path with model config
+    base_path, ext = path_save_model.rsplit('.', 1)
+    path_save_model = f"{base_path}_{model_config}.{ext}"
     
     # Load and split data
     dataset_training, dataset_test = split_data_along_sessiondim(
@@ -420,8 +422,8 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Train GQL model with PyTorch')
     
-    parser.add_argument('--path_save_model', type=str, default='params/dezfouli2019/gql_dezfouli2019.pkl', help='Path to save the trained model')
-    parser.add_argument('--path_data', type=str, default='data/dezfouli2019/dezfouli2019.csv', help='Path to the dataset')
+    parser.add_argument('--path_save_model', type=str, default='../params/dezfouli2019/gql_dezfouli2019.pkl', help='Path to save the trained model')
+    parser.add_argument('--path_data', type=str, default='../data/preprocessing/dezfouli2019.csv', help='Path to the dataset')
     parser.add_argument('--model', type=str, default='PhiChiBetaKappaC', help='Model configuration (e.g., PhiChiBeta)')
     parser.add_argument('--n_actions', type=int, default=2, help='Number of actions')
     parser.add_argument('--dimensions', type=int, default=2, help='Number of dimensions (d parameter)')
