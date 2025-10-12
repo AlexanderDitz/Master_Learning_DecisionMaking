@@ -155,33 +155,44 @@ def create_seaborn_feature_plots(df):
         y_max = df[feature].max()
         y_min = df[feature].min()
         y_range = y_max - y_min
+        top = y_max
         
-        # Calculate positions for significance bars
-        bar_height = y_max + 0.05 * y_range
-        bar_height_2 = y_max + 0.12 * y_range
-        bar_height_3 = y_max + 0.19 * y_range
+        # Collect significant combinations
+        significant_combinations = []
         
-        # Add significance bars and stars - clean simple lines
-        # Healthy vs Depression (positions 0 and 1)
+        # Check each pairwise comparison and add to list if significant
         if sig_healthy_depression != 'ns':
-            plt.plot([0, 1], [bar_height, bar_height], 'k-', linewidth=1.2)
-            plt.text(0.5, bar_height + 0.015 * y_range, sig_healthy_depression, 
-                    ha='center', va='bottom', fontsize=12, fontweight='bold')
-        
-        # Depression vs Bipolar (positions 1 and 2)  
+            significant_combinations.append([(0, 1), sig_healthy_depression])
         if sig_depression_bipolar != 'ns':
-            plt.plot([1, 2], [bar_height_2, bar_height_2], 'k-', linewidth=1.2)
-            plt.text(1.5, bar_height_2 + 0.015 * y_range, sig_depression_bipolar, 
-                    ha='center', va='bottom', fontsize=12, fontweight='bold')
-        
-        # Healthy vs Bipolar (positions 0 and 2)
+            significant_combinations.append([(1, 2), sig_depression_bipolar])
         if sig_healthy_bipolar != 'ns':
-            plt.plot([0, 2], [bar_height_3, bar_height_3], 'k-', linewidth=1.2)
-            plt.text(1, bar_height_3 + 0.015 * y_range, sig_healthy_bipolar, 
+            significant_combinations.append([(0, 2), sig_healthy_bipolar])
+        
+        # Draw significance bars using the new bracket style
+        for i, significant_combination in enumerate(significant_combinations):
+            # Columns corresponding to the datasets of interest
+            x1 = significant_combination[0][0]
+            x2 = significant_combination[0][1]
+            # What level is this bar among the bars above the plot?
+            level = len(significant_combinations) - i
+            # Plot the bar
+            bar_height = (y_range * 0.07 * level) + top
+            bar_tips = bar_height - (y_range * 0.02)
+            plt.plot(
+                [x1, x1, x2, x2],
+                [bar_tips, bar_height, bar_height, bar_tips], lw=1, c='k'
+            )
+            # Add significance text
+            sig_text = significant_combination[1]
+            plt.text((x1 + x2) / 2, bar_height + 0.01 * y_range, sig_text, 
                     ha='center', va='bottom', fontsize=12, fontweight='bold')
         
         # Adjust y-axis limits to accommodate significance bars
-        plt.ylim(y_min - 0.05 * y_range, y_max + 0.30 * y_range)
+        if significant_combinations:
+            max_level = len(significant_combinations)
+            plt.ylim(y_min - 0.05 * y_range, y_max + (0.07 * max_level + 0.05) * y_range)
+        else:
+            plt.ylim(y_min - 0.05 * y_range, y_max + 0.05 * y_range)
         
         # Add title and axis labels
         plt.title(f'{feature_labels[feature]}', 
