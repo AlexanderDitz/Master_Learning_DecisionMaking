@@ -186,9 +186,16 @@ def create_seaborn_feature_plots(df):
         # Add title and axis labels
         plt.title(f'{feature_labels[feature]}', 
                  fontsize=16, fontweight='bold', pad=20)
-        plt.xlabel('Diagnosis', fontsize=14, labelpad=20)
+        plt.xlabel('Diagnosis', fontsize=14, labelpad=40)  # Increased labelpad for sample size annotations
         plt.ylabel(feature_labels[feature], fontsize=14)
-        plt.xticks(fontsize=12)
+        
+        # Set x-axis tick labels with sample size annotations
+        x_labels = []
+        for diagnosis in diagnosis_order:
+            sample_size = len(df[df['diagnosis'] == diagnosis])
+            x_labels.append(f'{diagnosis}\n(n={sample_size})')
+        
+        plt.xticks(range(len(diagnosis_order)), x_labels, fontsize=12)
         plt.yticks(fontsize=12)
         
         # Create two separate legends
@@ -347,12 +354,14 @@ def create_ridge_plot(df):
     for idx, feature in enumerate(features):
         ax = axes[idx]
         
-        # Create KDE for each diagnosis
+        # Create KDE for each diagnosis with sample size in legend
+        legend_labels = []
         for i, diagnosis in enumerate(['Healthy', 'Depression', 'Bipolar']):
             data = df[df['diagnosis'] == diagnosis][feature]
+            sample_size = len(data)
             
             # Create KDE
-            sns.kdeplot(data=data, ax=ax, label=diagnosis, 
+            sns.kdeplot(data=data, ax=ax, label=f'{diagnosis} (n={sample_size})', 
                        color=diagnosis_colors[diagnosis], fill=True, alpha=0.6, linewidth=2)
         
         ax.set_xlabel(feature_labels[feature], fontsize=12)
