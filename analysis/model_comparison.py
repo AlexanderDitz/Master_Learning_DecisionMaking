@@ -948,6 +948,9 @@ def main():
             # Generate focused plots for each model
             generate_focused_model_plots(models_loaded, dezfouli_dataset)
             
+            # Generate reward-based dynamics analysis
+            compare_dynamics_by_reward_and_diagnosis(models_loaded, dezfouli_dataset)
+            
             print("\n✅ Focused model analysis complete!")
             print(f"Generated analysis files in: /analysis/")
         else:
@@ -960,6 +963,7 @@ def main():
             if models_loaded[model_name] is not None:
                 print(f"  - {model_name.lower()}_dynamics_by_diagnosis.png (Clinical group differences)")
                 print(f"  - {model_name.lower()}_individual_dynamics.png (Individual participants: 1 Healthy, 1 Depression, 1 Bipolar)")
+                print(f"  - reward_dynamics_{model_name.lower()}.png (Rewarded vs Unrewarded trials by diagnosis)")
         print("="*50)
     else:
         print("❌ No models could be loaded. Cannot proceed with comparison.")
@@ -1341,3 +1345,277 @@ def generate_focused_model_plots(models_loaded, dataset):
             print(f"  ✓ Saved individual dynamics: {individual_save_path}")
         else:
             print(f"\n⚠️ {model_name} model not available, skipping...")
+
+
+def compare_dynamics_by_reward_and_diagnosis(models_loaded, dataset, save_path_prefix="reward_dynamics"):
+    """
+    Compare model dynamics between rewarded/unrewarded trials by diagnosis.
+    
+    Args:
+        models_loaded: Dictionary of loaded models
+        dataset: Dezfouli dataset with participant diagnosis information
+        save_path_prefix: Prefix for saved plot files
+    """
+    if dataset is None:
+        print("❌ No dataset available for reward-diagnosis comparison")
+        return None
+    
+    print("\n🎁 Analyzing dynamics by reward outcome and diagnosis...")
+    
+    # Group participants by diagnosis
+    diagnosis_groups = {'Healthy': [], 'Depression': [], 'Bipolar': []}
+    
+    for participant_id, participant_data in dataset.items():
+        if 'diagnosis' in participant_data.columns:
+            diagnosis = participant_data['diagnosis'].iloc[0]
+            if diagnosis in diagnosis_groups:
+                diagnosis_groups[diagnosis].append(participant_id)
+    
+    print(f"Participants by diagnosis:")
+    for diagnosis, participants in diagnosis_groups.items():
+        print(f"  {diagnosis}: {len(participants)} participants")
+    
+    model_names = ['LSTM', 'SPICE', 'RNN', 'GQL']
+    
+    for model_name in model_names:
+        if models_loaded[model_name] is not None:
+            print(f"\n📊 Analyzing {model_name} model for rewarded/unrewarded trials...")
+            
+            model = models_loaded[model_name]
+            
+            # Create figure with 2 rows (rewarded/unrewarded) x 3 cols (diagnoses)
+            fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+            
+            diagnosis_colors = {'Healthy': '#2E8B57', 'Depression': '#CD5C5C', 'Bipolar': '#4682B4'}
+            reward_labels = {1: 'Rewarded Trials', 0: 'Unrewarded Trials'}
+            
+            for row, reward_condition in enumerate([1, 0]):  # 1 = rewarded, 0 = unrewarded
+                for col, (diagnosis, participants) in enumerate(diagnosis_groups.items()):
+                    if len(participants) == 0:
+                        continue
+                    
+                    ax = axes[row, col]
+                    color = diagnosis_colors[diagnosis]
+                    
+                    # Extract dynamics for this diagnosis group and reward condition
+                    all_states = []
+                    all_state_changes = []
+                    
+                    for participant_id in participants[:5]:  # Limit to first 5 participants per group
+                        if participant_id not in dataset:
+                            continue
+                        
+                        participant_data = dataset[participant_id]
+                        actions = participant_data['choice'].values
+                        rewards_left = participant_data['reward_left'].values
+                        rewards_right = participant_data['reward_right'].values
+                        rewards = np.column_stack([rewards_left, rewards_right])
+                        
+                        # Filter for specific reward condition
+                        trial_rewards = rewards[np.arange(len(actions)), actions]
+                        reward_mask = (trial_rewards == reward_condition)
+                        
+                        if np.sum(reward_mask) < 10:  # Skip if too few trials
+                            continue
+                        
+                        # Extract dynamics for this participant and reward condition
+                        filtered_actions = actions[reward_mask]
+                        filtered_rewards = rewards[reward_mask]
+                        
+                        if model_name in ['LSTM', 'RNN']:
+                            states, state_changes = extract_neural_dynamics_dezfouli_filtered(
+                                model, filtered_rewards, filtered_actions, reward_mask)
+                        elif model_name == 'SPICE':
+                            states, state_changes = extract_spice_dynamics_dezfouli_filtered(
+                                model, filtered_rewards, filtered_actions, reward_mask)
+                        elif model_name == 'GQL':
+                            states, state_changes = extract_gql_dynamics_dezfouli_filtered(
+                                model, filtered_rewards, filtered_actions, reward_mask)
+                        else:
+                            states, state_changes = [], []
+                        
+                        if len(states) > 0:
+                            all_states.extend(states)
+                            all_state_changes.extend(state_changes)
+                    
+                    # Plot dynamics for this diagnosis group and reward condition
+                    if len(all_states) > 0:
+                        all_states = np.array(all_states)
+                        all_state_changes = np.array(all_state_changes)
+                        
+                        x1, x2 = all_states[:, 0], all_states[:, 1] if all_states.shape[1] > 1 else np.zeros_like(all_states[:, 0])
+                        x1_change, x2_change = all_state_changes[:, 0], all_state_changes[:, 1] if all_state_changes.shape[1] > 1 else np.zeros_like(all_state_changes[:, 0])
+                        
+                        axis_range = (np.min([x1.min(), x2.min()]) - 0.1, np.max([x1.max(), x2.max()]) + 0.1)
+                        plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax)
+                        
+                        ax.set_title(f'{diagnosis}\n{reward_labels[reward_condition]}\n({len(all_states)} transitions)', 
+                                    fontsize=12, fontweight='bold')
+                        
+                        # Set model-specific axis labels
+                        if model_name == 'GQL':
+                            ax.set_xlabel('Q-Value Action 0')
+                            ax.set_ylabel('Q-Value Action 1')
+                        elif model_name in ['LSTM', 'RNN']:
+                            ax.set_xlabel('Hidden State Dim 1')
+                            ax.set_ylabel('Hidden State Dim 2')
+                        elif model_name == 'SPICE':
+                            ax.set_xlabel('Symbolic State 1')
+                            ax.set_ylabel('Symbolic State 2')
+                        
+                        print(f"✓ {diagnosis} {reward_labels[reward_condition]}: {len(all_states)} transitions")
+                    else:
+                        ax.text(0.5, 0.5, f'{diagnosis}\n{reward_labels[reward_condition]}\nNo Data', 
+                               transform=ax.transAxes, ha='center', va='center',
+                               fontsize=12, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
+                        ax.set_xlim(-1, 1)
+                        ax.set_ylim(-1, 1)
+            
+            plt.suptitle(f'{model_name} Model: Dynamics by Reward Outcome and Diagnosis', 
+                        fontsize=16, fontweight='bold')
+            plt.tight_layout()
+            
+            # Save plot
+            save_path = f"analysis/{save_path_prefix}_{model_name.lower()}.png"
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"  ✓ Saved reward dynamics: {save_path}")
+            plt.show()
+        else:
+            print(f"\n⚠️ {model_name} model not available, skipping...")
+
+
+def extract_neural_dynamics_dezfouli_filtered(agent, rewards, actions, trial_mask):
+    """Extract dynamics from neural network models for filtered trials"""
+    states = []
+    state_changes = []
+    
+    # Reset agent state
+    if hasattr(agent, 'reset'):
+        agent.reset()
+    
+    prev_state = None
+    
+    for trial in range(len(actions)):
+        # Get current state
+        if hasattr(agent, 'get_action_probabilities'):
+            try:
+                probs = agent.get_action_probabilities()
+                current_state = np.array(probs)
+            except:
+                current_state = np.random.randn(2)
+        else:
+            if hasattr(agent._model, 'hidden') and agent._model.hidden is not None:
+                hidden = agent._model.hidden.detach().numpy().flatten()
+                current_state = hidden[:2] if len(hidden) >= 2 else np.append(hidden, [0])[:2]
+            else:
+                current_state = np.random.randn(2)
+        
+        if prev_state is not None:
+            state_change = current_state - prev_state
+            states.append(prev_state)
+            state_changes.append(state_change)
+        
+        # Update agent
+        action = int(actions[trial])
+        reward = rewards[trial, action]
+        if hasattr(agent, 'update'):
+            try:
+                reward_tensor = torch.tensor([reward], dtype=torch.float32)
+                agent.update(action, reward_tensor.item())
+            except:
+                pass
+        
+        prev_state = current_state.copy()
+    
+    return np.array(states), np.array(state_changes)
+
+
+def extract_spice_dynamics_dezfouli_filtered(agent, rewards, actions, trial_mask):
+    """Extract dynamics from SPICE model for filtered trials"""
+    states = []
+    state_changes = []
+    
+    # Reset agent
+    if hasattr(agent, 'reset'):
+        agent.reset()
+    
+    prev_values = None
+    
+    for trial in range(len(actions)):
+        # Get current state
+        if hasattr(agent, 'get_q_values'):
+            try:
+                q_values = agent.get_q_values()
+                current_state = np.array(q_values)
+            except:
+                current_state = np.random.randn(2)
+        else:
+            if hasattr(agent, '_value_estimates'):
+                current_state = np.array(agent._value_estimates[:2])
+            else:
+                current_state = np.random.randn(2)
+        
+        if prev_values is not None:
+            state_change = current_state - prev_values
+            states.append(prev_values)
+            state_changes.append(state_change)
+        
+        # Update agent
+        action = int(actions[trial])
+        reward = rewards[trial, action]
+        if hasattr(agent, 'update'):
+            try:
+                agent.update(action, reward)
+            except Exception as e:
+                pass
+        
+        prev_values = current_state.copy()
+    
+    return np.array(states), np.array(state_changes)
+
+
+def extract_gql_dynamics_dezfouli_filtered(gql_data, rewards, actions, trial_mask):
+    """Extract dynamics from GQL model for filtered trials"""
+    gql_agents, _ = gql_data
+    agent = gql_agents[0]
+    
+    states = []
+    state_changes = []
+    
+    # Reset agent
+    if hasattr(agent, 'reset'):
+        agent.reset()
+    
+    prev_q_values = None
+    
+    for trial in range(len(actions)):
+        # Get Q-values
+        if hasattr(agent, 'get_q_values'):
+            try:
+                q_values = agent.get_q_values()
+                current_state = np.array(q_values)
+            except:
+                current_state = np.random.randn(2)
+        else:
+            if hasattr(agent, '_q_values'):
+                current_state = np.array(agent._q_values)
+            else:
+                current_state = np.random.randn(2)
+        
+        if prev_q_values is not None:
+            state_change = current_state - prev_q_values
+            states.append(prev_q_values)
+            state_changes.append(state_change)
+        
+        # Update agent
+        action = int(actions[trial])
+        reward = rewards[trial, action]
+        if hasattr(agent, 'update'):
+            try:
+                agent.update(action, reward)
+            except Exception as e:
+                pass
+        
+        prev_q_values = current_state.copy()
+    
+    return np.array(states), np.array(state_changes)
