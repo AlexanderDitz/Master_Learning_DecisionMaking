@@ -118,15 +118,98 @@ desired_order = [
 
 participant_df = participant_df[desired_order]
 
-# Create the features directory if it doesn't exist (parallel to preprocessing)
-os.makedirs('../features', exist_ok=True)
+# Create the features directory and subfolders if they don't exist
+os.makedirs('../features/real_features', exist_ok=True)
 
-# Save to CSV
-participant_df.to_csv('../features/participant_features.csv', index=False)
+# Save to CSV in the real_features subfolder
+participant_df.to_csv('../features/real_features/real_participant_features.csv', index=False)
 
-print("Saved participant-level features to '../features/participant_features.csv'")
+print("Saved participant-level features to '../features/real_features/real_participant_features.csv'")
 print(participant_df.head())
 print("\nDiagnosis distribution in generated features:")
 print(participant_df['diagnosis'].value_counts())
 
 print(f"✅ Created features for {len(participant_df)} participants")
+
+# === Process Synthetic Data ===
+print("\n" + "="*60)
+print("PROCESSING SYNTHETIC DATA")
+print("="*60)
+
+# Define paths to synthetic data files
+synthetic_data_dir = '../synthetic data'
+synthetic_files = {
+    'LSTM': 'synthetic_choices_lstm.csv',
+    'SPICE': 'synthetic_choices_spice.csv', 
+    'RNN': 'synthetic_choices_rnn.csv',
+    'GQL': 'synthetic_choices_gql.csv'
+}
+
+# Check if synthetic data exists
+if not os.path.exists(synthetic_data_dir):
+    print(f"❌ Synthetic data directory not found: {synthetic_data_dir}")
+    print("   Run generate_synthetic_data.py first to create synthetic data")
+else:
+    all_synthetic_rows = []
+    
+    for model_name, filename in synthetic_files.items():
+        filepath = os.path.join(synthetic_data_dir, filename)
+        
+        if os.path.exists(filepath):
+            print(f"📊 Processing {model_name} data from {filename}...")
+            
+            # Load synthetic data
+            synthetic_df = pd.read_csv(filepath)
+            print(f"   Loaded {len(synthetic_df)} trials from {len(synthetic_df['participant_id'].unique())} participants")
+            
+            # Rename columns to match the format expected by compute_participant_features
+            synthetic_df_renamed = synthetic_df.rename(columns={
+                'participant_id': 'df_participant_id',
+                'choice': 'df_choice', 
+                'reward': 'df_reward'
+            })
+            
+            # Process each synthetic participant
+            for pid, group in synthetic_df_renamed.groupby('df_participant_id'):
+                feats = compute_participant_features(group)
+                feats["participant"] = pid
+                feats["diagnosis"] = model_name  # Use model name as "diagnosis"
+                all_synthetic_rows.append(feats)
+            
+            print(f"   ✓ Processed {len(synthetic_df['participant_id'].unique())} {model_name} participants")
+        else:
+            print(f"⚠️ Synthetic file not found: {filepath}")
+    
+    if all_synthetic_rows:
+        # Create DataFrame of synthetic participant features
+        synthetic_participant_df = pd.DataFrame(all_synthetic_rows)
+        
+        # Rearrange columns to match real data format
+        synthetic_participant_df = synthetic_participant_df[desired_order]
+        
+        # Create synthetic_features subfolder and save synthetic features
+        os.makedirs('../features/synthetic_features', exist_ok=True)
+        synthetic_features_path = '../features/synthetic_features/synthetic_participant_features.csv'
+        synthetic_participant_df.to_csv(synthetic_features_path, index=False)
+        
+        print(f"\n💾 Saved synthetic participant features to '{synthetic_features_path}'")
+        print("Sample synthetic features:")
+        print(synthetic_participant_df.head())
+        print("\nModel distribution in synthetic features:")
+        print(synthetic_participant_df['diagnosis'].value_counts())
+        print(f"✅ Created synthetic features for {len(synthetic_participant_df)} participants")
+        
+        # Display comparison statistics
+        print("\n📊 COMPARISON SUMMARY:")
+        print(f"Real participants: {len(participant_df)}")
+        print(f"Synthetic participants: {len(synthetic_participant_df)}")
+        
+        print("\nReal data diagnosis distribution:")
+        for diag, count in participant_df['diagnosis'].value_counts().items():
+            print(f"  {diag}: {count}")
+            
+        print("\nSynthetic data model distribution:")
+        for model, count in synthetic_participant_df['diagnosis'].value_counts().items():
+            print(f"  {model}: {count}")
+    else:
+        print("❌ No synthetic data files found to process")
