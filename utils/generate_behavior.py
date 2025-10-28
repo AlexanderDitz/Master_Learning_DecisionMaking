@@ -18,6 +18,7 @@ from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022
 
 import argparse
 
+# ----------------------- ARGUMENT PARSING ----------------------------
 parser = argparse.ArgumentParser(description='Generate synthetic behavior for a given agent type.')
 parser.add_argument('--agent_type', type=str, required=True, help='Agent type: rnn, rnn2, rnn3, rnn4, rnn5, lstm, spice, spice2, spice3, spice4, spice5, spice6, benchmark, baseline, q_agent')
 args = parser.parse_args()
