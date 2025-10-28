@@ -137,79 +137,84 @@ print("PROCESSING SYNTHETIC DATA")
 print("="*60)
 
 # Define paths to synthetic data files
-synthetic_data_dir = '../synthetic data'
-synthetic_files = {
-    'LSTM': 'synthetic_choices_lstm.csv',
-    'SPICE': 'synthetic_choices_spice.csv', 
-    'RNN': 'synthetic_choices_rnn.csv',
-    'GQL': 'synthetic_choices_gql.csv'
-}
+synthetic_data_dir = '../synthetic_data'
 
-# Check if synthetic data exists
-if not os.path.exists(synthetic_data_dir):
-    print(f"❌ Synthetic data directory not found: {synthetic_data_dir}")
-    print("   Run generate_synthetic_data.py first to create synthetic data")
-else:
-    all_synthetic_rows = []
-    
-    for model_name, filename in synthetic_files.items():
-        filepath = os.path.join(synthetic_data_dir, filename)
-        
-        if os.path.exists(filepath):
-            print(f"📊 Processing {model_name} data from {filename}...")
-            
-            # Load synthetic data
-            synthetic_df = pd.read_csv(filepath)
-            print(f"   Loaded {len(synthetic_df)} trials from {len(synthetic_df['participant_id'].unique())} participants")
-            
-            # Rename columns to match the format expected by compute_participant_features
-            synthetic_df_renamed = synthetic_df.rename(columns={
-                'participant_id': 'df_participant_id',
-                'choice': 'df_choice', 
-                'reward': 'df_reward'
-            })
-            
-            # Process each synthetic participant
-            for pid, group in synthetic_df_renamed.groupby('df_participant_id'):
-                feats = compute_participant_features(group)
-                feats["participant"] = pid
-                feats["diagnosis"] = model_name  # Use model name as "diagnosis"
-                all_synthetic_rows.append(feats)
-            
-            print(f"   ✓ Processed {len(synthetic_df['participant_id'].unique())} {model_name} participants")
-        else:
-            print(f"⚠️ Synthetic file not found: {filepath}")
-    
-    if all_synthetic_rows:
-        # Create DataFrame of synthetic participant features
-        synthetic_participant_df = pd.DataFrame(all_synthetic_rows)
-        
-        # Rearrange columns to match real data format
-        synthetic_participant_df = synthetic_participant_df[desired_order]
-        
-        # Create synthetic_features subfolder and save synthetic features
-        os.makedirs('../features/synthetic_features', exist_ok=True)
-        synthetic_features_path = '../features/synthetic_features/synthetic_participant_features.csv'
-        synthetic_participant_df.to_csv(synthetic_features_path, index=False)
-        
-        print(f"\n💾 Saved synthetic participant features to '{synthetic_features_path}'")
-        print("Sample synthetic features:")
-        print(synthetic_participant_df.head())
-        print("\nModel distribution in synthetic features:")
-        print(synthetic_participant_df['diagnosis'].value_counts())
-        print(f"✅ Created synthetic features for {len(synthetic_participant_df)} participants")
-        
-        # Display comparison statistics
-        print("\n📊 COMPARISON SUMMARY:")
-        print(f"Real participants: {len(participant_df)}")
-        print(f"Synthetic participants: {len(synthetic_participant_df)}")
-        
-        print("\nReal data diagnosis distribution:")
-        for diag, count in participant_df['diagnosis'].value_counts().items():
-            print(f"  {diag}: {count}")
-            
-        print("\nSynthetic data model distribution:")
-        for model, count in synthetic_participant_df['diagnosis'].value_counts().items():
-            print(f"  {model}: {count}")
-    else:
-        print("❌ No synthetic data files found to process")
+# Uncomment the file you want to inspect
+# filename = 'dezfouli2019_generated_behavior_lstm.csv'
+# filename = 'dezfouli2019_generated_behavior_spice2_l2_0_001.csv'
+# filename = 'dezfouli2019_generated_behavior_spice3_l2_0_0001.csv'
+# filename = 'dezfouli2019_generated_behavior_spice4_l2_0_00001.csv'
+# filename = 'dezfouli2019_generated_behavior_spice5_l2_0_0005.csv'
+filename = 'dezfouli2019_generated_behavior_spice6_l2_0_00005.csv'
+# filename = 'dezfouli2019_generated_behavior_rnn_l2_0_001.csv'
+# filename = 'dezfouli2019_generated_behavior_rnn2_l2_0_0001.csv'
+# filename = 'dezfouli2019_generated_behavior_rnn3_l2_0_00001.csv'
+# filename = 'dezfouli2019_generated_behavior_rnn4_l2_0_0005.csv'
+# filename = 'dezfouli2019_generated_behavior_rnn5_l2_0_00005.csv'
+# filename = 'dezfouli2019_generated_behavior_benchmark.csv'
+# filename = 'dezfouli2019_generated_behavior_q_agent.csv'
+
+synthetic_df = pd.read_csv(os.path.join(synthetic_data_dir, filename))
+print(f"Loaded synthetic data from {filename} with shape {synthetic_df.shape}")
+
+# --- Harmonize column names to match real data conventions ---
+synthetic_df = synthetic_df.rename(columns={
+    'id': 'df_participant_id',
+    'session': 'df_session',
+    'choice': 'df_choice',
+    'reward': 'df_reward'
+})
+
+# Make sure numeric columns are correctly typed
+synthetic_df = synthetic_df.astype({
+    'df_session': int,
+    'df_choice': float,
+    'df_reward': float
+})
+
+print("Synthetic dataset columns after renaming:", synthetic_df.columns.tolist())
+print("First few rows:")
+print(synthetic_df.head())
+
+# === Compute participant-level features for synthetic data ===
+synthetic_participant_rows = []
+
+for pid, group in synthetic_df.groupby('df_participant_id'):
+    feats = compute_participant_features(group)
+    feats["participant"] = pid
+    feats["model_type"] = group["model_type"].iloc[0] if "model_type" in group.columns else "unknown"
+    synthetic_participant_rows.append(feats)
+
+synthetic_participant_df = pd.DataFrame(synthetic_participant_rows)
+
+# Reorder columns for consistency
+desired_order_synth = [
+    'participant', 'model_type', 'n_trials',
+    'choice_rate', 'reward_rate',
+    'win_stay', 'win_shift', 'lose_stay', 'lose_shift'
+]
+synthetic_participant_df = synthetic_participant_df[desired_order_synth]
+
+# Create output folder
+os.makedirs('../features/synthetic_features', exist_ok=True)
+
+# Save to CSV
+synthetic_features_path = f'../features/synthetic_features/synthetic_features_{os.path.splitext(filename)[0]}.csv'
+synthetic_participant_df.to_csv(synthetic_features_path, index=False)
+
+print(f"✅ Saved synthetic participant-level features to '{synthetic_features_path}'")
+print(synthetic_participant_df.head())
+
+# --- Optional: quick comparison summary ---
+print("\nSummary comparison:")
+print(f"Real data participants: {len(participant_df)}")
+print(f"Synthetic data participants: {len(synthetic_participant_df)}")
+
+# Compute simple mean comparison
+feature_cols = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift']
+comparison_df = pd.DataFrame({
+    'Real (mean)': participant_df[feature_cols].mean(),
+    'Synthetic (mean)': synthetic_participant_df[feature_cols].mean()
+})
+print("\nAverage feature comparison (real vs synthetic):")
+print(comparison_df)
