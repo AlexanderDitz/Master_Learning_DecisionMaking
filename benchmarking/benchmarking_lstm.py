@@ -22,7 +22,7 @@ class RLLSTM(torch.nn.Module):
         self.n_cells = n_cells
         
     def forward(self, inputs, state=None):
-        
+        inputs = inputs.float()
         x, state = self.lstm(inputs, state)
         logits = self.lin_out(x)
         # logits = self.softmax(logits)
@@ -190,9 +190,9 @@ if __name__=='__main__':
     
     # dataset_name = 'bahrami2020'
     # split_ratio = 0.8
-    
-    path_model_save = f'../params/{dataset_name}/lstm_{dataset_name}.pkl'
-    path_data = f'../data/preprocessing/{dataset_name}.csv'
+
+    path_model_save = f'params/{dataset_name}/lstm_{dataset_name}.pkl'
+    path_data = f'data/preprocessing/{dataset_name}.csv'
     n_actions = 2  # Dezfouli2019 has 2 actions
     n_cells = 16
     n_epochs = 3000
