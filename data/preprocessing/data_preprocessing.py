@@ -70,12 +70,17 @@ def compute_participant_features(group):
     choice_rate = choices.mean()
     reward_rate = rewards.mean()
 
-    win_stay, win_shift, lose_stay, lose_shift = [], [], [], []
+    win_stay, win_shift, lose_stay, lose_shift, choice_perseveration, switch_rate = [], [], [], [], [], []
 
     for t in range(1, n_trials):
         prev_choice = choices[t - 1]
         curr_choice = choices[t]
         prev_reward = rewards[t - 1]
+
+        # Choice perseveration: Tendency to repeat previous choice
+        choice_perseveration.append(curr_choice == prev_choice)
+        # Switch rate: Tendency to switch in the next trial
+        switch_rate.append(curr_choice != prev_choice)
 
         if prev_reward == 1:
             win_stay.append(curr_choice == prev_choice)
@@ -91,6 +96,8 @@ def compute_participant_features(group):
         "win_shift": np.mean(win_shift) if win_shift else np.nan,
         "lose_stay": np.mean(lose_stay) if lose_stay else np.nan,
         "lose_shift": np.mean(lose_shift) if lose_shift else np.nan,
+        "choice_perseveration": np.mean(choice_perseveration) if choice_perseveration else np.nan,
+        "switch_rate": np.mean(switch_rate) if switch_rate else np.nan,
         "n_trials": n_trials
     }
     return features
@@ -113,7 +120,8 @@ participant_df = pd.DataFrame(participant_rows)
 desired_order = [
     'participant', 'diagnosis', 'n_trials',
     'choice_rate', 'reward_rate',
-    'win_stay', 'win_shift', 'lose_stay', 'lose_shift'
+    'win_stay', 'win_shift', 'lose_stay', 'lose_shift', 
+    'choice_perseveration', 'switch_rate'
 ]
 
 participant_df = participant_df[desired_order]
@@ -145,14 +153,14 @@ synthetic_data_dir = '../synthetic_data'
 # filename = 'dezfouli2019_generated_behavior_spice3_l2_0_0001.csv'
 # filename = 'dezfouli2019_generated_behavior_spice4_l2_0_00001.csv'
 # filename = 'dezfouli2019_generated_behavior_spice5_l2_0_0005.csv'
-filename = 'dezfouli2019_generated_behavior_spice6_l2_0_00005.csv'
+# filename = 'dezfouli2019_generated_behavior_spice6_l2_0_00005.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn_l2_0_001.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn2_l2_0_0001.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn3_l2_0_00001.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn4_l2_0_0005.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn5_l2_0_00005.csv'
 # filename = 'dezfouli2019_generated_behavior_benchmark.csv'
-# filename = 'dezfouli2019_generated_behavior_q_agent.csv'
+filename = 'dezfouli2019_generated_behavior_q_agent.csv'
 
 synthetic_df = pd.read_csv(os.path.join(synthetic_data_dir, filename))
 print(f"Loaded synthetic data from {filename} with shape {synthetic_df.shape}")
@@ -191,7 +199,8 @@ synthetic_participant_df = pd.DataFrame(synthetic_participant_rows)
 desired_order_synth = [
     'participant', 'model_type', 'n_trials',
     'choice_rate', 'reward_rate',
-    'win_stay', 'win_shift', 'lose_stay', 'lose_shift'
+    'win_stay', 'win_shift', 'lose_stay', 'lose_shift',
+    'choice_perseveration', 'switch_rate'
 ]
 synthetic_participant_df = synthetic_participant_df[desired_order_synth]
 
@@ -211,7 +220,7 @@ print(f"Real data participants: {len(participant_df)}")
 print(f"Synthetic data participants: {len(synthetic_participant_df)}")
 
 # Compute simple mean comparison
-feature_cols = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift']
+feature_cols = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
 comparison_df = pd.DataFrame({
     'Real (mean)': participant_df[feature_cols].mean(),
     'Synthetic (mean)': synthetic_participant_df[feature_cols].mean()
