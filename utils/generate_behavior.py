@@ -50,8 +50,8 @@ agent_type = args.agent_type
 dataset = 'dezfouli2019'
 benchmark_model = 'gql_dezfouli2019_PhiChiBetaKappaC.pkl'
 baseline_model = 'PhiBeta'
-class_rnn = RLRNN_eckstein2022
-sindy_config = SindyConfig_eckstein2022
+class_rnn = RLRNN_dezfouli2019
+sindy_config = SindyConfig_dezfouli2019
 bandits_environment = Bandits_Standard
 n_sessions = 12
 unique_bandits_kwargs = [
@@ -152,7 +152,7 @@ def get_setup_agent(agent_type):
     elif agent_type.startswith('rnn'):
         return setup_agent_rnn
     elif agent_type == 'lstm':
-        return lambda **kwargs: load_lstm_model(path_lstm)
+        return lambda **kwargs: load_lstm_model(path_lstm, deterministic=False)
     elif agent_type in ['baseline', 'benchmark']:
         return setup_agent_benchmark
     elif agent_type == 'q_agent':
@@ -200,8 +200,14 @@ for i, participant_id in enumerate(participant_ids):
                 class_rnn=class_rnn,
                 path_rnn=spice_rnn_paths[agent_type],
                 path_spice=path_model,
+                rnn_modules=sindy_config['rnn_modules'],
+                control_parameters=sindy_config['control_parameters'],
+                sindy_library_polynomial_degree=1,
+                sindy_library_setup=sindy_config['library_setup'],
+                sindy_filter_setup=sindy_config['filter_setup'],
+                sindy_dataprocessing=sindy_config['dataprocessing_setup'],
                 deterministic=False
-        )
+            )
         elif agent_type.startswith('rnn') or agent_type in ['baseline', 'benchmark']:
             agent = setup_agent(
                 class_rnn=class_rnn,
@@ -227,6 +233,9 @@ for i, participant_id in enumerate(participant_ids):
         n_actions = agent[0]._n_actions if isinstance(agent, list) else agent._n_actions
         for trial_idx in range(n_trials_this_session):
             experiment = dataset.xs[0][trial_idx].cpu().numpy()
+            # Print action logits/probs for the first 10 trials of the first participant/session
+            if i == 0 and session_idx == 0 and trial_idx < 10:
+                print(f"Trial {trial_idx} action logits/probs: {experiment[:n_actions]}")
             meta_rows.append([
                 participant_id,  # use real participant id
                 agent_type,
