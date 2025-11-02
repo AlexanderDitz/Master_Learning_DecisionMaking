@@ -174,7 +174,7 @@ def plot_session(
     x_axis = True
     
     # valid keys in agent dictionary
-    valid_keys_color_pairs = {'groundtruth': 'tab:blue', 'rnn': 'tab:orange', 'sindy': 'tab:pink', 'benchmark':'tab:grey'}    
+    valid_keys_color_pairs = {'groundtruth': 'tab:blue', 'rnn': 'tab:orange', 'sindy': 'tab:pink', 'benchmark':'tab:grey', 'lstm':'tab:green'}    
     
     n_actions = agents[list(agents.keys())[0]]._n_actions
     if isinstance(experiment, BanditSession):
