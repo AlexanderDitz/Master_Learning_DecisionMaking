@@ -29,6 +29,9 @@ def setup_rnn(
     
     if 'model' in state_dict:
         state_dict = state_dict['model']
+    # Fix for participant_embedding key mismatch
+    if "participant_embedding.0.weight" in state_dict:
+        state_dict["participant_embedding.weight"] = state_dict.pop("participant_embedding.0.weight")
     
     participant_embedding_index = [i for i, s in enumerate(list(state_dict.keys())) if 'participant_embedding' in s]
     participant_embedding_bool = True if len(participant_embedding_index) > 0 else False
@@ -122,6 +125,6 @@ def setup_agent_spice(
     else:
         # load SPICE model from a file
         spice_modules = load_spice(path_spice)
-        agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions)
+        agent_spice = AgentSpice(model_rnn=agent_rnn._model, sindy_modules=spice_modules, n_actions=agent_rnn._n_actions, deterministic=deterministic)
         
     return agent_spice
