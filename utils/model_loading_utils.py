@@ -14,7 +14,7 @@ from benchmarking.benchmarking_lstm import RLLSTM, AgentLSTM
 from benchmarking.benchmarking_dezfouli2019 import AgentGQL, setup_agent_gql, Dezfouli2019GQL
 from utils.setup_agents import setup_agent_spice, setup_agent_rnn
 from resources.bandits import AgentSpice, AgentNetwork
-from resources.rnn import RLRNN_eckstein2022
+from resources.rnn import RLRNN_dezfouli2019
 
 
 def load_dezfouli_dataset():
@@ -111,151 +111,148 @@ def get_rewards_array(participant_data):
     return rewards_matrix
 
 
-def load_lstm_model(path_model: str) -> AgentLSTM:
+def load_lstm_model(path_model: str, deterministic: bool = True) -> AgentLSTM:
     """
     Load LSTM model from saved checkpoint.
-    
     Args:
         path_model: Path to the saved LSTM model (.pkl file)
-    
     Returns:
-        AgentLSTM: Loaded LSTM agent
+        AgentLSTM: Loaded LSTM agent or None if loading fails
     """
     print(f"Loading LSTM model from: {path_model}")
-    
-    # Load the state dictionary
-    state_dict = torch.load(path_model, map_location=torch.device('cpu'), weights_only=True)
-    
-    # Extract model parameters from state dict
-    n_cells = state_dict['lin_out.weight'].shape[1]
-    n_actions = state_dict['lin_out.weight'].shape[0]
-    
-    print(f"LSTM Model parameters: n_cells={n_cells}, n_actions={n_actions}")
-    
-    # Create LSTM model and load weights
-    lstm = RLLSTM(n_cells=n_cells, n_actions=n_actions)
-    lstm.load_state_dict(state_dict=state_dict)
-    
-    # Create agent wrapper
-    agent = AgentLSTM(model_rnn=lstm, n_actions=n_actions)
-    
-    print("LSTM model loaded successfully!")
-    return agent
+    try:
+        if not os.path.isfile(path_model):
+            raise FileNotFoundError(f"File not found: {path_model}")
+        # Try PyTorch >=2.0 weights_only, else fallback
+        try:
+            state_dict = torch.load(path_model, map_location=torch.device('cpu'), weights_only=True)
+        except TypeError:
+            state_dict = torch.load(path_model, map_location=torch.device('cpu'))
+        if 'lin_out.weight' not in state_dict:
+            raise KeyError("'lin_out.weight' not found in state_dict. Check model checkpoint.")
+        n_cells = state_dict['lin_out.weight'].shape[1]
+        n_actions = state_dict['lin_out.weight'].shape[0]
+        print(f"LSTM Model parameters: n_cells={n_cells}, n_actions={n_actions}")
+        lstm = RLLSTM(n_cells=n_cells, n_actions=n_actions)
+        lstm.load_state_dict(state_dict)
+        agent = AgentLSTM(model_rnn=lstm, n_actions=n_actions, deterministic=deterministic)
+        print("LSTM model loaded successfully!")
+        return agent
+    except Exception as e:
+        print(f"❌ Failed to load LSTM model: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
-def load_spice_model(path_spice: str, path_rnn: str) -> AgentSpice:
+def load_spice_model(path_spice: str, path_rnn: str, deterministic: bool = True) -> AgentSpice:
     """
     Load SPICE model from saved checkpoint.
-    
     Args:
         path_spice: Path to the saved SPICE model (.pkl file)
         path_rnn: Path to the corresponding RNN model (.pkl file)
-    
     Returns:
-        AgentSpice: Loaded SPICE agent
+        AgentSpice: Loaded SPICE agent or None if loading fails
     """
     print(f"Loading SPICE model from: {path_spice}")
     print(f"Loading corresponding RNN model from: {path_rnn}")
-    
-    # Load SPICE agent using the setup function
-    agent_spice = setup_agent_spice(
-        class_rnn=RLRNN_eckstein2022,
-        path_rnn=path_rnn,
-        path_spice=path_spice,
-    )
-    
-    print("SPICE model loaded successfully!")
-    print(f"  - Model type: {type(agent_spice)}")
-    print(f"  - Number of actions: {agent_spice._n_actions}")
-    print(f"  - SPICE modules: {list(agent_spice.get_modules().keys())}")
-    
-    return agent_spice
+    try:
+        if not os.path.isfile(path_spice):
+            raise FileNotFoundError(f"File not found: {path_spice}")
+        if not os.path.isfile(path_rnn):
+            raise FileNotFoundError(f"File not found: {path_rnn}")
+        agent_spice = setup_agent_spice(
+            class_rnn=RLRNN_dezfouli2019,
+            path_rnn=path_rnn,
+            path_spice=path_spice,
+            deterministic=deterministic,
+        )
+        print("SPICE model loaded successfully!")
+        print(f"  - Model type: {type(agent_spice)}")
+        print(f"  - Number of actions: {agent_spice._n_actions}")
+        print(f"  - SPICE modules: {list(agent_spice.get_modules().keys())}")
+        return agent_spice
+    except Exception as e:
+        print(f"❌ Failed to load SPICE model: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
-def load_rnn_model(path_model: str) -> AgentNetwork:
+def load_rnn_model(path_model: str, deterministic: bool = True) -> AgentNetwork:
     """
     Load RNN model from saved checkpoint.
-    
     Args:
         path_model: Path to the saved RNN model (.pkl file)
-    
     Returns:
-        AgentNetwork: Loaded RNN agent
+        AgentNetwork: Loaded RNN agent or None if loading fails
     """
     print(f"Loading RNN model from: {path_model}")
-    
-    # Load RNN agent using the setup function
-    agent_rnn = setup_agent_rnn(
-        class_rnn=RLRNN_eckstein2022,
-        path_rnn=path_model,
-    )
-    
-    print("RNN model loaded successfully!")
-    print(f"  - Model type: {type(agent_rnn._model)}")
-    print(f"  - Number of actions: {agent_rnn._n_actions}")
-    print(f"  - Hidden size: {agent_rnn._model.hidden_size}")
-    
-    return agent_rnn
+    try:
+        if not os.path.isfile(path_model):
+            raise FileNotFoundError(f"File not found: {path_model}")
+        agent_rnn = setup_agent_rnn(
+            class_rnn=RLRNN_dezfouli2019,
+            path_rnn=path_model,
+            deterministic=deterministic,
+        )
+        print("RNN model loaded successfully!")
+        print(f"  - Model type: {type(agent_rnn._model)}")
+        print(f"  - Number of actions: {agent_rnn._n_actions}")
+        print(f"  - Hidden size: {agent_rnn._model.hidden_size}")
+        return agent_rnn
+    except Exception as e:
+        print(f"❌ Failed to load RNN model: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
-def load_gql_model(path_model: str, model_config: str = "PhiChiBetaKappaC") -> AgentGQL:
+def load_gql_model(path_model: str, model_config: str = "PhiChiBetaKappaC", deterministic: bool = True):
     """
     Load GQL model from saved checkpoint.
-    
+
     Args:
         path_model: Path to the saved GQL model (.pkl file)
         model_config: Model configuration string
-    
+
     Returns:
-        AgentGQL: Loaded GQL agent
+        Tuple[List[AgentGQL], int] or None if loading fails
     """
     print(f"Loading GQL model from: {path_model}")
     print(f"Model configuration: {model_config}")
-    
     try:
-        # Import the GQL classes
+        if not os.path.isfile(path_model):
+            raise FileNotFoundError(f"File not found: {path_model}")
         from benchmarking.benchmarking_dezfouli2019 import Dezfouli2019GQL, AgentGQL
-        
-        # Create a custom unpickler to handle the class import issue
         import pickle
         import sys
-        
-        # Add the class to the current module for unpickling
         current_module = sys.modules[__name__]
         setattr(current_module, 'Dezfouli2019GQL', Dezfouli2019GQL)
-        
         # Try loading with torch.load first (in case it was saved with torch)
         try:
             all_models = torch.load(path_model, map_location=torch.device('cpu'), weights_only=False)
-        except:
-            # Fallback to pickle load
+        except Exception:
             with open(path_model, 'rb') as file:
                 all_models = pickle.load(file)
-        
-        # Ensure all_models is a list
         if not isinstance(all_models, list):
             all_models = [all_models]
-        
-        # Create agents from loaded models
+        if not all_models:
+            raise ValueError("No models found in checkpoint.")
         agent_gql = []
         for model in all_models:
-            agent_gql.append(AgentGQL(model=model, deterministic=True))
-        
-        # Calculate number of parameters from the first model
+            agent_gql.append(AgentGQL(model=model, deterministic=deterministic))
         model = all_models[0]
         n_parameters = 0
         for index_letter, letter in enumerate(model_config):
             if not letter.islower():
                 n_parameters += 1 * model.d * model.d if letter == 'C' and index_letter == len(model_config)-1 else 1 * model.d
-        
         print("GQL model loaded successfully!")
         print(f"  - Model type: {type(agent_gql[0])}")
         print(f"  - Number of participants: {len(agent_gql)}")
         print(f"  - Number of actions: {agent_gql[0]._n_actions}")
         print(f"  - Total parameters: {n_parameters}")
-        
         return agent_gql, n_parameters
-        
     except Exception as e:
         print(f"❌ Failed to load GQL model: {e}")
         import traceback
