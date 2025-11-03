@@ -16,31 +16,22 @@ args = parser.parse_args()
 # Auto-detect file if not provided
 if args.csv is None:
     synthetic_dir = os.path.join('data', 'synthetic_data')
-    for f in os.listdir(synthetic_dir):
-        if 'benchmark' in f and f.endswith('.csv'):
-            args.csv = os.path.join(synthetic_dir, f)
-            break
+    args.csv = next((os.path.join(synthetic_dir, f) for f in os.listdir(synthetic_dir)
+                     if 'benchmark' in f and f.endswith('.csv')), None)
     if args.csv is None:
         raise FileNotFoundError('Could not find a benchmark synthetic data CSV file.')
 
-# Load data
+# Load data and select participant/session
 print(f"Loading: {args.csv}")
-df = pd.read_csv(args.csv)
-
-# Select participant and session
-df = df.dropna(subset=['Q0', 'Q1'])
-if args.participant is None:
-    pid = df['id'].iloc[0]
-else:
-    pid = args.participant
-if args.session is None:
-    sid = df[df['id'] == pid]['session'].iloc[0]
-else:
-    sid = args.session
-
+df = pd.read_csv(args.csv).dropna(subset=['Q0', 'Q1'])
+pid = args.participant or df['id'].iloc[0]
+sid = args.session or df[df['id'] == pid]['session'].iloc[0]
 sub_df = df[(df['id'] == pid) & (df['session'] == sid)]
-Q0 = sub_df['Q0'].values
-Q1 = sub_df['Q1'].values
+Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+
+print(f"Q0: min={Q0.min()}, max={Q0.max()}, unique={np.unique(Q0)}")
+print(f"Q1: min={Q1.min()}, max={Q1.max()}, unique={np.unique(Q1)}")
+print(f"Number of trials: {len(Q0)}")
 
 def plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax=None, arrow_max_num=200, arrow_alpha=0.8, plot_n_decimal=1):
     if ax is None:
