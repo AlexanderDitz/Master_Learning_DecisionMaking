@@ -72,10 +72,6 @@ plt.savefig('analysis/spice_sindy_tsne_plot.png', dpi=300)
 plt.show()
 print("✅ Plotted t-SNE of clusters. Figure saved as analysis/spice_sindy_tsne_plot.png")
 
-# Silhouette score for k=3
-score = silhouette_score(X_scaled, labels)
-print(f"Silhouette score (k=3): {score:.3f}")
-
 # Silhouette scores for k=2 to 10
 print("\nSilhouette scores for k=2 to 10:")
 for k in range(2, 11):
