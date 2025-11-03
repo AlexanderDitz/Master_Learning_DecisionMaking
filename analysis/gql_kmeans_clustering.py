@@ -41,6 +41,12 @@ unique_counts = params_with_diag.groupby(['cluster', 'diag'])['participant'].nun
 print("\nUnique participants per cluster and diagnosis:")
 print(unique_counts)
 
+# Print participant IDs for each cluster
+print("\nParticipant IDs by cluster:")
+for cluster_id in sorted(params_with_diag['cluster'].unique()):
+    ids = params_with_diag.loc[params_with_diag['cluster'] == cluster_id, 'participant'].unique()
+    print(f"Cluster {cluster_id}: {list(ids)}\n")
+
 # t-SNE for visualization
 print("Running t-SNE (this may take a minute)...")
 tsne = TSNE(n_components=2, random_state=42, perplexity=20)
