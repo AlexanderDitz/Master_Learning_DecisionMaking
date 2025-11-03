@@ -25,7 +25,7 @@ print(f"Current working directory: {os.getcwd()}")
 pd.set_option('future.no_silent_downcasting', True)
 
 # Load the participant features data
-features_path = '../data/features/participant_features.csv'
+features_path = '../data/features/real_features/real_participant_features.csv'
 df = pd.read_csv(features_path)
 print(f"Loaded data from {features_path}")
 print(f"Data shape: {df.shape}")
@@ -34,8 +34,17 @@ print(f"Data shape: {df.shape}")
 print("First 5 rows of the dataset:")
 print(df.head())
 
+# Define diagnosis order and color mapping (colorblind friendly)
+diagnosis_order = ['Healthy', 'Depression', 'Bipolar']
+diagnosis_colors = {
+'Healthy': '#2E8B57',      # Sea Green
+'Depression': '#CD5C5C',   # Indian Red  
+'Bipolar': '#4682B4'       # Steel Blue
+}
+colors_list = [diagnosis_colors[diag] for diag in diagnosis_order]
+
 # Create seaborn feature plots
-def create_seaborn_feature_plots(df):
+def create_seaborn_feature_plots(df, plot_counter):
     """Create comprehensive seaborn plots for all behavioral features by diagnosis."""
     
     # Create visualization_plots directory if it doesn't exist
@@ -44,29 +53,18 @@ def create_seaborn_feature_plots(df):
     # Set seaborn style
     sns.set_style("whitegrid")
     
-    # Define custom colors for each diagnosis - colorblind friendly
-    diagnosis_colors = {
-        'Healthy': '#2E8B57',      # Sea Green
-        'Depression': '#CD5C5C',   # Indian Red  
-        'Bipolar': '#4682B4'       # Steel Blue
-    }
-    
-    # Create a color palette list in the same order as diagnosis_order
-    colors_list = [diagnosis_colors['Healthy'], diagnosis_colors['Depression'], diagnosis_colors['Bipolar']]
-    
-    # Define features to plot (excluding participant and diagnosis columns)
-    features = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift']
+    # Define features to plot (excluding participant, diagnosis, and n_trials columns)
+    features = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
     feature_labels = {
         'choice_rate': 'Choice Rate',
         'reward_rate': 'Reward Rate', 
         'win_stay': 'Win-Stay Rate',
         'win_shift': 'Win-Shift Rate',
         'lose_stay': 'Lose-Stay Rate',
-        'lose_shift': 'Lose-Shift Rate'
+        'lose_shift': 'Lose-Shift Rate',
+        'choice_perseveration': 'Choice Perseveration',
+        'switch_rate': 'Switch Rate'
     }
-    
-    # Order diagnoses for consistent plotting
-    diagnosis_order = ['Healthy', 'Depression', 'Bipolar']
     
     print(f"\n=== Creating Seaborn Feature Plots for {len(features)} Features ===")
     
@@ -251,16 +249,13 @@ def create_seaborn_feature_plots(df):
         plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_{feature}_boxplot.png', dpi=300, bbox_inches='tight')
         plt.show()
         plot_counter += 1
+    return plot_counter
         
     print(f"\n✅ Successfully created {plot_counter-1} feature plots!")
     print(f"All plots saved to '../data/visualization_plots/'")
 
-# Call the function to create the plots
-if __name__ == "__main__":
-    create_seaborn_feature_plots(df)
-
-#%%
-def create_correlation_heatmap(df):
+# Create correlation heatmap
+def create_correlation_heatmap(df, plot_counter):
     """Create correlation heatmap of all behavioral features."""
     
     # Select only numeric features
@@ -283,12 +278,13 @@ def create_correlation_heatmap(df):
     
     plt.title('Behavioral Features Correlation Matrix', fontsize=18, fontweight='bold', pad=20)
     plt.tight_layout()
-    plt.savefig('../data/visualization_plots/07_correlation_heatmap.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_correlation_heatmap.png', dpi=300, bbox_inches='tight')
     plt.show()
+    return plot_counter + 1
     
     print("✅ Created correlation heatmap")
 
-def create_behavioral_phenotype_clusters(df):
+def create_behavioral_phenotype_clusters(df, plot_counter):
     """Create behavioral phenotype clusters and visualizations."""
     
     print("\n=== Creating Behavioral Phenotype Clusters ===")
@@ -304,64 +300,66 @@ def create_behavioral_phenotype_clusters(df):
     kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
     df['behavioral_cluster'] = kmeans.fit_predict(X_scaled)
     
-    # Define diagnosis colors
-    diagnosis_colors = {'Healthy': '#2E8B57', 'Depression': '#CD5C5C', 'Bipolar': '#4682B4'}
+    # Create visualization
+    fig, ax1 = plt.subplots(1, figsize=(12, 8))
     
-    # Create visualization with only 2 plots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-    fig.suptitle('Behavioral Cluster Analysis', fontsize=20, fontweight='bold')
-
-    # Plot 1: Win-Stay vs Lose-Shift scatter plot colored by diagnosis
+    # Plot: Win-Stay vs Lose-Shift scatter plot colored by diagnosis
     for diagnosis in df['diagnosis'].unique():
         mask = df['diagnosis'] == diagnosis
         ax1.scatter(df[mask]['win_stay'], df[mask]['lose_shift'], 
                    label=diagnosis, color=diagnosis_colors[diagnosis], 
-                   alpha=0.8, s=100, edgecolors='black', linewidth=1)
-    ax1.set_xlabel('Win-Stay Rate', fontsize=14)
-    ax1.set_ylabel('Lose-Shift Rate', fontsize=14)
-    ax1.set_title('Win-Stay vs. Lose-Shift', fontsize=16, fontweight='bold')
-    ax1.legend(title='Diagnosis', fontsize=12, title_fontsize=12, loc='lower right')
+                   alpha=0.8, s=120, edgecolors='black', linewidth=1)
+    
+    # Add quadrant labels with better positioning (move left/right further out)
+    ax1.text(1.12, 1.05, 'Theoretical Ideal', transform=ax1.transAxes, 
+             ha='center', va='center', fontsize=11, fontweight='bold',
+             bbox=dict(boxstyle="round,pad=0.4", facecolor="lightgreen", alpha=0.8))
+    ax1.text(-0.12, 1.05, 'Switching Strategy', transform=ax1.transAxes, 
+             ha='center', va='center', fontsize=11, fontweight='bold',
+             bbox=dict(boxstyle="round,pad=0.4", facecolor="lightcoral", alpha=0.8))
+    ax1.text(1.12, -0.05, 'Persistent Strategy', transform=ax1.transAxes, 
+             ha='center', va='center', fontsize=11, fontweight='bold',
+             bbox=dict(boxstyle="round,pad=0.4", facecolor="lightblue", alpha=0.8))
+    ax1.text(-0.12, -0.05, 'Less Adaptive', transform=ax1.transAxes, 
+             ha='center', va='center', fontsize=11, fontweight='bold',
+             bbox=dict(boxstyle="round,pad=0.4", facecolor="lightgray", alpha=0.8))
+    
+    ax1.set_xlabel('Win-Stay Rate', fontsize=16)
+    ax1.set_ylabel('Lose-Shift Rate', fontsize=16)
+    ax1.set_title('Behavioral Strategies: Win-Stay vs. Lose-Shift', 
+                  fontsize=14, fontweight='bold', pad=20)
+    ax1.legend(title='Diagnosis', fontsize=14, title_fontsize=14, loc='upper right',
+               frameon=True, fancybox=True, shadow=True)
     ax1.grid(True, alpha=0.3)
     
-    # Plot 2: Reward Rate vs Win-Stay scatter plot colored by diagnosis
-    for diagnosis in df['diagnosis'].unique():
-        mask = df['diagnosis'] == diagnosis
-        ax2.scatter(df[mask]['reward_rate'], df[mask]['win_stay'], 
-                   label=diagnosis, color=diagnosis_colors[diagnosis], 
-                   alpha=0.8, s=100, edgecolors='black', linewidth=1)
-    ax2.set_xlabel('Reward Rate', fontsize=14)
-    ax2.set_ylabel('Win-Stay Rate', fontsize=14)
-    ax2.set_title('Reward Rate vs. Win-Stay', fontsize=16, fontweight='bold')
-    ax2.legend(title='Diagnosis', fontsize=12, title_fontsize=12, loc='lower right')
-    ax2.grid(True, alpha=0.3)
+    # Make axes labels larger
+    ax1.tick_params(axis='both', which='major', labelsize=12)
     
     plt.tight_layout()
-    plt.savefig('../data/visualization_plots/08_behavioral_clusters.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_behavioral_clusters.png', dpi=300, bbox_inches='tight')
     plt.show()
     
     print("✅ Created behavioral phenotype clusters")
-    return df
+    return plot_counter + 1, df
 
-
-
-def create_ridge_plot(df):
-    """Create ridge/KDE plots for elegant distribution comparison."""
+def create_ridge_plot(df, plot_counter):
+    """Create ridge/KDE plots for distribution comparison."""
     
     print("\n=== Creating Ridge/KDE Plots ===")
     
     # Focus on key behavioral features
-    features = ['reward_rate', 'win_stay', 'lose_shift']
+    features = ['reward_rate', 'win_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
     feature_labels = {
         'reward_rate': 'Reward Rate', 
         'win_stay': 'Win-Stay Rate',
-        'lose_shift': 'Lose-Shift Rate'
+        'lose_shift': 'Lose-Shift Rate',
+        'choice_perseveration': 'Choice Perseveration',
+        'switch_rate': 'Switch Rate'
     }
     
-    diagnosis_colors = {'Healthy': '#2E8B57', 'Depression': '#CD5C5C', 'Bipolar': '#4682B4'}
-    
-    fig, axes = plt.subplots(3, 1, figsize=(12, 10))
-    fig.suptitle('Distribution of behavioral features', fontsize=18, fontweight='bold')
-    
+    fig, axes = plt.subplots(5, 1, figsize=(12, 10))
+    fig.suptitle('Distribution of key behavioral features', fontsize=18, fontweight='bold')
+
     for idx, feature in enumerate(features):
         ax = axes[idx]
         
@@ -377,22 +375,20 @@ def create_ridge_plot(df):
         
         ax.set_xlabel(feature_labels[feature], fontsize=12)
         ax.set_ylabel('Density', fontsize=12)
-        ax.set_title(f'{feature_labels[feature]} Distribution', fontsize=14, fontweight='bold')
         ax.legend(title='Diagnosis')
         ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('../data/visualization_plots/09_ridge_kde.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_ridge_kde.png', dpi=300, bbox_inches='tight')
     plt.show()
-    
+    return plot_counter + 1
+
     print("✅ Created ridge/KDE plots")
-
-
 
 # Call the functions to create the plots
 if __name__ == "__main__":
-    create_correlation_heatmap(df)
-    df = create_behavioral_phenotype_clusters(df)
-    
-    # Add only the ridge plots
-    create_ridge_plot(df)
+    plot_counter = 1
+    plot_counter = create_seaborn_feature_plots(df, plot_counter)
+    plot_counter = create_correlation_heatmap(df, plot_counter)
+    plot_counter, df = create_behavioral_phenotype_clusters(df, plot_counter)
+    plot_counter = create_ridge_plot(df, plot_counter)
