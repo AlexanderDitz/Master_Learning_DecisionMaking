@@ -231,22 +231,62 @@ for i, participant_id in enumerate(participant_ids):
             verbose=False,
         )[0]
         n_actions = agent[0]._n_actions if isinstance(agent, list) else agent._n_actions
+        if agent_type in ['benchmark', 'baseline']:
+            agent_obj = agent[0] if isinstance(agent, list) else agent
+            Q_vals = []
+            Q0, Q1 = np.nan, np.nan
+            # Manually simulate trials to record Q-values after each step
+            env = environment
+            # Bandits_Standard does not have reset(), so just start with obs = None
+            obs = None
+            for t in range(n_trials_this_session):
+                # 1. Get action values
+                qvals_action = agent_obj.q  # shape: (n_actions,)
+                # 2. Select action (deterministic)
+                action = int(np.argmax(qvals_action))
+                # 3. Step environment
+                reward, done = env.step(action)
+                # 4. Update agent
+                agent_obj.update(action, [reward])
+                # 5. Extract Q-values after agent update
+                qvals = agent_obj._state['x_value_reward']
+                # Debug print for first 5 trials of first session/participant
+                if i == 0 and session_idx == 0 and t < 5:
+                    print(f"Trial {t} qvals shape: {qvals.shape}, qvals: {qvals}")
+                qvals = qvals.detach().cpu().numpy()
+                qvals = qvals[0, :, 0]  # shape [2]
+                Q0, Q1 = qvals[0], qvals[1]
+                meta_rows.append([
+                    participant_id,  # use real participant id
+                    agent_type,
+                    session_idx,
+                    trial_counter + t,
+                    int(action),
+                    float(reward),
+                    Q0,
+                    Q1
+                ])
+            trial_counter += n_trials_this_session
+            continue  # skip the rest of the loop for this agent_type
         for trial_idx in range(n_trials_this_session):
             experiment = dataset.xs[0][trial_idx].cpu().numpy()
             # Print action logits/probs for the first 10 trials of the first participant/session
             if i == 0 and session_idx == 0 and trial_idx < 10:
                 print(f"Trial {trial_idx} action logits/probs: {experiment[:n_actions]}")
+            Q0, Q1 = np.nan, np.nan
             meta_rows.append([
                 participant_id,  # use real participant id
                 agent_type,
                 session_idx,
                 trial_counter,
                 int(np.argmax(experiment[:n_actions])),
-                float(np.max(experiment[n_actions:n_actions*2]))
+                float(np.max(experiment[n_actions:n_actions*2])),
+                Q0,
+                Q1
             ])
             trial_counter += 1
 
-columns = ['id', 'model_type', 'session', 'n_trials', 'choice', 'reward']
+columns = ['id', 'model_type', 'session', 'n_trials', 'choice', 'reward', 'Q0', 'Q1']
 df = pd.DataFrame(meta_rows, columns=columns)
 df.to_csv(path_save, index=False)
 
