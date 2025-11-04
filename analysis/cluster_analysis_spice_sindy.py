@@ -51,7 +51,14 @@ df['tsne1'] = X_tsne[:,0]
 df['tsne2'] = X_tsne[:,1]
 
 plt.figure(figsize=(10,7))
-palette = ["#d95f02", "#1b9e77", "#377eb8", "#7570b3", "#e7298a", "#666666"]  # 6 dark, distinct colors
+palette = [
+    "#d95f02",  # dark orange
+    "#1b9e77",  # dark green
+    "#377eb8",  # dark blue
+    "#ffd700",  # bright yellow (Gold)
+    "#e41a1c",  # bright red
+    "#e7298a"   # magenta/pink
+]
 # palette = ["#d95f02", "#1b9e77", "#377eb8"]  # dark orange, dark green, dark blue
 sns.scatterplot(
     data=df,
@@ -63,7 +70,7 @@ sns.scatterplot(
     edgecolor='black',
     linewidth=1.0
 )
-plt.title('K-means Clusters of SPICE SINDy Parameters (t-SNE projection)')
+
 plt.xlabel('t-SNE 1')
 plt.ylabel('t-SNE 2')
 plt.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
