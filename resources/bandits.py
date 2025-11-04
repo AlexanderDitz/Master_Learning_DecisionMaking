@@ -325,7 +325,7 @@ class AgentQ(Agent):
     # (Counterfactual) Reward update
     reward_update = alpha * rpe
     
-    # Forgetting - restore q-values of non-chosen actions towards the initial value
+    # Forgetting - restore q-values of non-chosen actions toward the initial value
     forget_update = self._forget_rate * (self._q_init - self._state['x_value_reward'][non_chosen_action])
 
     # Choice-Perseverance: Action-based updates
@@ -1087,6 +1087,7 @@ def create_dataset(
   parameter_list = []
   
   print('Creating dataset...')
+  q_values_all_sessions = []
   for session in tqdm(range(n_sessions)):
     if verbose:
       print(f'Running session {session+1}/{n_sessions}...')
@@ -1096,7 +1097,15 @@ def create_dataset(
     agent.new_sess(sample_parameters=sample_parameters, participant_id=session)
     experiment, choices, rewards = run_experiment(agent, environment, n_trials, session)
     experiment_list.append(experiment)
-    
+    # Q-value extraction
+    q_values = []
+    agent_for_q = deepcopy(agent)
+    agent_for_q.new_sess(sample_parameters=sample_parameters, participant_id=session)
+    for trial in range (n_trials):
+      q_values.append(agent_for_q.q.copy())
+      agent_for_q.update(choice=int(experiment.choices[trial]), reward=experiment.rewards[trial], participant_id=session)
+    q_values_all_sessions.append(np.stack(q_values))
+
     # one-hot encoding of choices
     participant_id = experiment.session[:, None]
     choices = np.eye(agent._n_actions)[choices]
@@ -1124,7 +1133,7 @@ def create_dataset(
     stride=stride,
     device=device)
   
-  return dataset, experiment_list, parameter_list
+  return dataset, experiment_list, parameter_list, q_values_all_sessions
 
 
 def get_update_dynamics(experiment: Union[np.ndarray, torch.Tensor], agent: Agent):

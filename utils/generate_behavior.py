@@ -223,16 +223,19 @@ for i, participant_id in enumerate(participant_ids):
 
         if isinstance(agent, tuple):
             agent = agent[0]
-        dataset = create_dataset(
+        dataset, _, _, q_values_all_sessions = create_dataset(
             agent=agent,
             environment=environment,
             n_trials=n_trials_this_session,
             n_sessions=1,  # Only one participant per call
             verbose=False,
-        )[0]
+        )
         n_actions = agent[0]._n_actions if isinstance(agent, list) else agent._n_actions
         for trial_idx in range(n_trials_this_session):
             experiment = dataset.xs[0][trial_idx].cpu().numpy()
+            qvals = q_values_all_sessions[0][trial_idx]  # shape: (n_actions,)
+            Q0 = qvals[0]
+            Q1 = qvals[1]
             # Print action logits/probs for the first 10 trials of the first participant/session
             if i == 0 and session_idx == 0 and trial_idx < 10:
                 print(f"Trial {trial_idx} action logits/probs: {experiment[:n_actions]}")
@@ -242,11 +245,13 @@ for i, participant_id in enumerate(participant_ids):
                 session_idx,
                 trial_counter,
                 int(np.argmax(experiment[:n_actions])),
-                float(np.max(experiment[n_actions:n_actions*2]))
+                float(np.max(experiment[n_actions:n_actions*2])),
+                Q0,
+                Q1
             ])
             trial_counter += 1
 
-columns = ['id', 'model_type', 'session', 'n_trials', 'choice', 'reward']
+columns = ['id', 'model_type', 'session', 'n_trials', 'choice', 'reward', 'Q0', 'Q1']
 df = pd.DataFrame(meta_rows, columns=columns)
 df.to_csv(path_save, index=False)
 
