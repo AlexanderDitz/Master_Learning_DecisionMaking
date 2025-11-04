@@ -24,14 +24,12 @@ if args.csv is None:
 # Load data and select participant/session
 print(f"Loading: {args.csv}")
 df = pd.read_csv(args.csv).dropna(subset=['Q0', 'Q1'])
+
+# --- Individual participant/session plot (existing code) ---
 pid = args.participant or df['id'].iloc[0]
 sid = args.session or df[df['id'] == pid]['session'].iloc[0]
 sub_df = df[(df['id'] == pid) & (df['session'] == sid)]
 Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
-
-print(f"Q0: min={Q0.min()}, max={Q0.max()}, unique={np.unique(Q0)}")
-print(f"Q1: min={Q1.min()}, max={Q1.max()}, unique={np.unique(Q1)}")
-print(f"Number of trials: {len(Q0)}")
 
 def plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax=None, arrow_max_num=200, arrow_alpha=0.8, plot_n_decimal=1):
     if ax is None:
@@ -76,5 +74,45 @@ ax.set_title(f'Q-value Vector Flow (Participant {pid}, Session {sid})')
 plt.colorbar(ax.collections[1], label='Trial', ax=ax)
 ax.grid(True)
 ax.legend()
+plt.tight_layout()
+plt.show()
+
+# --- Mean Q0/Q1 vector field across all participants and sessions ---
+print("\nPlotting mean Q-value vector field across all participants and sessions...")
+# Find the minimum number of trials across all (participant, session) pairs
+min_trials = df.groupby(['id', 'session']).size().min()
+
+# Collect Q0 and Q1 arrays for all (participant, session) pairs, truncated to min_trials
+all_Q0 = []
+all_Q1 = []
+for (pid, sid), group in df.groupby(['id', 'session']):
+    q0 = group['Q0'].values[:min_trials]
+    q1 = group['Q1'].values[:min_trials]
+    if len(q0) == min_trials and len(q1) == min_trials:
+        all_Q0.append(q0)
+        all_Q1.append(q1)
+all_Q0 = np.stack(all_Q0)
+all_Q1 = np.stack(all_Q1)
+
+mean_Q0 = all_Q0.mean(axis=0)
+mean_Q1 = all_Q1.mean(axis=0)
+
+# Compute mean vector field
+x1 = mean_Q0[:-1]
+x2 = mean_Q1[:-1]
+x1_change = mean_Q0[1:] - mean_Q0[:-1]
+x2_change = mean_Q1[1:] - mean_Q1[:-1]
+axis_min = min(np.min(mean_Q0), np.min(mean_Q1))
+axis_max = max(np.max(mean_Q0), np.max(mean_Q1))
+axis_range = (axis_min, axis_max)
+fig2, ax2 = plt.subplots(figsize=(8, 8))
+plt_2d_vector_flow(x1, x1_change, x2, x2_change, color='red', axis_range=axis_range, ax=ax2)
+ax2.scatter(mean_Q0, mean_Q1, c=range(len(mean_Q0)), cmap='plasma', s=20, label='Mean Q trajectory')
+ax2.set_xlabel('Q0 (mean)')
+ax2.set_ylabel('Q1 (mean)')
+ax2.set_title('Mean Q-value Vector Flow (All Participants/Sessions)')
+plt.colorbar(ax2.collections[1], label='Trial', ax=ax2)
+ax2.grid(True)
+ax2.legend()
 plt.tight_layout()
 plt.show()
