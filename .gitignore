@@ -25,3 +25,4 @@ analysis/participants_analysis_dezfouli
 analysis/plots_confusion_matrix
 analysis/plots_parameter_recovery
 analysis/sindy_grouped
+venv/
