@@ -32,15 +32,15 @@ participant_ids = list(dataset.keys())
 n_cells = agent_rnn._model.n_cells if hasattr(agent_rnn._model, 'n_cells') else 32
 n_actions = agent_rnn._model.n_actions if hasattr(agent_rnn._model, 'n_actions') else 2
 
-rows = []
+rows_participant = []
+rows_per_trial = []
+
+pid_map = {p: i for i, p in enumerate(participant_ids)}
 for pid in participant_ids:
     participant_data = dataset[pid]
     try:
-        # One-hot encode choices
         choices = participant_data['choice'].astype(int).to_numpy()
-        choice_onehot = np.eye(n_actions)[choices]  # shape: (seq_len, n_actions)
-
-        # Build reward matrix
+        choice_onehot = np.eye(n_actions)[choices]
         if f'reward_0' in participant_data.columns and f'reward_1' in participant_data.columns:
             reward_vec = participant_data[[f'reward_0', f'reward_1']].to_numpy()
         else:
@@ -48,30 +48,43 @@ for pid in participant_ids:
             reward_vec = np.full((len(rewards), n_actions), -1, dtype=np.float32)
             for i, (ch, r) in enumerate(zip(choices, rewards)):
                 reward_vec[i, ch] = r
-
-        # Add participant index as feature (repeat for all timesteps)
-        participant_idx = np.full((len(choices), 1), int(pid), dtype=np.float32) if pid.isdigit() else np.zeros((len(choices), 1), dtype=np.float32)
-        # If pid is not numeric, you may need a mapping from pid to index
-        # For now, use a simple mapping:
-        pid_map = {p: i for i, p in enumerate(participant_ids)}
         participant_idx = np.full((len(choices), 1), pid_map[pid], dtype=np.float32)
+        inputs_np = np.hstack([choice_onehot, reward_vec, participant_idx])
+        inputs = torch.tensor(inputs_np, dtype=torch.float32).unsqueeze(1)
 
-        # Stack to get RNN input
-        inputs_np = np.hstack([choice_onehot, reward_vec, participant_idx])  # shape: (seq_len, n_actions*2+1)
-        inputs = torch.tensor(inputs_np, dtype=torch.float32).unsqueeze(1)  # shape: (seq_len, 1, features)
+        # Per-trial extraction
+        prev_state = None
+        for t in range(len(choices)):
+            input_t = inputs[t:t+1]
+            logits, state = agent_rnn._model(input_t, prev_state=prev_state, batch_first=False)
+            prev_state = state
+            hidden_vec = state['x_value_reward'].cpu().detach().numpy().flatten()
+            row_trial = {
+                'participant': pid,
+                'trial': t,
+                'h_0': hidden_vec[0],
+                'h_1': hidden_vec[1],
+                'choice': choices[t],
+                'reward': rewards[t]
+            }
+            rows_per_trial.append(row_trial)
 
-        # Initial hidden state (None for your RNN)
-        logits, state = agent_rnn._model(inputs, prev_state=None, batch_first=False)
-        # Extract hidden state vector (state is a dict)
-        hidden_vec = state['x_value_reward'].cpu().detach().numpy().flatten()
+        # Per-participant extraction (final hidden state)
+        # You can use the last hidden_vec from the loop above
+        row_participant = {f"h_{i}": val for i, val in enumerate(hidden_vec)}
+        row_participant['participant'] = pid
+        rows_participant.append(row_participant)
+
     except Exception as e:
         print(f"Error extracting hidden state for participant {pid}: {e}")
-        hidden_vec = np.full(n_cells, np.nan)
-    row = {f"h_{i}": val for i, val in enumerate(hidden_vec)}
-    row['participant'] = pid
-    rows.append(row)
 
-hidden_df = pd.DataFrame(rows)
+# Save per-participant hidden states
+hidden_df = pd.DataFrame(rows_participant)
 hidden_df = hidden_df.set_index('participant')
 hidden_df.to_csv("rnn_hidden_states.csv")
-print("✅ Saved RNN hidden states for all participants to rnn_hidden_states.csv")
+print("✅ Saved RNN hidden states for clustering to rnn_hidden_states.csv")
+
+# Save per-trial hidden states
+hidden_trial_df = pd.DataFrame(rows_per_trial)
+hidden_trial_df.to_csv("rnn_hidden_states_per_trial.csv", index=False)
+print("✅ Saved per-trial RNN hidden states for vector field analysis to rnn_hidden_states_per_trial.csv")
