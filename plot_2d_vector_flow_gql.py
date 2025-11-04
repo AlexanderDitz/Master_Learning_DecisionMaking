@@ -21,16 +21,6 @@ if args.csv is None:
     if args.csv is None:
         raise FileNotFoundError('Could not find a benchmark synthetic data CSV file.')
 
-# Load data and select participant/session
-print(f"Loading: {args.csv}")
-df = pd.read_csv(args.csv).dropna(subset=['Q0', 'Q1'])
-
-# --- Individual participant/session plot (existing code) ---
-pid = args.participant or df['id'].iloc[0]
-sid = args.session or df[df['id'] == pid]['session'].iloc[0]
-sub_df = df[(df['id'] == pid) & (df['session'] == sid)]
-Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
-
 def plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax=None, arrow_max_num=200, arrow_alpha=0.8, plot_n_decimal=1):
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 8))
@@ -56,6 +46,77 @@ def plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax=None,
     ax.set_yticklabels(ticklabels)
     ax.set_aspect('equal')
     return ax
+
+def plot_generalized_q_vector_field_subplot(alpha=0.1, qmin=-1, qmax=1, grid_points=20):
+    fig, axes = plt.subplots(2, 2, figsize=(14, 12), sharex=True, sharey=True)
+    params = [
+        (1, 0, 'Reward=1, Action=0'),
+        (0, 0, 'Reward=0, Action=0'),
+        (1, 1, 'Reward=1, Action=1'),
+        (0, 1, 'Reward=0, Action=1'),
+    ]
+    for ax, (reward, action, title) in zip(axes.flat, params):
+        Q0_grid, Q1_grid = np.meshgrid(
+            np.linspace(qmin, qmax, grid_points),
+            np.linspace(qmin, qmax, grid_points)
+        )
+        Q0_flat = Q0_grid.flatten()
+        Q1_flat = Q1_grid.flatten()
+        Q0_new = Q0_flat.copy()
+        Q1_new = Q1_flat.copy()
+        if action == 0:
+            Q0_new += alpha * (reward - Q0_flat)
+        else:
+            Q1_new += alpha * (reward - Q1_flat)
+        dQ0 = Q0_new - Q0_flat
+        dQ1 = Q1_new - Q1_flat
+        ax.quiver(Q0_flat, Q1_flat, dQ0, dQ1, angles='xy', scale_units='xy', scale=1, color='purple', alpha=0.7)
+        ax.set_title(title)
+        ax.set_xlabel('Q0')
+        ax.set_ylabel('Q1')
+        ax.set_xlim([qmin, qmax])
+        ax.set_ylim([qmin, qmax])
+        ax.grid(True)
+    plt.suptitle(f'Generalized Q-learning Vector Fields (alpha={alpha})', fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+# Load data and select participant/session
+print(f"Loading: {args.csv}")
+df = pd.read_csv(args.csv).dropna(subset=['Q0', 'Q1'])
+
+# --- Individual participant/session plot (existing code) ---
+pid = args.participant or df['id'].iloc[0]
+sid = args.session or df[df['id'] == pid]['session'].iloc[0]
+sub_df = df[(df['id'] == pid) & (df['session'] == sid)]
+Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+
+# Assume your DataFrame has a 'reward' column (1 for rewarded, 0 for unrewarded)
+rewarded = sub_df['reward'].values.astype(int)
+Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+
+# Compute changes
+Q0_change = Q0[1:] - Q0[:-1]
+Q1_change = Q1[1:] - Q1[:-1]
+rewarded = rewarded[:-1]  # Align with change arrays
+
+# Split indices
+idx_rewarded = rewarded == 1
+idx_unrewarded = rewarded == 0
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True, sharey=True)
+for ax, idx, label, color in zip(
+    axes, [idx_rewarded, idx_unrewarded], ['Rewarded', 'Unrewarded'], ['green', 'red']):
+    plt_2d_vector_flow(Q0[:-1][idx], Q0_change[idx], Q1[:-1][idx], Q1_change[idx], color=color,
+                       axis_range=(min(Q0.min(), Q1.min()), max(Q0.max(), Q1.max())), ax=ax)
+    ax.scatter(Q0[:-1][idx], Q1[:-1][idx], c=np.arange(np.sum(idx)), cmap='viridis', s=20, label=f'{label} Q trajectory')
+    ax.set_title(f'Q-value Vector Flow ({label} Trials)')
+    ax.set_xlabel('Q0')
+    ax.set_ylabel('Q1')
+    ax.legend()
+plt.tight_layout()
+plt.show()
 
 # Compute vector field for Q0/Q1
 x1 = Q0[:-1]
@@ -116,3 +177,6 @@ ax2.grid(True)
 ax2.legend()
 plt.tight_layout()
 plt.show()
+
+# Plot the generalized vector field with all possible action/reward combinations
+plot_generalized_q_vector_field_subplot(alpha=0.1)
