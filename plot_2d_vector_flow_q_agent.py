@@ -110,3 +110,60 @@ ax2.grid(True)
 ax2.legend()
 plt.tight_layout()
 plt.show()
+
+# --- Rewarded/Unrewarded vector field plots ---
+rewarded = sub_df['reward'].values.astype(int)
+Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+Q0_change = Q0[1:] - Q0[:-1]
+Q1_change = Q1[1:] - Q1[:-1]
+rewarded = rewarded[:-1]  # Align with change arrays
+idx_rewarded = rewarded == 1
+idx_unrewarded = rewarded == 0
+fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True, sharey=True)
+for ax, idx, label, color in zip(
+    axes, [idx_rewarded, idx_unrewarded], ['Rewarded', 'Unrewarded'], ['green', 'red']):
+    plt_2d_vector_flow(Q0[:-1][idx], Q0_change[idx], Q1[:-1][idx], Q1_change[idx], color=color,
+                       axis_range=(min(Q0.min(), Q1.min()), max(Q0.max(), Q1.max())), ax=ax)
+    ax.scatter(Q0[:-1][idx], Q1[:-1][idx], c=np.arange(np.sum(idx)), cmap='viridis', s=20, label=f'{label} Q trajectory')
+    ax.set_title(f'Q-value Vector Flow ({label} Trials)')
+    ax.set_xlabel('Q0')
+    ax.set_ylabel('Q1')
+    ax.legend()
+plt.tight_layout()
+plt.show()
+
+def plot_generalized_q_vector_field_subplot(alpha=0.1, qmin=-1, qmax=1, grid_points=20):
+    fig, axes = plt.subplots(2, 2, figsize=(14, 12), sharex=True, sharey=True)
+    params = [
+        (1, 0, 'Reward=1, Action=0'),
+        (0, 0, 'Reward=0, Action=0'),
+        (1, 1, 'Reward=1, Action=1'),
+        (0, 1, 'Reward=0, Action=1'),
+    ]
+    for ax, (reward, action, title) in zip(axes.flat, params):
+        Q0_grid, Q1_grid = np.meshgrid(
+            np.linspace(qmin, qmax, grid_points),
+            np.linspace(qmin, qmax, grid_points)
+        )
+        Q0_flat = Q0_grid.flatten()
+        Q1_flat = Q1_grid.flatten()
+        Q0_new = Q0_flat.copy()
+        Q1_new = Q1_flat.copy()
+        if action == 0:
+            Q0_new += alpha * (reward - Q0_flat)
+        else:
+            Q1_new += alpha * (reward - Q1_flat)
+        dQ0 = Q0_new - Q0_flat
+        dQ1 = Q1_new - Q1_flat
+        ax.quiver(Q0_flat, Q1_flat, dQ0, dQ1, angles='xy', scale_units='xy', scale=1, color='purple', alpha=0.7)
+        ax.set_title(title)
+        ax.set_xlabel('Q0')
+        ax.set_ylabel('Q1')
+        ax.set_xlim([qmin, qmax])
+        ax.set_ylim([qmin, qmax])
+        ax.grid(True)
+    plt.suptitle(f'Generalized Q-learning Vector Fields (alpha={alpha})', fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+plot_generalized_q_vector_field_subplot(alpha=0.1)
