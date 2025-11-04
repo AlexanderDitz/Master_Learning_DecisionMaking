@@ -110,3 +110,24 @@ ax2.grid(True)
 ax2.legend()
 plt.tight_layout()
 plt.show()
+
+# --- Rewarded/Unrewarded vector field plots ---
+rewarded = sub_df['reward'].values.astype(int)
+Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+Q0_change = Q0[1:] - Q0[:-1]
+Q1_change = Q1[1:] - Q1[:-1]
+rewarded = rewarded[:-1]  # Align with change arrays
+idx_rewarded = rewarded == 1
+idx_unrewarded = rewarded == 0
+fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True, sharey=True)
+for ax, idx, label, color in zip(
+    axes, [idx_rewarded, idx_unrewarded], ['Rewarded', 'Unrewarded'], ['green', 'red']):
+    plt_2d_vector_flow(Q0[:-1][idx], Q0_change[idx], Q1[:-1][idx], Q1_change[idx], color=color,
+                       axis_range=(min(Q0.min(), Q1.min()), max(Q0.max(), Q1.max())), ax=ax)
+    ax.scatter(Q0[:-1][idx], Q1[:-1][idx], c=np.arange(np.sum(idx)), cmap='viridis', s=20, label=f'{label} Q trajectory')
+    ax.set_title(f'Q-value Vector Flow ({label} Trials)')
+    ax.set_xlabel('Q0')
+    ax.set_ylabel('Q1')
+    ax.legend()
+plt.tight_layout()
+plt.show()
