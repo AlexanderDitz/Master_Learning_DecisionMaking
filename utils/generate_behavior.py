@@ -17,6 +17,11 @@ from resources.sindy_utils import SindyConfig, SindyConfig_eckstein2022, SindyCo
 from benchmarking import benchmarking_dezfouli2019, benchmarking_eckstein2022
 
 import argparse
+import random
+
+np.random.seed(42)
+torch.manual_seed(42)
+random.seed(42)
 
 # ----------------------- ARGUMENT PARSING ----------------------------
 parser = argparse.ArgumentParser(description='Generate synthetic behavior for a given agent type.')
