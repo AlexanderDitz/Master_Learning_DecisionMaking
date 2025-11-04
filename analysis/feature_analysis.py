@@ -34,6 +34,9 @@ print(f"Data shape: {df.shape}")
 print("First 5 rows of the dataset:")
 print(df.head())
 
+# Define plot counter
+plot_counter = 1
+
 # Define diagnosis order and color mapping (colorblind friendly)
 diagnosis_order = ['Healthy', 'Depression', 'Bipolar']
 diagnosis_colors = {
@@ -43,33 +46,33 @@ diagnosis_colors = {
 }
 colors_list = [diagnosis_colors[diag] for diag in diagnosis_order]
 
+# Define features and labels globally
+features = [
+    'choice_rate', 'reward_rate', 'win_stay', 'win_shift',
+    'lose_stay', 'lose_shift', 'choice_perseveration', 'switch_rate'
+]
+feature_labels = {
+    'choice_rate': 'Choice Rate',
+    'reward_rate': 'Reward Rate', 
+    'win_stay': 'Win-Stay Rate',
+    'win_shift': 'Win-Shift Rate',
+    'lose_stay': 'Lose-Stay Rate',
+    'lose_shift': 'Lose-Shift Rate',
+    'choice_perseveration': 'Choice Perseveration',
+    'switch_rate': 'Switch Rate'
+}
+
+# Create visualization_plots directory if it doesn't exist
+os.makedirs('../data/visualization_plots', exist_ok=True)
+    
+# Set seaborn style
+sns.set_style("whitegrid")
+
 # Create seaborn feature plots
 def create_seaborn_feature_plots(df, plot_counter):
     """Create comprehensive seaborn plots for all behavioral features by diagnosis."""
     
-    # Create visualization_plots directory if it doesn't exist
-    os.makedirs('../data/visualization_plots', exist_ok=True)
-    
-    # Set seaborn style
-    sns.set_style("whitegrid")
-    
-    # Define features to plot (excluding participant, diagnosis, and n_trials columns)
-    features = ['choice_rate', 'reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
-    feature_labels = {
-        'choice_rate': 'Choice Rate',
-        'reward_rate': 'Reward Rate', 
-        'win_stay': 'Win-Stay Rate',
-        'win_shift': 'Win-Shift Rate',
-        'lose_stay': 'Lose-Stay Rate',
-        'lose_shift': 'Lose-Shift Rate',
-        'choice_perseveration': 'Choice Perseveration',
-        'switch_rate': 'Switch Rate'
-    }
-    
     print(f"\n=== Creating Seaborn Feature Plots for {len(features)} Features ===")
-    
-    plot_counter = 1
-    
     for feature in features:
         print(f"Creating plots for {feature_labels[feature]}...")
         
@@ -229,6 +232,32 @@ def create_seaborn_feature_plots(df, plot_counter):
     print(f"\n✅ Successfully created {plot_counter-1} feature plots!")
     print(f"All plots saved to '../data/visualization_plots/'")
 
+def create_combined_feature_subplots(df, plot_counter):
+    """Create a combined figure with subplots for all behavioral features by diagnosis."""
+    n_features = len(features)
+    n_cols = 2
+    n_rows = int(np.ceil(n_features / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(14, 4 * n_rows), sharey=False)
+    axes = axes.flatten()
+
+    for idx, feature in enumerate(features):
+        ax = axes[idx]
+        sns.boxplot(data=df, x='diagnosis', y=feature, order=diagnosis_order, palette=colors_list, ax=ax, showfliers=False)
+        for i, diagnosis in enumerate(diagnosis_order):
+            group_data = df[df['diagnosis'] == diagnosis][feature]
+            x_pos = i
+            x_positions = np.random.normal(x_pos, 0.08, size=len(group_data))
+            ax.scatter(x_positions, group_data, color=colors_list[i], alpha=0.7, s=15, edgecolor='white', linewidth=0.5, zorder=10)
+        ax.set_xlabel('')
+        ax.set_ylabel(feature_labels[feature], fontsize=12)
+        ax.grid(True, alpha=0.3)
+        ax.set_xticklabels(diagnosis_order, fontsize=10)
+    
+    plt.tight_layout(rect=[0, 0, 0.97, 0.97])
+    plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_combined_feature_boxplots.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    return plot_counter + 1
+
 # Create correlation heatmap
 def create_correlation_heatmap(df, plot_counter):
     """Create correlation heatmap of all behavioral features."""
@@ -361,6 +390,7 @@ def create_ridge_plot(df, plot_counter):
 if __name__ == "__main__":
     plot_counter = 1
     plot_counter = create_seaborn_feature_plots(df, plot_counter)
+    plot_counter = create_combined_feature_subplots(df, plot_counter)
     plot_counter = create_correlation_heatmap(df, plot_counter)
     plot_counter, df = create_behavioral_phenotype_clusters(df, plot_counter)
     plot_counter = create_ridge_plot(df, plot_counter)
