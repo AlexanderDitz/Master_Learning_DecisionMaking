@@ -192,9 +192,7 @@ def create_seaborn_feature_plots(df, plot_counter):
         else:
             plt.ylim(y_min - 0.05 * y_range, y_max + 0.05 * y_range)
         
-        # Add title and axis labels
-        plt.title(f'{feature_labels[feature]}', 
-                 fontsize=16, fontweight='bold', pad=20)
+        # Add axis labels
         plt.xlabel('Diagnosis', fontsize=14, labelpad=40)  # Increased labelpad for sample size annotations
         plt.ylabel(feature_labels[feature], fontsize=14)
         
@@ -207,19 +205,7 @@ def create_seaborn_feature_plots(df, plot_counter):
         plt.xticks(range(len(diagnosis_order)), x_labels, fontsize=12)
         plt.yticks(fontsize=12)
         
-        # Create two separate legends
-        
-        # Legend 1: Diagnosis colors
-        color_legend_elements = [
-            plt.Line2D([0], [0], color=diagnosis_colors['Healthy'], linewidth=0, 
-                      marker='s', markersize=10, label='Healthy'),
-            plt.Line2D([0], [0], color=diagnosis_colors['Depression'], linewidth=0, 
-                      marker='s', markersize=10, label='Depression'),
-            plt.Line2D([0], [0], color=diagnosis_colors['Bipolar'], linewidth=0, 
-                      marker='s', markersize=10, label='Bipolar')
-        ]
-        
-        # Legend 2: Statistical significance
+        # Legend: Statistical significance
         significance_legend_elements = [
             plt.Line2D([0], [0], color='white', markerfacecolor='white', marker='', 
                       markersize=0, label='Statistical Significance:'),
@@ -230,20 +216,9 @@ def create_seaborn_feature_plots(df, plot_counter):
             plt.Line2D([0], [0], color='white', markerfacecolor='white', marker='', 
                       markersize=0, label='* p < 0.05')
         ]
-        
-        # Add color legend (positioned outside plot area)
-        color_legend = plt.legend(handles=color_legend_elements, 
-                                bbox_to_anchor=(1.02, 1), loc='upper left', 
-                                fontsize=11, frameon=True, fancybox=True, shadow=True,
-                                title='Diagnosis Groups', title_fontsize=12)
-        
-        # Add significance legend (positioned below color legend)
-        significance_legend = plt.legend(handles=significance_legend_elements, 
-                                       bbox_to_anchor=(1.02, 0.65), loc='upper left', 
-                                       fontsize=10, frameon=True, fancybox=True, shadow=True)
-        
-        # Add the color legend back (matplotlib only shows the last legend by default)
-        plt.gca().add_artist(color_legend)
+
+       # Add the significance legend, positioned in the top right corner outside the plot area
+        plt.legend(handles=significance_legend_elements, bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10, frameon=True, fancybox=True, shadow=True)
         
         plt.tight_layout()
         plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_{feature}_boxplot.png', dpi=300, bbox_inches='tight')
@@ -276,7 +251,6 @@ def create_correlation_heatmap(df, plot_counter):
                 cbar_kws={"shrink": .8},
                 fmt='.3f')
     
-    plt.title('Behavioral Features Correlation Matrix', fontsize=18, fontweight='bold', pad=20)
     plt.tight_layout()
     plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_correlation_heatmap.png', dpi=300, bbox_inches='tight')
     plt.show()
@@ -326,8 +300,6 @@ def create_behavioral_phenotype_clusters(df, plot_counter):
     
     ax1.set_xlabel('Win-Stay Rate', fontsize=16)
     ax1.set_ylabel('Lose-Shift Rate', fontsize=16)
-    ax1.set_title('Behavioral Strategies: Win-Stay vs. Lose-Shift', 
-                  fontsize=14, fontweight='bold', pad=20)
     ax1.legend(title='Diagnosis', fontsize=14, title_fontsize=14, loc='upper right',
                frameon=True, fancybox=True, shadow=True)
     ax1.grid(True, alpha=0.3)
@@ -348,17 +320,14 @@ def create_ridge_plot(df, plot_counter):
     print("\n=== Creating Ridge/KDE Plots ===")
     
     # Focus on key behavioral features
-    features = ['reward_rate', 'win_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
+    features = ['reward_rate', 'choice_perseveration', 'switch_rate']
     feature_labels = {
         'reward_rate': 'Reward Rate', 
-        'win_stay': 'Win-Stay Rate',
-        'lose_shift': 'Lose-Shift Rate',
         'choice_perseveration': 'Choice Perseveration',
         'switch_rate': 'Switch Rate'
     }
-    
-    fig, axes = plt.subplots(5, 1, figsize=(12, 10))
-    fig.suptitle('Distribution of key behavioral features', fontsize=18, fontweight='bold')
+
+    fig, axes = plt.subplots(len(features), 1, figsize=(12, 10))
 
     for idx, feature in enumerate(features):
         ax = axes[idx]
@@ -368,17 +337,20 @@ def create_ridge_plot(df, plot_counter):
         for i, diagnosis in enumerate(['Healthy', 'Depression', 'Bipolar']):
             data = df[df['diagnosis'] == diagnosis][feature]
             sample_size = len(data)
-            
             # Create KDE
             sns.kdeplot(data=data, ax=ax, label=f'{diagnosis} (n={sample_size})', 
                        color=diagnosis_colors[diagnosis], fill=True, alpha=0.6, linewidth=2)
-        
         ax.set_xlabel(feature_labels[feature], fontsize=12)
         ax.set_ylabel('Density', fontsize=12)
-        ax.legend(title='Diagnosis')
         ax.grid(True, alpha=0.3)
+        # Fix x-axis limits for choice_perseveration and switch_rate
+        if feature in ['choice_perseveration', 'switch_rate']:
+            ax.set_xlim(0, 1)
     
-    plt.tight_layout()
+    # # Only add legend to the first axis, outside the plot area
+    axes[0].legend(title='Diagnosis', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=12)
+
+    plt.tight_layout(rect=[0, 0, 1, 1])  # Adjust right to make space for legend
     plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_ridge_kde.png', dpi=300, bbox_inches='tight')
     plt.show()
     return plot_counter + 1
