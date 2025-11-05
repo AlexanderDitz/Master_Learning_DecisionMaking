@@ -17,7 +17,7 @@ from utils.model_loading_utils import load_lstm_model, load_dezfouli_dataset
 # Set up paths
 base_params = "params/dezfouli2019"
 lstm_path = os.path.join(base_params, "lstm_dezfouli2019.pkl")
-synthetic_data_path = "data/synthetic_data/dezfouli2019_generated_behavior_rnn_l2_0_001.csv"
+synthetic_data_path = "data/synthetic_data/dezfouli2019_generated_behavior_lstm.csv"
 
 print("Loading LSTM model from:", lstm_path)
 agent_lstm = load_lstm_model(lstm_path, deterministic=False)
