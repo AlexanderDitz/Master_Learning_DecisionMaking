@@ -1,42 +1,36 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import polars as pl
+import pandas as pd
 
 # Set file paths directly
-synthetic_data_path = 'data/synthetic_data/dezfouli2019_generated_behavior_rnn_l2_0_001.csv'
-hidden_states_per_trial_path = 'rnn_hidden_states_per_trial.csv'
+hidden_states_per_trial_path = 'lstm_synthetic_data_hidden_states_per_trial.csv'
 
 # Define columns to load
-cols_needed_synthetic = ['id', 'session', 'choice', 'reward']
-cols_needed_hidden = ['participant', 'h_0', 'h_1']
+cols_needed_hidden = ['participant', 'session', 'h_0', 'h_1', 'choice', 'reward']
 
-# Load data with Polars
-print(f"Loading: {synthetic_data_path}")
-df = pl.read_csv(synthetic_data_path).select(cols_needed_synthetic)
+# Load data
 print(f"Loading: {hidden_states_per_trial_path}")
-hidden_df = pl.read_csv(hidden_states_per_trial_path).select(cols_needed_hidden)
-
-# Rename 'participant' to 'id' for merging
-if 'participant' in hidden_df.columns:
-    hidden_df = hidden_df.rename({'participant': 'id'})
-
-# Merge on 'id'
-merged = df.join(hidden_df, on='id')
-sub_df = merged
+hidden_df = pd.read_csv(hidden_states_per_trial_path, usecols=cols_needed_hidden)
 
 # Extract columns as numpy arrays
-h0 = sub_df['h_0'].to_numpy()
-h1 = sub_df['h_1'].to_numpy()
-choice = sub_df['choice'].to_numpy()
-reward = sub_df['reward'].to_numpy()
-n_trials = len(sub_df)
+h0 = hidden_df['h_0'].to_numpy()
+h1 = hidden_df['h_1'].to_numpy()
+choice = hidden_df['choice'].to_numpy()
+reward = hidden_df['reward'].to_numpy()
+
+# Downsample by taking every n-th trial
+step = 5
+h0 = h0[::step]
+h1 = h1[::step]
+choice = choice[::step]
+reward = reward[::step]
 
 # Compute state changes
 h0_change = h0[1:] - h0[:-1]
 h1_change = h1[1:] - h1[:-1]
 
 # --- Grid-based vector field computation (GQL-style, optimized) ---
-n_grid = 10
+n_grid = 8
 radius = 0.1
 
 h0_points = h0[:-1]
@@ -66,22 +60,13 @@ for k, (g0, g1) in enumerate(grid_points):
         U.ravel()[k] = 0
         V.ravel()[k] = 0
 
-# Plot overall vector field
-plt.figure(figsize=(8, 8))
-plt.quiver(H0, H1, U, V, color='black')
-plt.xlabel('h0')
-plt.ylabel('h1')
-plt.title('Overall RNN Vector Field')
-plt.tight_layout()
-plt.show()
-
 # --- Trial-type split vector field plots ---
 def extract_value_changes(output, value_type=0):
     x = output[:, value_type]
     x_change = x[1:] - x[:-1]
     return x[:-1], x_change
 
-def plt_2d_vector_field_rnn(h0, h1, choice, reward, plot_n_decimal=1):
+def plt_2d_vector_field_lstm(h0, h1, choice, reward, plot_n_decimal=1):
     if choice is None or reward is None:
         print('Error: choice or reward is None. Cannot split by trial type.')
         return
@@ -102,7 +87,7 @@ def plt_2d_vector_field_rnn(h0, h1, choice, reward, plot_n_decimal=1):
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
     axes = axes.flatten()
 
-    max_arrows = 100  # Maximum number of arrows to plot per subplot
+    max_arrows = 10  # Maximum number of arrows to plot per subplot
 
     for trial_type in range(4):
         idx = trial_types == trial_type
@@ -148,4 +133,4 @@ def plt_2d_vector_field_rnn(h0, h1, choice, reward, plot_n_decimal=1):
     plt.show()
 
 # Usage example (after extracting h0, h1, choice, reward):
-plt_2d_vector_field_rnn(h0, h1, choice, reward)
+plt_2d_vector_field_lstm(h0, h1, choice, reward)
