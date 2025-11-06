@@ -1,133 +1,151 @@
-import pandas as pd
 import matplotlib.pyplot as plt
-import argparse
-import os
 import numpy as np
+import polars as pl
 
-parser = argparse.ArgumentParser(description='Plot 2D vector flow of Q-values for RNN agent.')
-parser.add_argument('--csv', type=str, required=False, default=None,
-                    help='Path to the generated_behavior_rnn_l2_0_001.csv file')
-parser.add_argument('--participant', type=str, required=False, default=None,
-                    help='Participant ID to plot (default: first)')
-parser.add_argument('--session', type=int, required=False, default=None,
-                    help='Session index to plot (default: first)')
-args = parser.parse_args()
+# Set file paths directly
+synthetic_data_path = 'data/synthetic_data/dezfouli2019_generated_behavior_rnn_l2_0_001.csv'
+hidden_states_per_trial_path = 'rnn_hidden_states_per_trial.csv'
 
-# Auto-detect file if not provided
-if args.csv is None:
-    synthetic_dir = os.path.join('data', 'synthetic_data')
-    args.csv = next((os.path.join(synthetic_dir, f) for f in os.listdir(synthetic_dir)
-                     if 'rnn' in f and f.endswith('.csv')), None)
-    if args.csv is None:
-        raise FileNotFoundError('Could not find a rnn synthetic data CSV file.')
+# Define columns to load
+cols_needed_synthetic = ['id', 'session', 'choice', 'reward']
+cols_needed_hidden = ['participant', 'h_0', 'h_1']
 
-# Load data and select participant/session
-print(f"Loading: {args.csv}")
-df = pd.read_csv(args.csv).dropna(subset=['Q0', 'Q1'])
+# Load data with Polars
+print(f"Loading: {synthetic_data_path}")
+df = pl.read_csv(synthetic_data_path).select(cols_needed_synthetic)
+print(f"Loading: {hidden_states_per_trial_path}")
+hidden_df = pl.read_csv(hidden_states_per_trial_path).select(cols_needed_hidden)
 
-# --- Individual participant/session plot ---
-pid = args.participant or df['id'].iloc[0]
-sid = args.session or df[df['id'] == pid]['session'].iloc[0]
-sub_df = df[(df['id'] == pid) & (df['session'] == sid)]
-Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+# Rename 'participant' to 'id' for merging
+if 'participant' in hidden_df.columns:
+    hidden_df = hidden_df.rename({'participant': 'id'})
 
-def plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax=None, arrow_max_num=200, arrow_alpha=0.8, plot_n_decimal=1):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 8))
-    if len(x1) > arrow_max_num:
-        idx = np.random.choice(len(x1), arrow_max_num, replace=False)
-        x1, x1_change, x2, x2_change = x1[idx], x1_change[idx], x2[idx], x2_change[idx]
-    ax.quiver(x1, x2, x1_change, x2_change, color=color,
-              angles='xy', scale_units='xy', scale=1, alpha=arrow_alpha, width=0.004, headwidth=10, headlength=10)
-    axis_min, axis_max = axis_range
-    if axis_min < 0 < axis_max:
-        axis_abs_max = max(abs(axis_min), abs(axis_max))
-        axis_min, axis_max = -axis_abs_max, axis_abs_max
-        ticks = [axis_min, 0, axis_max]
-        ticklabels = [np.round(axis_min, plot_n_decimal), 0, np.round(axis_max, plot_n_decimal)]
+# Merge on 'id'
+merged = df.join(hidden_df, on='id')
+sub_df = merged
+
+# Extract columns as numpy arrays
+h0 = sub_df['h_0'].to_numpy()
+h1 = sub_df['h_1'].to_numpy()
+choice = sub_df['choice'].to_numpy()
+reward = sub_df['reward'].to_numpy()
+n_trials = len(sub_df)
+
+# Compute state changes
+h0_change = h0[1:] - h0[:-1]
+h1_change = h1[1:] - h1[:-1]
+
+# --- Grid-based vector field computation (GQL-style, optimized) ---
+n_grid = 10
+radius = 0.1
+
+h0_points = h0[:-1]
+h1_points = h1[:-1]
+h0_changes = h0_change
+h1_changes = h1_change
+
+h0_min, h0_max = np.min(h0), np.max(h0)
+h1_min, h1_max = np.min(h1), np.max(h1)
+h0_grid = np.linspace(h0_min, h0_max, n_grid)
+h1_grid = np.linspace(h1_min, h1_max, n_grid)
+H0, H1 = np.meshgrid(h0_grid, h1_grid)
+U = np.zeros_like(H0)
+V = np.zeros_like(H1)
+
+# Vectorized computation over grid points
+grid_points = np.stack([H0.ravel(), H1.ravel()], axis=1)
+data_points = np.stack([h0_points, h1_points], axis=1)
+
+for k, (g0, g1) in enumerate(grid_points):
+    dist = np.sqrt((data_points[:, 0] - g0)**2 + (data_points[:, 1] - g1)**2)
+    idx = dist < radius
+    if np.any(idx):
+        U.ravel()[k] = np.mean(h0_changes[idx])
+        V.ravel()[k] = np.mean(h1_changes[idx])
     else:
-        ticks = [axis_min, axis_max]
-        ticklabels = [np.round(axis_min, plot_n_decimal), np.round(axis_max, plot_n_decimal)]
-    ax.set_xlim([axis_min, axis_max])
-    ax.set_ylim([axis_min, axis_max])
-    ax.set_xticks(ticks)
-    ax.set_yticks(ticks)
-    ax.set_xticklabels(ticklabels)
-    ax.set_yticklabels(ticklabels)
-    ax.set_aspect('equal')
-    return ax
+        U.ravel()[k] = 0
+        V.ravel()[k] = 0
 
-# Compute vector field for Q0/Q1
-x1 = Q0[:-1]
-x2 = Q1[:-1]
-x1_change = Q0[1:] - Q0[:-1]
-x2_change = Q1[1:] - Q1[:-1]
-axis_min = min(np.min(Q0), np.min(Q1))
-axis_max = max(np.max(Q0), np.max(Q1))
-axis_range = (axis_min, axis_max)
-fig, ax = plt.subplots(figsize=(8, 8))
-plt_2d_vector_flow(x1, x1_change, x2, x2_change, color='blue', axis_range=axis_range, ax=ax)
-ax.scatter(Q0, Q1, c=range(len(Q0)), cmap='viridis', s=20, label='Q trajectory')
-ax.set_xlabel('Q0')
-ax.set_ylabel('Q1')
-ax.set_title(f'Q-value Vector Flow (Participant {pid}, Session {sid})')
-plt.colorbar(ax.collections[1], label='Trial', ax=ax)
-ax.grid(True)
-ax.legend()
+# Plot overall vector field
+plt.figure(figsize=(8, 8))
+plt.quiver(H0, H1, U, V, color='black')
+plt.xlabel('h0')
+plt.ylabel('h1')
+plt.title('Overall RNN Vector Field')
 plt.tight_layout()
 plt.show()
 
-# --- Mean Q0/Q1 vector field across all participants and sessions ---
-print("\nPlotting mean Q-value vector field across all participants and sessions...")
-min_trials = df.groupby(['id', 'session']).size().min()
-all_Q0 = []
-all_Q1 = []
-for (pid, sid), group in df.groupby(['id', 'session']):
-    q0 = group['Q0'].values[:min_trials]
-    q1 = group['Q1'].values[:min_trials]
-    if len(q0) == min_trials and len(q1) == min_trials:
-        all_Q0.append(q0)
-        all_Q1.append(q1)
-all_Q0 = np.stack(all_Q0)
-all_Q1 = np.stack(all_Q1)
-mean_Q0 = all_Q0.mean(axis=0)
-mean_Q1 = all_Q1.mean(axis=0)
-x1 = mean_Q0[:-1]
-x2 = mean_Q1[:-1]
-x1_change = mean_Q0[1:] - mean_Q0[:-1]
-x2_change = mean_Q1[1:] - mean_Q1[:-1]
-axis_min = min(np.min(mean_Q0), np.min(mean_Q1))
-axis_max = max(np.max(mean_Q0), np.max(mean_Q1))
-axis_range = (axis_min, axis_max)
-fig2, ax2 = plt.subplots(figsize=(8, 8))
-plt_2d_vector_flow(x1, x1_change, x2, x2_change, color='red', axis_range=axis_range, ax=ax2)
-ax2.scatter(mean_Q0, mean_Q1, c=range(len(mean_Q0)), cmap='plasma', s=20, label='Mean Q trajectory')
-ax2.set_xlabel('Q0 (mean)')
-ax2.set_ylabel('Q1 (mean)')
-ax2.set_title('Mean Q-value Vector Flow (All Participants/Sessions)')
-plt.colorbar(ax2.collections[1], label='Trial', ax=ax2)
-ax2.grid(True)
-ax2.legend()
-plt.tight_layout()
-plt.show()
+# --- Trial-type split vector field plots ---
+def extract_value_changes(output, value_type=0):
+    x = output[:, value_type]
+    x_change = x[1:] - x[:-1]
+    return x[:-1], x_change
 
-# --- Rewarded/Unrewarded vector field plots ---
-rewarded = sub_df['reward'].values.astype(int)
-Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
-Q0_change = Q0[1:] - Q0[:-1]
-Q1_change = Q1[1:] - Q1[:-1]
-rewarded = rewarded[:-1]  # Align with change arrays
-idx_rewarded = rewarded == 1
-idx_unrewarded = rewarded == 0
-fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True, sharey=True)
-for ax, idx, label, color in zip(
-    axes, [idx_rewarded, idx_unrewarded], ['Rewarded', 'Unrewarded'], ['green', 'red']):
-    plt_2d_vector_flow(Q0[:-1][idx], Q0_change[idx], Q1[:-1][idx], Q1_change[idx], color=color,
-                       axis_range=(min(Q0.min(), Q1.min()), max(Q0.max(), Q1.max())), ax=ax)
-    ax.scatter(Q0[:-1][idx], Q1[:-1][idx], c=np.arange(np.sum(idx)), cmap='viridis', s=20, label=f'{label} Q trajectory')
-    ax.set_title(f'Q-value Vector Flow ({label} Trials)')
-    ax.set_xlabel('Q0')
-    ax.set_ylabel('Q1')
-    ax.legend()
-plt.tight_layout()
-plt.show()
+def plt_2d_vector_field_rnn(h0, h1, choice, reward, plot_n_decimal=1):
+    if choice is None or reward is None:
+        print('Error: choice or reward is None. Cannot split by trial type.')
+        return
+    output = np.stack([h0, h1], axis=1)
+    choice_bin = np.array(choice[:-1])
+    reward_bin = np.array(reward[:-1])
+    if np.any(choice_bin == 2):
+        choice_bin = choice_bin - 1
+    if np.any(reward_bin > 1):
+        reward_bin = (reward_bin > 0).astype(int)
+    trial_types = choice_bin * 2 + reward_bin  # 0,1,2,3 for (A1,R0),(A1,R1),(A2,R0),(A2,R1)
+    x1, x1_change = extract_value_changes(output, value_type=0)
+    x2, x2_change = extract_value_changes(output, value_type=1)
+    axis_max = max(np.max(x1), np.max(x2))
+    axis_min = min(np.min(x1), np.min(x2))
+    titles = ['A1 R=0', 'A1 R=1', 'A2 R=0', 'A2 R=1']
+    print("Trial type counts:", [np.sum(trial_types == i) for i in range(4)])
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    axes = axes.flatten()
+
+    max_arrows = 100  # Maximum number of arrows to plot per subplot
+
+    for trial_type in range(4):
+        idx = trial_types == trial_type
+        ax = axes[trial_type]
+        if np.sum(idx) == 0:
+            ax.set_title(titles[trial_type] + ' (empty)')
+            print(f'Warning: No data for {titles[trial_type]}')
+            continue
+        # Downsample arrows
+        arrow_indices = np.where(idx)[0]
+        if len(arrow_indices) > max_arrows:
+            arrow_indices = np.random.choice(arrow_indices, max_arrows, replace=False)
+        # Black arrows: state changes (downsampled)
+        ax.quiver(
+            x1[arrow_indices], x2[arrow_indices],
+            x1_change[arrow_indices], x2_change[arrow_indices],
+            color='black', angles='xy', scale_units='xy', scale=1,
+            alpha=0.8, width=0.004, headwidth=10, headlength=10, zorder=2
+        )
+        # Attractor states
+        speed = np.sqrt(x1_change[idx]**2 + x2_change[idx]**2)
+        attractor_idx = speed < np.percentile(speed, 10)
+        ax.scatter(x1[idx][attractor_idx], x2[idx][attractor_idx], marker='x', color='white', s=80, zorder=3)
+        # Indifference states
+        epsilon = 0.05
+        indiff_idx = np.abs(x1[idx] - x2[idx]) < epsilon
+        ax.plot(x1[idx][indiff_idx], x2[idx][indiff_idx], linestyle='dashed', color='gray', linewidth=2, zorder=1)
+        # Readout vector
+        readout_vec = np.array([x1_change[idx].mean(), x2_change[idx].mean()])
+        center = [np.mean(x1[idx]), np.mean(x2[idx])]
+        ax.arrow(center[0], center[1], readout_vec[0], readout_vec[1], color='orange', width=0.01, head_width=0.08, head_length=0.08, length_includes_head=True, zorder=4)
+        # Scatter: trial trajectory
+        ax.scatter(x1[idx], x2[idx], c=np.arange(np.sum(idx)), cmap='viridis', s=20, zorder=5)
+        ax.set_title(titles[trial_type])
+        ax.set_xlabel('h0')
+        ax.set_ylabel('h1')
+        ax.set_xlim([axis_min, axis_max])
+        ax.set_ylim([axis_min, axis_max])
+        ax.set_aspect('equal')
+        ax.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+# Usage example (after extracting h0, h1, choice, reward):
+plt_2d_vector_field_rnn(h0, h1, choice, reward)
