@@ -78,6 +78,9 @@ print("✅ Plotted t-SNE of clusters. Figure saved as gql_kmeans_tsne_plot.png")
 # Calculate mean and std for each parameter in each cluster
 cluster_stats = params_df.groupby('cluster').agg(['mean', 'std'])
 print(cluster_stats)
+# Save to CSV for further inspection
+cluster_stats.to_csv("gql_cluster_stats_mean_std.csv")
+print("✅ Saved cluster mean/std table to gql_cluster_stats_mean_std.csv")
 
 from sklearn.metrics import silhouette_score
 

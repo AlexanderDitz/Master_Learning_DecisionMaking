@@ -78,6 +78,9 @@ print("✅ Plotted t-SNE of clusters. Figure saved as rnn_kmeans_tsne_plot.png")
 # Calculate mean and std for each hidden state in each cluster
 cluster_stats = hidden_df.groupby('cluster').agg(['mean', 'std'])
 print(cluster_stats)
+# Save to CSV for further inspection
+cluster_stats.to_csv("rnn_cluster_stats_mean_std.csv")
+print("✅ Saved cluster mean/std table to rnn_cluster_stats_mean_std.csv")
 
 from sklearn.metrics import silhouette_score
 for k in range(2, 10):
