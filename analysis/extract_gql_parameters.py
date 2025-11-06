@@ -64,10 +64,12 @@ params_df.to_csv("gql_parameters.csv")
 print("✅ Saved GQL parameters for all participants to gql_parameters.csv")
 
 # --- Per-trial Q-value extraction using synthetic data ---
+# Load the synthetic data
 synthetic_df = pd.read_csv(synthetic_data_path)
 
 # Only keep relevant columns for output
 cols_to_save = ['id', 'session', 'n_trials', 'choice', 'reward', 'Q0', 'Q1']
 
+# Save per-trial Q-values for vector field analysis
 synthetic_df[cols_to_save].to_csv("gql_synthetic_data_qvalues_per_trial.csv", index=False)
 print("✅ Saved per-trial GQL Q-values for vector field analysis to gql_synthetic_data_qvalues_per_trial.csv")

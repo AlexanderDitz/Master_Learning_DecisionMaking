@@ -15,6 +15,7 @@ from utils.model_loading_utils import load_dezfouli_dataset, load_spice_model
 base_params = "params/dezfouli2019"
 spice_path = os.path.join(base_params, "spice2_dezfouli2019_l2_0_001.pkl")
 rnn_path = os.path.join(base_params, "rnn_dezfouli2019_l2_0_001.pkl")
+synthetic_data_path = "data/synthetic_data/dezfouli2019_generated_behavior_spice2_l2_0_001.csv"
 
 print("📂 Loading Dezfouli 2019 dataset...")
 dataset = load_dezfouli_dataset()
@@ -78,3 +79,14 @@ df = df[all_columns]
 out_path = "analysis/spice_sindy_parameters.csv"
 df.to_csv(out_path)
 print(f"✅ Saved wide-format SINDy coefficients for clustering to {out_path}")
+
+# --- Per-trial Q-value extraction using synthetic data ---
+# Load the synthetic data
+df = pd.read_csv(synthetic_data_path)
+
+# Columns to extract (adjust if your file uses different names)
+cols_to_save = ['id', 'session', 'n_trials', 'choice', 'reward', 'Q0', 'Q1']
+
+# Save per-trial Q-values for vector field analysis
+df[cols_to_save].to_csv("spice_synthetic_data_qvalues_per_trial.csv", index=False)
+print("✅ Saved per-trial SPICE Q-values for vector field analysis to spice_synthetic_data_qvalues_per_trial.csv")
