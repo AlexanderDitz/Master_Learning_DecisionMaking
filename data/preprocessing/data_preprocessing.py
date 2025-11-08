@@ -159,8 +159,8 @@ synthetic_data_dir = '../synthetic_data'
 # filename = 'dezfouli2019_generated_behavior_rnn3_l2_0_00001.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn4_l2_0_0005.csv'
 # filename = 'dezfouli2019_generated_behavior_rnn5_l2_0_00005.csv'
-# filename = 'dezfouli2019_generated_behavior_benchmark.csv'
-filename = 'dezfouli2019_generated_behavior_q_agent.csv'
+filename = 'dezfouli2019_generated_behavior_benchmark.csv'
+# filename = 'dezfouli2019_generated_behavior_q_agent.csv'
 
 synthetic_df = pd.read_csv(os.path.join(synthetic_data_dir, filename))
 print(f"Loaded synthetic data from {filename} with shape {synthetic_df.shape}")
