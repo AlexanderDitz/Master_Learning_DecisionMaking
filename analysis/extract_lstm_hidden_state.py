@@ -108,11 +108,11 @@ for idx, row in synthetic_df.iterrows():
         'participant': participant,
         'session': session,
         'trial': idx,
-        'h_0': hidden_vec[0],
-        'h_1': hidden_vec[1],
         'choice': choice,
         'reward': reward
     }
+    for i in range(len(hidden_vec)):
+        row_trial[f"h_{i}"] = hidden_vec[i]
     rows_per_trial.append(row_trial)
 
 hidden_trial_df = pd.DataFrame(rows_per_trial)
