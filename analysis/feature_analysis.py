@@ -234,13 +234,17 @@ def create_seaborn_feature_plots(df, plot_counter):
 
 def create_combined_feature_subplots(df, plot_counter):
     """Create a combined figure with subplots for all behavioral features by diagnosis."""
-    n_features = len(features)
+    # Only use a subset of features
+    selected_features = [
+        'choice_rate', 'reward_rate', 'win_stay', 'lose_shift', 'choice_perseveration', 'switch_rate'
+    ]
+    n_features = len(selected_features)
     n_cols = 2
     n_rows = int(np.ceil(n_features / n_cols))
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(14, 4 * n_rows), sharey=False)
     axes = axes.flatten()
 
-    for idx, feature in enumerate(features):
+    for idx, feature in enumerate(selected_features):
         ax = axes[idx]
         sns.boxplot(data=df, x='diagnosis', y=feature, order=diagnosis_order, palette=colors_list, ax=ax, showfliers=False)
         for i, diagnosis in enumerate(diagnosis_order):
