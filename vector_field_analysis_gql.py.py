@@ -1,182 +1,151 @@
-import pandas as pd
 import matplotlib.pyplot as plt
-import argparse
-import os
 import numpy as np
+import pandas as pd
+from scipy.ndimage import gaussian_filter
+import random
+from matplotlib.colors import LinearSegmentedColormap
+from sklearn.cluster import DBSCAN
 
-parser = argparse.ArgumentParser(description='Plot 2D vector flow of Q-values for GQL/benchmark agent.')
-parser.add_argument('--csv', type=str, required=False, default=None,
-                    help='Path to the generated_behavior_benchmark.csv file')
-parser.add_argument('--participant', type=str, required=False, default=None,
-                    help='Participant ID to plot (default: first)')
-parser.add_argument('--session', type=int, required=False, default=None,
-                    help='Session index to plot (default: first)')
-args = parser.parse_args()
+# Set random state for reproducibility
+np.random.seed(42)
+random.seed(42)
 
-# Auto-detect file if not provided
-if args.csv is None:
-    synthetic_dir = os.path.join('data', 'synthetic_data')
-    args.csv = next((os.path.join(synthetic_dir, f) for f in os.listdir(synthetic_dir)
-                     if 'benchmark' in f and f.endswith('.csv')), None)
-    if args.csv is None:
-        raise FileNotFoundError('Could not find a benchmark synthetic data CSV file.')
+# Set file paths directly
+q_values_per_trial_path = 'data/synthetic_data/dezfouli2019_generated_behavior_benchmark.csv'
 
-def plt_2d_vector_flow(x1, x1_change, x2, x2_change, color, axis_range, ax=None, arrow_max_num=200, arrow_alpha=0.8, plot_n_decimal=1):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 8))
-    if len(x1) > arrow_max_num:
-        idx = np.random.choice(len(x1), arrow_max_num, replace=False)
-        x1, x1_change, x2, x2_change = x1[idx], x1_change[idx], x2[idx], x2_change[idx]
-    ax.quiver(x1, x2, x1_change, x2_change, color=color,
-              angles='xy', scale_units='xy', scale=1, alpha=arrow_alpha, width=0.004, headwidth=10, headlength=10)
-    axis_min, axis_max = axis_range
-    if axis_min < 0 < axis_max:
-        axis_abs_max = max(abs(axis_min), abs(axis_max))
-        axis_min, axis_max = -axis_abs_max, axis_abs_max
-        ticks = [axis_min, 0, axis_max]
-        ticklabels = [np.round(axis_min, plot_n_decimal), 0, np.round(axis_max, plot_n_decimal)]
-    else:
-        ticks = [axis_min, axis_max]
-        ticklabels = [np.round(axis_min, plot_n_decimal), np.round(axis_max, plot_n_decimal)]
-    ax.set_xlim([axis_min, axis_max])
-    ax.set_ylim([axis_min, axis_max])
-    ax.set_xticks(ticks)
-    ax.set_yticks(ticks)
-    ax.set_xticklabels(ticklabels)
-    ax.set_yticklabels(ticklabels)
-    ax.set_aspect('equal')
-    return ax
+# Load all Q-value columns automatically
+q_df = pd.read_csv(q_values_per_trial_path)
+assert 'Q0' in q_df.columns and 'Q1' in q_df.columns, "Q0 and Q1 columns required!"
 
-def plot_generalized_q_vector_field_subplot(alpha=0.1, qmin=-1, qmax=1, grid_points=20):
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12), sharex=True, sharey=True)
-    params = [
-        (1, 0, 'Reward=1, Action=0'),
-        (0, 0, 'Reward=0, Action=0'),
-        (1, 1, 'Reward=1, Action=1'),
-        (0, 1, 'Reward=0, Action=1'),
-    ]
-    for ax, (reward, action, title) in zip(axes.flat, params):
-        Q0_grid, Q1_grid = np.meshgrid(
-            np.linspace(qmin, qmax, grid_points),
-            np.linspace(qmin, qmax, grid_points)
-        )
-        Q0_flat = Q0_grid.flatten()
-        Q1_flat = Q1_grid.flatten()
-        Q0_new = Q0_flat.copy()
-        Q1_new = Q1_flat.copy()
-        if action == 0:
-            Q0_new += alpha * (reward - Q0_flat)
+# Normalize Q0 and Q1 to [0, 1]
+for col in ['Q0', 'Q1']:
+    min_val = q_df[col].min()
+    max_val = q_df[col].max()
+    q_df[col] = (q_df[col] - min_val) / (max_val - min_val)
+    
+# --- Prepare subplots for all action/reward combinations ---
+fig, axes = plt.subplots(2, 2, figsize=(14, 12), facecolor='white')
+combinations = [(0,0), (0,1), (1,0), (1,1)]
+titles = [
+    r'Choice $_{0}$, Reward = 0',
+    r'Choice $_{0}$, Reward = 1',
+    r'Choice $_{1}$, Reward = 0',
+    r'Choice $_{1}$, Reward = 1'
+]
+
+# Custom colormap: yellow (slow), green (medium), purple (fast)
+speed_cmap = LinearSegmentedColormap.from_list('speed_cmap', ['yellow', 'green', 'purple'])
+
+def find_attractors(U, V, G0, G1, threshold=0.01, cluster_eps=0.08):
+    speed = np.sqrt(U**2 + V**2)
+    attractor_idx = np.where(speed < threshold)
+    attractor_points = np.column_stack((G0[attractor_idx], G1[attractor_idx]))
+    if len(attractor_points) > 0:
+        clustering = DBSCAN(eps=cluster_eps, min_samples=1).fit(attractor_points)
+        attractor_points = np.array([attractor_points[clustering.labels_ == i].mean(axis=0)
+                                     for i in np.unique(clustering.labels_)])
+    return attractor_points
+
+for idx, (action, reward) in enumerate(combinations):
+    ax = axes[idx//2, idx%2]
+    # Filter for this action/reward combination
+    mask = (q_df['choice'] == action) & (q_df['reward'] == reward)
+    df = q_df[mask].reset_index(drop=True)
+    if len(df) < 2:
+        ax.set_title(f"{titles[idx]} (Insufficient data)")
+        ax.axis('off')
+        continue
+
+    # Use Q0 and Q1 for 2D vector field
+    q0 = df['Q0'].to_numpy()
+    q1 = df['Q1'].to_numpy()
+
+    # Compute state changes (trial to trial)
+    dq0 = q0[1:] - q0[:-1]
+    dq1 = q1[1:] - q1[:-1]
+    q0_points = q0[:-1]
+    q1_points = q1[:-1]
+
+    # Prepare for grid-based vector field
+    n_grid = 20
+    radius = 0.05
+    grid = np.linspace(0, 1, n_grid)
+    G0, G1 = np.meshgrid(grid, grid)
+    U = np.zeros_like(G0)
+    V = np.zeros_like(G1)
+    grid_points = np.stack([G0.ravel(), G1.ravel()], axis=1)
+    data_points = np.stack([q0_points, q1_points], axis=1)
+    for k, (g0, g1) in enumerate(grid_points):
+        dist = np.sqrt((data_points[:, 0] - g0)**2 + (data_points[:, 1] - g1)**2)
+        idxs = dist < radius
+        if np.any(idxs):
+            U.ravel()[k] = np.mean(dq0[idxs])
+            V.ravel()[k] = np.mean(dq1[idxs])
         else:
-            Q1_new += alpha * (reward - Q1_flat)
-        dQ0 = Q0_new - Q0_flat
-        dQ1 = Q1_new - Q1_flat
-        ax.quiver(Q0_flat, Q1_flat, dQ0, dQ1, angles='xy', scale_units='xy', scale=1, color='purple', alpha=0.7)
-        ax.set_title(title)
-        ax.set_xlabel('Q0')
-        ax.set_ylabel('Q1')
-        ax.set_xlim([qmin, qmax])
-        ax.set_ylim([qmin, qmax])
-        ax.grid(True)
-    plt.suptitle(f'Generalized Q-learning Vector Fields (alpha={alpha})', fontsize=16)
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
+            U.ravel()[k] = 0
+            V.ravel()[k] = 0
 
-# Load data and select participant/session
-print(f"Loading: {args.csv}")
-df = pd.read_csv(args.csv).dropna(subset=['Q0', 'Q1'])
+    # Smoothing
+    sigma = 1.0
+    U_smooth = gaussian_filter(U, sigma=sigma)
+    V_smooth = gaussian_filter(V, sigma=sigma)
 
-# --- Individual participant/session plot (existing code) ---
-pid = args.participant or df['id'].iloc[0]
-sid = args.session or df[df['id'] == pid]['session'].iloc[0]
-sub_df = df[(df['id'] == pid) & (df['session'] == sid)]
-Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+    # Attractor detection (with clustering)
+    attractor_points = find_attractors(U_smooth, V_smooth, G0, G1, threshold=0.01, cluster_eps=0.08)
 
-# Assume your DataFrame has a 'reward' column (1 for rewarded, 0 for unrewarded)
-rewarded = sub_df['reward'].values.astype(int)
-Q0, Q1 = sub_df['Q0'].values, sub_df['Q1'].values
+    # Compute magnitude for coloring (dynamics speed)
+    magnitude = np.sqrt(U_smooth**2 + V_smooth**2)
 
-# Compute changes
-Q0_change = Q0[1:] - Q0[:-1]
-Q1_change = Q1[1:] - Q1[:-1]
-rewarded = rewarded[:-1]  # Align with change arrays
+    # Compute the edges of the grid for pcolormesh
+    dx = grid[1] - grid[0]
+    grid_edges = np.linspace(0 - dx/2, 1 + dx/2, n_grid + 1)
 
-# Split indices
-idx_rewarded = rewarded == 1
-idx_unrewarded = rewarded == 0
+    # Plot background as dynamics speed
+    bg = ax.pcolormesh(
+        grid_edges, grid_edges, magnitude.T,
+        cmap=speed_cmap, shading='auto', alpha=0.7, zorder=0
+    )
 
-# Plot
-fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True, sharey=True)
-for ax, idx, label, color in zip(
-    axes, [idx_rewarded, idx_unrewarded], ['Rewarded', 'Unrewarded'], ['green', 'red']):
-    plt_2d_vector_flow(Q0[:-1][idx], Q0_change[idx], Q1[:-1][idx], Q1_change[idx], color=color,
-                       axis_range=(min(Q0.min(), Q1.min()), max(Q0.max(), Q1.max())), ax=ax)
-    ax.scatter(Q0[:-1][idx], Q1[:-1][idx], c=np.arange(np.sum(idx)), cmap='viridis', s=20, label=f'{label} Q trajectory')
-    ax.set_title(f'Q-value Vector Flow ({label} Trials)')
-    ax.set_xlabel('Q0')
-    ax.set_ylabel('Q1')
-    ax.legend()
-plt.tight_layout()
+    # Add streamlines for flow visualization (flowlines only)
+    strm = ax.streamplot(
+        grid, grid, U_smooth.T, V_smooth.T,
+        color=magnitude.T,
+        linewidth=1.2, cmap='viridis', density=1.2, arrowsize=1.0, zorder=2
+    )
+
+    # Attractors as white crosses
+    if attractor_points.shape[0] > 0:
+        ax.scatter(attractor_points[:, 0], attractor_points[:, 1], marker='x', color='white', s=60, linewidths=2, zorder=5)
+
+    # Dashed nullcline (diagonal)
+    ax.plot([0, 1], [0, 1], 'k--', alpha=0.7, linewidth=2, zorder=4)
+
+    # Orange readout vector (mean state change)
+    mean_q0 = np.mean(q0_points)
+    mean_q1 = np.mean(q1_points)
+    mean_dq0 = np.mean(dq0)
+    mean_dq1 = np.mean(dq1)
+    ax.arrow(mean_q0, mean_q1, mean_dq0, mean_dq1, color='orange', width=0.008, head_width=0.04, head_length=0.04, length_includes_head=True, zorder=6)
+
+    # Axis formatting
+    ax.set_xlabel('Q0 (t)', fontsize=12)
+    ax.set_ylabel('Q1 (t)', fontsize=12)
+    ax.set_title(f"{titles[idx]}   [n={len(df)}]", fontsize=14)
+    ax.grid(True, linestyle='--', alpha=0.7, color='gray')
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+    ax.set_facecolor('white')
+    ax.tick_params(axis='both', colors='black')
+    for spine in ax.spines.values():
+        spine.set_edgecolor('black')
+
+plt.subplots_adjust(right=0.85)
+cbar = plt.colorbar(
+    bg, ax=axes.ravel().tolist(),
+    orientation='vertical',
+    fraction=0.025, pad=0.04, label='Dynamics speed'
+)
+
+plt.tight_layout(pad=2.0)
+plt.savefig('vector_field_grid_benchmark.png', dpi=300, bbox_inches="tight")
 plt.show()
-
-# Compute vector field for Q0/Q1
-x1 = Q0[:-1]
-x2 = Q1[:-1]
-x1_change = Q0[1:] - Q0[:-1]
-x2_change = Q1[1:] - Q1[:-1]
-axis_min = min(np.min(Q0), np.min(Q1))
-axis_max = max(np.max(Q0), np.max(Q1))
-axis_range = (axis_min, axis_max)
-fig, ax = plt.subplots(figsize=(8, 8))
-plt_2d_vector_flow(x1, x1_change, x2, x2_change, color='blue', axis_range=axis_range, ax=ax)
-ax.scatter(Q0, Q1, c=range(len(Q0)), cmap='viridis', s=20, label='Q trajectory')
-ax.set_xlabel('Q0')
-ax.set_ylabel('Q1')
-ax.set_title(f'Q-value Vector Flow (Participant {pid}, Session {sid})')
-plt.colorbar(ax.collections[1], label='Trial', ax=ax)
-ax.grid(True)
-ax.legend()
-plt.tight_layout()
-plt.show()
-
-# --- Mean Q0/Q1 vector field across all participants and sessions ---
-print("\nPlotting mean Q-value vector field across all participants and sessions...")
-# Find the minimum number of trials across all (participant, session) pairs
-min_trials = df.groupby(['id', 'session']).size().min()
-
-# Collect Q0 and Q1 arrays for all (participant, session) pairs, truncated to min_trials
-all_Q0 = []
-all_Q1 = []
-for (pid, sid), group in df.groupby(['id', 'session']):
-    q0 = group['Q0'].values[:min_trials]
-    q1 = group['Q1'].values[:min_trials]
-    if len(q0) == min_trials and len(q1) == min_trials:
-        all_Q0.append(q0)
-        all_Q1.append(q1)
-all_Q0 = np.stack(all_Q0)
-all_Q1 = np.stack(all_Q1)
-
-mean_Q0 = all_Q0.mean(axis=0)
-mean_Q1 = all_Q1.mean(axis=0)
-
-# Compute mean vector field
-x1 = mean_Q0[:-1]
-x2 = mean_Q1[:-1]
-x1_change = mean_Q0[1:] - mean_Q0[:-1]
-x2_change = mean_Q1[1:] - mean_Q1[:-1]
-axis_min = min(np.min(mean_Q0), np.min(mean_Q1))
-axis_max = max(np.max(mean_Q0), np.max(mean_Q1))
-axis_range = (axis_min, axis_max)
-fig2, ax2 = plt.subplots(figsize=(8, 8))
-plt_2d_vector_flow(x1, x1_change, x2, x2_change, color='red', axis_range=axis_range, ax=ax2)
-ax2.scatter(mean_Q0, mean_Q1, c=range(len(mean_Q0)), cmap='plasma', s=20, label='Mean Q trajectory')
-ax2.set_xlabel('Q0 (mean)')
-ax2.set_ylabel('Q1 (mean)')
-ax2.set_title('Mean Q-value Vector Flow (All Participants/Sessions)')
-plt.colorbar(ax2.collections[1], label='Trial', ax=ax2)
-ax2.grid(True)
-ax2.legend()
-plt.tight_layout()
-plt.show()
-
-# Plot the generalized vector field with all possible action/reward combinations
-plot_generalized_q_vector_field_subplot(alpha=0.1)
