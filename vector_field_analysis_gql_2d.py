@@ -46,27 +46,20 @@ def find_attractors(U, V, G0, G1, threshold=0.01, cluster_eps=0.08):
                                      for i in np.unique(clustering.labels_)])
     return attractor_points
 
+all_magnitudes = []
+
+# --- First loop: collect all magnitudes for global color scaling ---
 for idx, (action, reward) in enumerate(combinations):
-    ax = axes[idx//2, idx%2]
-    # Filter for this action/reward combination
     mask = (q_df['choice'] == action) & (q_df['reward'] == reward)
     df = q_df[mask].reset_index(drop=True)
     if len(df) < 2:
-        ax.set_title(f"{titles[idx]} (Insufficient data)")
-        ax.axis('off')
         continue
-
-    # Use Q0 and Q1 for 2D vector field
     q0 = df['Q0'].to_numpy()
     q1 = df['Q1'].to_numpy()
-
-    # Compute state changes (trial to trial)
     dq0 = q0[1:] - q0[:-1]
     dq1 = q1[1:] - q1[:-1]
     q0_points = q0[:-1]
     q1_points = q1[:-1]
-
-    # Prepare for grid-based vector field
     n_grid = 20
     radius = 0.05
     grid = np.linspace(0, 1, n_grid)
@@ -84,49 +77,79 @@ for idx, (action, reward) in enumerate(combinations):
         else:
             U.ravel()[k] = 0
             V.ravel()[k] = 0
-
-    # Smoothing
     sigma = 1.0
     U_smooth = gaussian_filter(U, sigma=sigma)
     V_smooth = gaussian_filter(V, sigma=sigma)
-
-    # Attractor detection (with clustering)
-    attractor_points = find_attractors(U_smooth, V_smooth, G0, G1, threshold=0.01, cluster_eps=0.08)
-
-    # Compute magnitude for coloring (dynamics speed)
     magnitude = np.sqrt(U_smooth**2 + V_smooth**2)
+    all_magnitudes.append(magnitude)
 
-    # Compute the edges of the grid for pcolormesh
+all_magnitudes = np.array(all_magnitudes)
+global_vmin = all_magnitudes.min()
+global_vmax = all_magnitudes.max()
+
+# --- Second loop: plot with consistent color scaling and colorbar ---
+for idx, (action, reward) in enumerate(combinations):
+    ax = axes[idx//2, idx%2]
+    mask = (q_df['choice'] == action) & (q_df['reward'] == reward)
+    df = q_df[mask].reset_index(drop=True)
+    if len(df) < 2:
+        ax.set_title(f"{titles[idx]} (Insufficient data)")
+        ax.axis('off')
+        continue
+    q0 = df['Q0'].to_numpy()
+    q1 = df['Q1'].to_numpy()
+    dq0 = q0[1:] - q0[:-1]
+    dq1 = q1[1:] - q1[:-1]
+    q0_points = q0[:-1]
+    q1_points = q1[:-1]
+    n_grid = 20
+    radius = 0.05
+    grid = np.linspace(0, 1, n_grid)
+    G0, G1 = np.meshgrid(grid, grid)
+    U = np.zeros_like(G0)
+    V = np.zeros_like(G1)
+    grid_points = np.stack([G0.ravel(), G1.ravel()], axis=1)
+    data_points = np.stack([q0_points, q1_points], axis=1)
+    for k, (g0, g1) in enumerate(grid_points):
+        dist = np.sqrt((data_points[:, 0] - g0)**2 + (data_points[:, 1] - g1)**2)
+        idxs = dist < radius
+        if np.any(idxs):
+            U.ravel()[k] = np.mean(dq0[idxs])
+            V.ravel()[k] = np.mean(dq1[idxs])
+        else:
+            U.ravel()[k] = 0
+            V.ravel()[k] = 0
+    sigma = 1.0
+    U_smooth = gaussian_filter(U, sigma=sigma)
+    V_smooth = gaussian_filter(V, sigma=sigma)
+    attractor_points = find_attractors(U_smooth, V_smooth, G0, G1, threshold=0.01, cluster_eps=0.08)
+    magnitude = np.sqrt(U_smooth**2 + V_smooth**2)
     dx = grid[1] - grid[0]
     grid_edges = np.linspace(0 - dx/2, 1 + dx/2, n_grid + 1)
-
-    # Plot background as dynamics speed
+    # Speedmap background
     bg = ax.pcolormesh(
         grid_edges, grid_edges, magnitude.T,
-        cmap=speed_cmap, shading='auto', alpha=0.7, zorder=0
+        cmap=speed_cmap, shading='auto', alpha=0.7, zorder=0,
+        vmin=global_vmin, vmax=global_vmax
     )
-
-    # Add streamlines for flow visualization (flowlines only)
+    # Streamlines (flow lines)
     strm = ax.streamplot(
         grid, grid, U_smooth.T, V_smooth.T,
         color=magnitude.T,
-        linewidth=1.2, cmap='viridis', density=1.2, arrowsize=1.0, zorder=2
+        linewidth=1.2, cmap='viridis', density=1.2, arrowsize=1.0, zorder=2,
+        norm=plt.Normalize(global_vmin, global_vmax)
     )
-
     # Attractors as white crosses
     if attractor_points.shape[0] > 0:
         ax.scatter(attractor_points[:, 0], attractor_points[:, 1], marker='x', color='white', s=60, linewidths=2, zorder=5)
-
     # Dashed nullcline (diagonal)
     ax.plot([0, 1], [0, 1], 'k--', alpha=0.7, linewidth=2, zorder=4)
-
     # Orange readout vector (mean state change)
     mean_q0 = np.mean(q0_points)
     mean_q1 = np.mean(q1_points)
     mean_dq0 = np.mean(dq0)
     mean_dq1 = np.mean(dq1)
     ax.arrow(mean_q0, mean_q1, mean_dq0, mean_dq1, color='orange', width=0.008, head_width=0.04, head_length=0.04, length_includes_head=True, zorder=6)
-
     # Axis formatting
     ax.set_xlabel('Q0 (t)', fontsize=12)
     ax.set_ylabel('Q1 (t)', fontsize=12)
@@ -136,16 +159,21 @@ for idx, (action, reward) in enumerate(combinations):
     ax.set_ylim([0, 1])
     ax.set_facecolor('white')
     ax.tick_params(axis='both', colors='black')
+    # Only show 0 and 1 as axis ticks (integers)
+    ax.set_xticks([0, 1])
+    ax.set_yticks([0, 1])
+    ax.set_xticklabels(["0", "1"], fontsize=12)
+    ax.set_yticklabels(["0", "1"], fontsize=12)
     for spine in ax.spines.values():
         spine.set_edgecolor('black')
 
-plt.subplots_adjust(right=0.85)
+plt.tight_layout(pad=2.0, rect=[0, 0, 0.88, 1])  # leave space for colorbar on the right
+# Add colorbar in a dedicated axes
+cbar_ax = fig.add_axes([0.90, 0.15, 0.025, 0.7])  # [left, bottom, width, height]
 cbar = plt.colorbar(
-    bg, ax=axes.ravel().tolist(),
+    bg, cax=cbar_ax,
     orientation='vertical',
-    fraction=0.025, pad=0.04, label='Dynamics speed'
+    label='Dynamics speed'
 )
-
-plt.tight_layout(pad=2.0)
 plt.savefig('vector_field_grid_benchmark.png', dpi=300, bbox_inches="tight")
 plt.show()

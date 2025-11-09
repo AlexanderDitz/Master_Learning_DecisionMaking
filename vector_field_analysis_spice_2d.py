@@ -160,15 +160,21 @@ for idx, (action, reward) in enumerate(combinations):
     ax.set_ylim([0, 1])
     ax.set_facecolor('white')
     ax.tick_params(axis='both', colors='black')
+    # Only show 0 and 1 as axis ticks (integers)
+    ax.set_xticks([0, 1])
+    ax.set_yticks([0, 1])
+    ax.set_xticklabels(["0", "1"], fontsize=12)
+    ax.set_yticklabels(["0", "1"], fontsize=12)
     for spine in ax.spines.values():
         spine.set_edgecolor('black')
 
-plt.subplots_adjust(right=0.85)
+plt.tight_layout(pad=2.0, rect=[0, 0, 0.88, 1])  # leave space for colorbar on the right
+# Add colorbar in a dedicated axes
+cbar_ax = fig.add_axes([0.90, 0.15, 0.025, 0.7])  # [left, bottom, width, height]
 cbar = plt.colorbar(
-    bg, ax=axes.ravel().tolist(),
+    bg, cax=cbar_ax,
     orientation='vertical',
-    fraction=0.025, pad=0.04, label='Dynamics speed'
+    label='Dynamics speed'
 )
-plt.tight_layout(pad=2.0)
 plt.savefig('vector_field_grid_spice_q.png', dpi=300, bbox_inches="tight")
 plt.show()
