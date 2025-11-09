@@ -125,7 +125,7 @@ for idx, (action, reward) in enumerate(combinations):
     # Plot background as dynamics speed
     bg = ax.pcolormesh(
         grid_edges, grid_edges, magnitude.T,
-        cmap=speed_cmap, shading='auto', alpha=0.7, zorder=0,
+        cmap=speed_cmap, shading='auto', alpha=0.4, zorder=0,
         vmin=global_vmin, vmax=global_vmax
     )
     # Add streamlines for flow visualization (flowlines only)

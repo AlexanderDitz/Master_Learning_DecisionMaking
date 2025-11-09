@@ -130,7 +130,7 @@ for idx, (action, reward) in enumerate(combinations):
     # Speedmap background
     bg = ax.pcolormesh(
         grid_edges, grid_edges, magnitude.T,
-        cmap=speed_cmap, shading='auto', alpha=0.7, zorder=0,
+        cmap=speed_cmap, shading='auto', alpha=0.4, zorder=0,
         vmin=global_vmin, vmax=global_vmax
     )
     # Streamlines (flow lines)
