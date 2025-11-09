@@ -140,17 +140,8 @@ for idx, (action, reward) in enumerate(combinations):
         linewidth=1.2, cmap='viridis', density=1.2, arrowsize=1.0, zorder=2,
         norm=plt.Normalize(global_vmin, global_vmax)
     )
-    # Attractors as white crosses
-    if attractor_points.shape[0] > 0:
-        ax.scatter(attractor_points[:, 0], attractor_points[:, 1], marker='x', color='white', s=60, linewidths=2, zorder=5)
     # Dashed nullcline (diagonal)
     ax.plot([0, 1], [0, 1], 'k--', alpha=0.7, linewidth=2, zorder=4)
-    # Orange readout vector (mean state change)
-    mean_q0 = np.mean(q0_points)
-    mean_q1 = np.mean(q1_points)
-    mean_dq0 = np.mean(dq0)
-    mean_dq1 = np.mean(dq1)
-    ax.arrow(mean_q0, mean_q1, mean_dq0, mean_dq1, color='orange', width=0.008, head_width=0.04, head_length=0.04, length_includes_head=True, zorder=6)
     # Axis formatting
     ax.set_xlabel('Q0 (t)', fontsize=12)
     ax.set_ylabel('Q1 (t)', fontsize=12)

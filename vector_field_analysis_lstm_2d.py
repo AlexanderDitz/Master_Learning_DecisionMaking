@@ -56,9 +56,9 @@ for idx, (action, reward) in enumerate(combinations):
     if len(df) < 2:
         continue
     mean_hidden = df[hidden_cols].mean(axis=1).to_numpy()
-    mean_hidden_change = mean_hidden[1:] - mean_hidden[:-1]
     mean_hidden_t = mean_hidden[:-1]
-    mean_hidden_t1 = mean_hidden[1:]
+    mean_hidden_t2 = mean_hidden[:-1]  # Use t for both axes for grid
+    d_hidden = mean_hidden[1:] - mean_hidden[:-1]
     n_grid = 20
     radius = 0.15
     grid = np.linspace(-1, 1, n_grid)
@@ -66,13 +66,13 @@ for idx, (action, reward) in enumerate(combinations):
     U = np.zeros_like(G0)
     V = np.zeros_like(G1)
     grid_points = np.stack([G0.ravel(), G1.ravel()], axis=1)
-    data_points = np.stack([mean_hidden_t, mean_hidden_t1], axis=1)
+    data_points = np.stack([mean_hidden_t, mean_hidden_t2], axis=1)
     for k, (g0, g1) in enumerate(grid_points):
         dist = np.sqrt((data_points[:, 0] - g0)**2 + (data_points[:, 1] - g1)**2)
         idxs = dist < radius
         if np.any(idxs):
-            U.ravel()[k] = np.mean(mean_hidden_change[idxs])
-            V.ravel()[k] = np.mean(mean_hidden_change[idxs])
+            U.ravel()[k] = np.mean(d_hidden[idxs])
+            V.ravel()[k] = np.mean(d_hidden[idxs])
         else:
             U.ravel()[k] = 0
             V.ravel()[k] = 0
@@ -95,12 +95,10 @@ for idx, (action, reward) in enumerate(combinations):
         ax.set_title(f"{titles[idx]} (Insufficient data)")
         ax.axis('off')
         continue
-
     mean_hidden = df[hidden_cols].mean(axis=1).to_numpy()
-    mean_hidden_change = mean_hidden[1:] - mean_hidden[:-1]
     mean_hidden_t = mean_hidden[:-1]
-    mean_hidden_t1 = mean_hidden[1:]
-
+    mean_hidden_t2 = mean_hidden[:-1]  # Use t for both axes for grid
+    d_hidden = mean_hidden[1:] - mean_hidden[:-1]
     n_grid = 20
     radius = 0.15
     grid = np.linspace(-1, 1, n_grid)
@@ -108,62 +106,46 @@ for idx, (action, reward) in enumerate(combinations):
     U = np.zeros_like(G0)
     V = np.zeros_like(G1)
     grid_points = np.stack([G0.ravel(), G1.ravel()], axis=1)
-    data_points = np.stack([mean_hidden_t, mean_hidden_t1], axis=1)
+    data_points = np.stack([mean_hidden_t, mean_hidden_t2], axis=1)
     for k, (g0, g1) in enumerate(grid_points):
         dist = np.sqrt((data_points[:, 0] - g0)**2 + (data_points[:, 1] - g1)**2)
         idxs = dist < radius
         if np.any(idxs):
-            U.ravel()[k] = np.mean(mean_hidden_change[idxs])
-            V.ravel()[k] = np.mean(mean_hidden_change[idxs])
+            U.ravel()[k] = np.mean(d_hidden[idxs])
+            V.ravel()[k] = np.mean(d_hidden[idxs])
         else:
             U.ravel()[k] = 0
             V.ravel()[k] = 0
-
     sigma = 1.0
     U_smooth = gaussian_filter(U, sigma=sigma)
     V_smooth = gaussian_filter(V, sigma=sigma)
     attractor_points = find_attractors(U_smooth, V_smooth, G0, G1, threshold=0.01, cluster_eps=0.12)
     magnitude = np.sqrt(U_smooth**2 + V_smooth**2)
     grid_edges = np.linspace(-1, 1, n_grid + 1)
-
     # Plot background as dynamics speed
     bg = ax.pcolormesh(
         grid_edges, grid_edges, magnitude.T,
         cmap=speed_cmap, shading='auto', alpha=0.7, zorder=0,
         vmin=global_vmin, vmax=global_vmax
     )
-
     # Add streamlines for flow visualization (flowlines only)
     strm = ax.streamplot(
         grid, grid, U_smooth.T, V_smooth.T,
         color=magnitude.T,
-        linewidth=1.8, cmap='viridis', density=1.5, arrowsize=1.0, zorder=2,
+        linewidth=1.2, cmap='viridis', density=1.2, arrowsize=1.0, zorder=2,
         norm=plt.Normalize(global_vmin, global_vmax)
     )
-
-    # Attractors as white crosses
-    if attractor_points.shape[0] > 0:
-        ax.scatter(attractor_points[:, 0], attractor_points[:, 1], marker='x', color='white', s=80, linewidths=2.5, zorder=5)
-
     # Dashed nullcline (diagonal)
     ax.plot([-1, 1], [-1, 1], 'k--', alpha=0.7, linewidth=2, zorder=4)
-
-    # Orange readout vector (mean state change)
-    mean_h0 = np.mean(mean_hidden_t)
-    mean_h1 = np.mean(mean_hidden_t1)
-    mean_dh0 = np.mean(mean_hidden_change)
-    mean_dh1 = np.mean(mean_hidden_change)
-    ax.arrow(mean_h0, mean_h1, mean_dh0, mean_dh1, color='orange', width=0.012, head_width=0.08, head_length=0.08, length_includes_head=True, zorder=6)
-
-        # Axis formatting
-    ax.set_xlabel('Mean hidden state (t)', fontsize=16)
-    ax.set_ylabel('Mean hidden state (t+1)', fontsize=16)
-    ax.set_title(f"{titles[idx]}   [n={len(df)}]", fontsize=18)
-    ax.grid(True, linestyle=':', alpha=0.4, color='gray')
+    # Axis formatting
+    ax.set_xlabel('Mean hidden state (t)', fontsize=14)
+    ax.set_ylabel('Mean hidden state (t)', fontsize=14)
+    ax.set_title(f"{titles[idx]}   [n={len(df)}]", fontsize=16)
+    ax.grid(True, linestyle='--', alpha=0.7, color='gray')
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])
     ax.set_facecolor('white')
-    ax.tick_params(axis='both', labelsize=14, colors='black')
+    ax.tick_params(axis='both', labelsize=12, colors='black')
     ax.set_aspect('equal')
     for spine in ax.spines.values():
         spine.set_linewidth(2)
@@ -171,8 +153,8 @@ for idx, (action, reward) in enumerate(combinations):
     # Only show -1 and 1 on axes, as integers
     ax.set_xticks([-1, 1])
     ax.set_yticks([-1, 1])
-    ax.set_xticklabels(['-1', '1'])
-    ax.set_yticklabels(['-1', '1'])
+    ax.set_xticklabels(['-1', '1'], fontsize=12)
+    ax.set_yticklabels(['-1', '1'], fontsize=12)
 
 plt.tight_layout(pad=2.0, rect=[0, 0, 0.88, 1])  # leave space for colorbar on the right
 # Add colorbar in a dedicated axes
