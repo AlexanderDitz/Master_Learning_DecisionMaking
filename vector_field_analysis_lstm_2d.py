@@ -164,5 +164,5 @@ cbar = plt.colorbar(
     orientation='vertical',
     label='Dynamics speed'
 )
-plt.savefig('vector_field_grid_mean_hidden_lstm_nice.png', dpi=300, bbox_inches="tight")
+plt.savefig('vector_field_lstm.png', dpi=300, bbox_inches="tight")
 plt.show()

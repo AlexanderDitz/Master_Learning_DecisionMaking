@@ -167,5 +167,5 @@ cbar = plt.colorbar(
     orientation='vertical',
     label='Dynamics speed'
 )
-plt.savefig('vector_field_grid_spice_q.png', dpi=300, bbox_inches="tight")
+plt.savefig('vector_field_spice.png', dpi=300, bbox_inches="tight")
 plt.show()
