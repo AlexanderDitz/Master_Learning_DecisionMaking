@@ -32,18 +32,6 @@ titles = [
 # Custom colormap: yellow (slow), green (medium), purple (fast)
 speed_cmap = LinearSegmentedColormap.from_list('speed_cmap', ['yellow', 'green', 'purple'])
 
-from sklearn.cluster import DBSCAN
-
-def find_attractors(U, V, H0, H1, threshold=0.02, cluster_eps=0.1):
-    speed = np.sqrt(U**2 + V**2)
-    attractor_idx = np.where(speed < threshold)
-    attractor_points = np.column_stack((H0[attractor_idx], H1[attractor_idx]))
-    if len(attractor_points) > 0:
-        clustering = DBSCAN(eps=cluster_eps, min_samples=1).fit(attractor_points)
-        attractor_points = np.array([attractor_points[clustering.labels_ == i].mean(axis=0)
-                                     for i in np.unique(clustering.labels_)])
-    return attractor_points
-
 # --- First loop: collect all magnitudes for global color scaling ---
 all_magnitudes = []
 for idx, (action, reward) in enumerate(combinations):
@@ -119,7 +107,6 @@ for idx, (action, reward) in enumerate(combinations):
     sigma = 1.0
     U_smooth = gaussian_filter(U, sigma=sigma)
     V_smooth = gaussian_filter(V, sigma=sigma)
-    attractor_points = find_attractors(U_smooth, V_smooth, H0, H1, threshold=0.1, cluster_eps=0.15)
     magnitude = np.sqrt(U_smooth**2 + V_smooth**2)
     dx = grid[1] - grid[0]
     grid_edges = np.linspace(-1 - dx/2, 1 + dx/2, n_grid + 1)
