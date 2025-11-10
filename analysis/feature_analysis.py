@@ -71,6 +71,9 @@ sns.set_style("whitegrid")
 # Create seaborn feature plots
 def create_seaborn_feature_plots(df, plot_counter):
     """Create comprehensive seaborn plots for all behavioral features by diagnosis."""
+
+    # Add at the start of create_seaborn_feature_plots
+    significance_summary = {feature: {} for feature in features}
     
     print(f"\n=== Creating Seaborn Feature Plots for {len(features)} Features ===")
     for feature in features:
@@ -151,6 +154,11 @@ def create_seaborn_feature_plots(df, plot_counter):
         sig_healthy_depression = get_significance_stars(p_healthy_depression)
         sig_healthy_bipolar = get_significance_stars(p_healthy_bipolar)
         sig_depression_bipolar = get_significance_stars(p_depression_bipolar)
+
+        # Store results for summary
+        significance_summary[feature]['Healthy vs Depression'] = sig_healthy_depression
+        significance_summary[feature]['Healthy vs Bipolar'] = sig_healthy_bipolar
+        significance_summary[feature]['Depression vs Bipolar'] = sig_depression_bipolar
         
         # Add significance annotations to the plot
         y_max = df[feature].max()
@@ -227,10 +235,17 @@ def create_seaborn_feature_plots(df, plot_counter):
         plt.savefig(f'../data/visualization_plots/{plot_counter:02d}_{feature}_boxplot.png', dpi=300, bbox_inches='tight')
         plt.show()
         plot_counter += 1
+    
+    print("\n=== Summary of Significant Feature Differences ===")
+    for feature in features:
+        print(f"\n{feature_labels[feature]}:")
+        for comparison, sig in significance_summary[feature].items():
+            if sig != 'ns':
+                print(f"  {comparison}: {sig}")
     return plot_counter
-        
-    print(f"\n✅ Successfully created {plot_counter-1} feature plots!")
-    print(f"All plots saved to '../data/visualization_plots/'")
+    
+print(f"\n✅ Successfully created {plot_counter-1} feature plots!")
+print(f"All plots saved to '../data/visualization_plots/'")
 
 def create_combined_feature_subplots(df, plot_counter):
     """Create a combined figure with subplots for all behavioral features by diagnosis."""
