@@ -304,7 +304,7 @@ def create_correlation_heatmap(df, plot_counter):
     plt.show()
     return plot_counter + 1
     
-    print("✅ Created correlation heatmap")
+print("✅ Created correlation heatmap")
 
 def create_behavioral_phenotype_clusters(df, plot_counter):
     """Create behavioral phenotype clusters and visualizations."""
@@ -403,7 +403,7 @@ def create_ridge_plot(df, plot_counter):
     plt.show()
     return plot_counter + 1
 
-    print("✅ Created ridge/KDE plots")
+print("✅ Created ridge/KDE plots")
 
 # Call the functions to create the plots
 if __name__ == "__main__":
