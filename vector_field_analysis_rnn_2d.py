@@ -108,6 +108,17 @@ for idx, (action, reward) in enumerate(combinations):
     U_smooth = gaussian_filter(U, sigma=sigma)
     V_smooth = gaussian_filter(V, sigma=sigma)
     magnitude = np.sqrt(U_smooth**2 + V_smooth**2)
+
+    # Summary statistics for flow
+    mean_speed = np.mean(magnitude)
+    mean_U = np.mean(U_smooth)
+    mean_V = np.mean(V_smooth)
+    angle = np.arctan2(mean_V, mean_U) * 180 / np.pi  # in degrees
+
+    print(f"Action {action}, Reward {reward}:")
+    print(f"  Mean speed: {mean_speed:.3f}")
+    print(f"  Mean direction: ({mean_U:.3f}, {mean_V:.3f}), angle: {angle:.1f}°")
+
     dx = grid[1] - grid[0]
     grid_edges = np.linspace(-1 - dx/2, 1 + dx/2, n_grid + 1)
     # Plot background as dynamics speed
