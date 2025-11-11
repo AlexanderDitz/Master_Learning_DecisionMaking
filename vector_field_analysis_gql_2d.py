@@ -166,5 +166,5 @@ cbar = plt.colorbar(
     orientation='vertical',
     label='Dynamics speed'
 )
-plt.savefig('vector_field_benchmark.png', dpi=300, bbox_inches="tight")
+plt.savefig('results/vector_field_benchmark.png', dpi=300, bbox_inches="tight")
 plt.show()

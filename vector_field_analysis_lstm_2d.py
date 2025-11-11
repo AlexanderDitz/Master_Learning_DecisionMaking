@@ -193,8 +193,8 @@ for idx, (action, reward) in enumerate(combinations):
             norm=plt.Normalize(global_vmin, global_vmax)
         )
         ax.plot([-1, 1], [-1, 1], 'k--', alpha=0.7, linewidth=2, zorder=4)
-        ax.set_xlabel(f'{unit_x} (t)', fontsize=12)
-        ax.set_ylabel(f'{unit_y} (t)', fontsize=12)
+        ax.set_xlabel(f'{unit_x.replace("_h", "")} (t)', fontsize=12)
+        ax.set_ylabel(f'{unit_y.replace("_h", "")} (t)', fontsize=12)
         ax.set_title(f"{titles[idx]} [n={n_trials}]", fontsize=14)
         ax.grid(True, linestyle='--', alpha=0.7, color='gray')
         ax.set_xlim([-1, 1])
@@ -216,5 +216,5 @@ cbar = plt.colorbar(
     orientation='vertical',
     label='Dynamics speed'
 )
-plt.savefig('vector_field_lstm.png', dpi=300, bbox_inches="tight")
+plt.savefig('results/vector_field_lstm.png', dpi=300, bbox_inches="tight")
 plt.show()
