@@ -282,7 +282,7 @@ def create_correlation_heatmap(df, plot_counter):
     """Create correlation heatmap of all behavioral features."""
     
     # Select only numeric features
-    numeric_features = ['reward_rate', 'win_stay', 'win_shift', 'lose_stay', 'lose_shift']
+    numeric_features = ['reward_rate', 'win_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
     
     plt.figure(figsize=(12, 10))
     
