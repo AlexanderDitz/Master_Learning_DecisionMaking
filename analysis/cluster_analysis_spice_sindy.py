@@ -9,7 +9,7 @@ import seaborn as sns
 import ast
 
 # Load wide-format SINDy coefficients (with lists as strings)
-df = pd.read_csv("spice_sindy_parameters.csv")
+df = pd.read_csv("results/model_params/spice_sindy_parameters.csv")
 print(f"Loaded SINDy parameters: {df.shape[0]} participants, {df.shape[1]} features (including participant column)")
 
 # Expand all list columns into separate columns
@@ -75,9 +75,9 @@ plt.xlabel('t-SNE 1')
 plt.ylabel('t-SNE 2')
 plt.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
-plt.savefig('analysis/spice_sindy_tsne_plot.png', dpi=300)
+plt.savefig('results/clustering_analysis/spice_sindy_tsne_plot.png', dpi=300)
 plt.show()
-print("✅ Plotted t-SNE of clusters. Figure saved as analysis/spice_sindy_tsne_plot.png")
+print("✅ Plotted t-SNE of clusters. Figure saved as results/clustering_analysis/spice_sindy_tsne_plot.png")
 
 # Silhouette scores for k=2 to 10
 print("\nSilhouette scores for k=2 to 10:")
@@ -97,7 +97,7 @@ cluster_stats = df.groupby('cluster')[feature_cols].agg(['mean', 'std'])
 print("\nMean and std for each parameter in each cluster:")
 print(cluster_stats)
 # Save to CSV for further inspection
-cluster_stats.to_csv("spice_sindy_cluster_stats_mean_std.csv")
+cluster_stats.to_csv("results/clustering_analysis/spice_sindy_cluster_stats_mean_std.csv")
 print("✅ Saved cluster mean/std table to spice_sindy_cluster_stats_mean_std.csv")
 
 # Print participant IDs for each cluster
@@ -107,5 +107,5 @@ for cluster_id in sorted(df['cluster'].unique()):
     print(f"Cluster {cluster_id}: {list(ids)}\n")
 
 # Save cluster assignments
-df[['participant', 'cluster', 'diagnosis']].to_csv("spice_sindy_clusters.csv", index=False)
+df[['participant', 'cluster', 'diagnosis']].to_csv("results/clustering_analysis/spice_sindy_clusters.csv", index=False)
 print("\n✅ Clustering complete. Results saved to spice_sindy_clusters.csv and spice_sindy_tsne_plot.png")

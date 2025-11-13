@@ -8,8 +8,12 @@ benchmarking/__pycache__
 benchmarking/results
 benchmarking/studies
 data/*
+# Ignore all csv and png files
 *.csv
 *.png
+# But do NOT ignore those in results/
+!results/*.csv
+!results/*.png
 *.pyc
 */__pycache__/*
 hyperparameter_optimization

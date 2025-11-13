@@ -13,7 +13,7 @@ import seaborn as sns
 import os
 
 # Load LSTM hidden states
-hidden_df = pd.read_csv("lstm_hidden_states.csv", index_col=0)
+hidden_df = pd.read_csv("results/model_params/lstm_hidden_states.csv", index_col=0)
 
 X = hidden_df.copy()
 
@@ -27,7 +27,7 @@ kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
 hidden_df['cluster'] = kmeans.fit_predict(X_scaled)
 
 # Save results
-hidden_df.to_csv("lstm_kmeans_clusters.csv")
+hidden_df.to_csv("results/clustering_analysis/lstm_kmeans_clusters.csv")
 print("✅ Saved clustering results to lstm_kmeans_clusters.csv")
 
 # Load diagnosis info from original_data.csv
@@ -71,7 +71,7 @@ plt.xlabel('t-SNE 1')
 plt.ylabel('t-SNE 2')
 plt.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
-plt.savefig('lstm_kmeans_tsne_plot.png', dpi=300)
+plt.savefig('results/clustering_analysis/lstm_kmeans_tsne_plot.png', dpi=300)
 plt.show()
 print("✅ Plotted t-SNE of clusters. Figure saved as lstm_kmeans_tsne_plot.png")
 
@@ -79,7 +79,7 @@ print("✅ Plotted t-SNE of clusters. Figure saved as lstm_kmeans_tsne_plot.png"
 cluster_stats = hidden_df.groupby('cluster').agg(['mean', 'std'])
 print(cluster_stats)
 # Save to CSV for further inspection
-cluster_stats.to_csv("lstm_cluster_stats_mean_std.csv")
+cluster_stats.to_csv("results/clustering_analysis/lstm_cluster_stats_mean_std.csv")
 print("✅ Saved cluster mean/std table to lstm_cluster_stats_mean_std.csv")
 
 from sklearn.metrics import silhouette_score
