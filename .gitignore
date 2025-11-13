@@ -1,23 +1,15 @@
 playground*
 plots/*
 resources/__pycache__/*
-params/*
 __pycache__
 benchmarking/params
 benchmarking/__pycache__
 benchmarking/results
 benchmarking/studies
 data/*
-# Ignore all csv and png files
-*.csv
-*.png
-# But do NOT ignore those in results/
-!results/*.csv
-!results/*.png
 *.pyc
 */__pycache__/*
 hyperparameter_optimization
-params
 data
 tests
 analysis/analysis_model_evaluation_tables
