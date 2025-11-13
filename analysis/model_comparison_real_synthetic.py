@@ -119,6 +119,30 @@ def plot_combined_subplots(df, features, feature_labels, model_order, model_colo
     plt.show()
     return plot_counter + 1
 
+import scipy.stats as stats
+
+def compare_models_to_real(df, features, feature_labels, model_order, real_label="HUMAN"):
+    for model in model_order:
+        if model == real_label:
+            continue
+        print(f"\n=== {model} vs {real_label} ===")
+        summary = []
+        for feature in features:
+            model_data = df[df['model_type'] == model][feature].dropna()
+            real_data = df[df['model_type'] == real_label][feature].dropna()
+            # Compute means and stds
+            model_mean, model_std = model_data.mean(), model_data.std()
+            real_mean, real_std = real_data.mean(), real_data.std()
+            summary.append({
+                "Feature": feature_labels.get(feature, feature),
+                f"{model} Mean": model_mean,
+                f"{model} Std": model_std,
+                f"{real_label} Mean": real_mean,
+                f"{real_label} Std": real_std
+            })
+        df_summary = pd.DataFrame(summary)
+        print(df_summary)
+
 if __name__ == "__main__":
     plot_counter = 1
     df = load_all_data()
@@ -135,3 +159,5 @@ if __name__ == "__main__":
     # Combined subplots for a subset of features (customize as needed)
     combined_features = ['choice_rate', 'reward_rate', 'win_stay', 'lose_shift', 'choice_perseveration', 'switch_rate']
     plot_counter = plot_combined_subplots(df, combined_features, feature_labels, model_order, model_colors, plot_counter)
+    # Statistical comparison of models to real data
+    compare_models_to_real(df, features, feature_labels, model_order, real_label="HUMAN")
