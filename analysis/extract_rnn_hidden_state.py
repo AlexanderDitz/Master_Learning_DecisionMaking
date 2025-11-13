@@ -67,7 +67,7 @@ for pid in participant_ids:
 
 hidden_df = pd.DataFrame(rows_participant)
 hidden_df = hidden_df.set_index('participant')
-hidden_df.to_csv("rnn_hidden_states.csv")
+hidden_df.to_csv("results/model_params/rnn_hidden_states.csv")
 print("✅ Saved RNN hidden states for clustering to rnn_hidden_states.csv")
 
 # Per-trial extraction using synthetic data
@@ -112,5 +112,5 @@ for idx, row in synthetic_df.iterrows():
     rows_per_trial.append(row_trial)
 
 hidden_trial_df = pd.DataFrame(rows_per_trial)
-hidden_trial_df.to_csv("rnn_synthetic_data_hidden_states_per_trial.csv", index=False)
+hidden_trial_df.to_csv("results/model_params/rnn_synthetic_data_hidden_states_per_trial.csv", index=False)
 print("✅ Saved per-trial RNN hidden states for vector field analysis to rnn_synthetic_data_hidden_states_per_trial.csv")

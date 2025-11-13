@@ -76,7 +76,7 @@ cols = ['participant'] + all_columns if 'participant' in df.columns else all_col
 df = df[all_columns]
 
 # Step 3: Save wide-format CSV for clustering
-out_path = "analysis/spice_sindy_parameters.csv"
+out_path = "results/model_params/spice_sindy_parameters.csv"
 df.to_csv(out_path)
 print(f"✅ Saved wide-format SINDy coefficients for clustering to {out_path}")
 
@@ -88,5 +88,5 @@ df = pd.read_csv(synthetic_data_path)
 cols_to_save = ['id', 'session', 'n_trials', 'choice', 'reward', 'Q0', 'Q1']
 
 # Save per-trial Q-values for vector field analysis
-df[cols_to_save].to_csv("spice_synthetic_data_qvalues_per_trial.csv", index=False)
+df[cols_to_save].to_csv("results/model_params/spice_synthetic_data_qvalues_per_trial.csv", index=False)
 print("✅ Saved per-trial SPICE Q-values for vector field analysis to spice_synthetic_data_qvalues_per_trial.csv")
