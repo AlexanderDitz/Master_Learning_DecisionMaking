@@ -1,6 +1,6 @@
 # Computational Modeling of Individual Learning Dynamics in Affective Disorders
 
-This repository contains the code, data structure, and analyses for the thesis  
+This repository contains the code, data structure, and analyses for the master's thesis  
 **“Discovering individual differences in learning dynamics between healthy and clinical populations.”**  
 
 The current project investigates how individuals with **depression** or **bipolar disorder** differ from **healthy controls** in their learning and adaptive decision-making behavior.
@@ -9,7 +9,7 @@ The current project investigates how individuals with **depression** or **bipola
 
 ## 🧠 Overview
 
-We combine **computational modeling** with **unsupervised machine learning** to explore latent patterns in learning dynamics:
+This project combines **computational modeling** with **unsupervised machine learning** to explore latent patterns in learning dynamics:
 
 - **Generalized Q-Learning (GQL):** captures reinforcement learning parameters  
 - **Recurrent Neural Networks (RNNs)** and **Long Short-Term Memory (LSTM):** learn temporal dependencies in behavioral data  
@@ -28,16 +28,21 @@ Models are trained and fitted on behavioral data (by Dezfouli et al. (2019)) col
 │   ├── gql_model.py
 │   ├── rnn_model.py
 │   ├── lstm_model.py
+│   ├── spice_model.py
 │   └── utils/
 ├── analysis/            # Extraction, clustering, and plotting scripts
 │   ├── extract_rnn_hidden_state.py
 │   ├── extract_lstm_hidden_state.py
 │   ├── extract_gql_parameters.py
+│   ├── extract_spice_parameters.py
 │   ├── cluster_analysis_rnn.py
 │   ├── cluster_analysis_lstm.py
 │   ├── cluster_analysis_gql.py
-│   └── plot_2d_vector_flow_rnn.py
-├── figures/             # Generated figures and plots
+│   ├── cluster_analysis_spice_sindy.py
+│   ├── vector_field_analysis_gql.py
+│   ├── vector_field_analysis_lstm.py
+│   ├── vector_field_analysis_rnn.py
+│   └── vector_field_analysis_spice.py
 ├── results/             # Model outputs, clustering results
 ├── requirements.txt     # Python dependencies
 └── README.md            # This file
@@ -73,26 +78,16 @@ pip install -r requirements.txt
 ## 🏗️ Analysis Pipeline
 
 1. **Data preprocessing:** Scripts in `data/`
-2. **Model training:** Train GQL, RNN, and LSTM models on real data (`models/`)
+2. **Model training:** Train GQL and LSTM models on real data (`benchmarking/`)
 3. **Parameter/hidden state extraction:**  
    - Per-participant (real data) for clustering  
    - Per-trial (synthetic data) for vector field analysis
 4. **Clustering & visualization:** K-Means, t-SNE (`analysis/`)
-5. **Statistical analysis:** Compare clusters, visualize group differences
+5. **Vector Field analysis:** Compare model dynamics, dependent on rewarded/unrewarded trials
 
 ---
 
 ## 💻 Example Usage
-
-**Extract RNN hidden states per trial:**
-```bash
-python analysis/extract_rnn_hidden_state.py
-```
-
-**Extract LSTM hidden states per trial:**
-```bash
-python analysis/extract_lstm_hidden_state.py
-```
 
 **Extract GQL parameters and Q-values:**
 ```bash
@@ -106,7 +101,7 @@ python analysis/cluster_analysis_rnn.py
 
 **Plot vector field for RNN:**
 ```bash
-python plot_2d_vector_flow_rnn.py
+python vector_field_analysis_rnn.py
 ```
 
 ---
@@ -115,9 +110,3 @@ python plot_2d_vector_flow_rnn.py
 
 Alexander Ditz, 2025  
 [aditz@uni-osnabrueck.de]
-
----
-
-## 📄 License
-
-[Specify license if applicable]
